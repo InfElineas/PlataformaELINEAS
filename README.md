@@ -28,8 +28,18 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 - **Frontend**: Next.js 14 (App Router), React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API Routes, Mongoose ODM
 - **Database**: MongoDB (local o Atlas)
-- **Auth**: JWT con flag toggleable (AUTH_DISABLED=true para dev)
+- **Auth**: Sesiones HTTP-only con RBAC multi-tenant (roles dinámicos y permisos por organización)
 - **Multitenancy**: org_id filtrado en todas las queries
+
+### Roles iniciales
+- `superadmin`: acceso global, gestiona roles y organizaciones
+- `org_admin`: administra usuarios, catálogos y reglas dentro de su organización
+- `manager_ops`: operaciones de inventario, generación/aprobación de planes y órdenes
+- `manager_commercial`: catálogo y listas de precios
+- `support`: herramientas de soporte e inventario utilitario
+- `auditor`: acceso de solo lectura con exportaciones
+- `operador`: movimientos operativos básicos
+- `read_only`: observador sin permisos de escritura
 
 ## 📦 Installation
 
@@ -45,18 +55,22 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 yarn install
 ```
 
-2. **Configure environment** (ya configurado en .env):
+2. **Configure environment**:
 ```bash
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=inventory_replenishment_db
-NEXT_PUBLIC_BASE_URL=https://stockflow-295.preview.emergentagent.com
 ORG_ID_DEFAULT=ELINEAS
-AUTH_DISABLED=true
+JWT_SECRET=change-me-super-secret
+ALLOWED_ORIGIN=http://localhost:3000
+BCRYPT_SALT_ROUNDS=12
+DEFAULT_SUPERADMIN_EMAIL=superadmin@example.com
+DEFAULT_SUPERADMIN_PASSWORD=ChangeMeNow!2025
 ```
 
-3. **Seed database**:
+3. **Seed database y roles**:
 ```bash
 npm run seed
+npm run seed:auth
 ```
 
 Esto crea:
@@ -67,13 +81,14 @@ Esto crea:
 - ✅ 4,650 inventory snapshots (50 productos × 3 tiendas × 31 días)
 - ✅ 50 price lists
 - ✅ 3 replenishment rules (global + por categoría + por tienda)
+- ✅ Roles/Permisos base y usuario superadmin (credenciales arriba)
 
 4. **Start development server**:
 ```bash
 npm run dev
 ```
 
-App disponible en: https://stockflow-295.preview.emergentagent.com
+App disponible en: https://stockflow-295.preview.emergentagent.com (ruta de login: `/login`)
 
 ## 🎯 Usage
 
