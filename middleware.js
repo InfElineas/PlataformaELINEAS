@@ -7,7 +7,12 @@ const PUBLIC_API_PATHS = ['/api/auth/login', '/api/auth/logout', '/api/auth/sess
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon.ico') || pathname.startsWith('/assets')) {
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/assets') ||
+    pathname.startsWith('/.well-known')
+  ) {
     return NextResponse.next();
   }
 
