@@ -4,12 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-<<<<<<< HEAD
-import { Search } from 'lucide-react';
-=======
 import { Button } from '@/components/ui/button';
 import { Search, Settings2 } from 'lucide-react';
->>>>>>> main
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -31,16 +27,6 @@ function fmt(val) {
   if (val === null || val === undefined || val === '') return '—';
   return String(val);
 }
-<<<<<<< HEAD
-function fmtDate(val) {
-  if (!val) return '—';
-  const d = new Date(val);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
-}
-
-
-=======
->>>>>>> main
 function fmtDate(val) {
   if (!val) return '—';
   const d = new Date(val);
@@ -163,21 +149,7 @@ export default function ProductsPage() {
 
   // Carga de datos del backend (solo query de búsqueda a la API)
   useEffect(() => {
-<<<<<<< HEAD
-    const id = setTimeout(loadProducts, 250); // debounce
-    return () => clearTimeout(id);
-  }, [search]);
-
-  async function loadProducts() {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/products?search=${encodeURIComponent(search)}&limit=100`, {
-        cache: 'no-store',
-      });
-    const id = setTimeout(() => loadProducts(search), 250); // debounce
-=======
     const id = setTimeout(() => loadProducts(search), 250);
->>>>>>> main
     return () => clearTimeout(id);
   }, [search]);
 
@@ -306,49 +278,17 @@ export default function ProductsPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Products</h1>
-        <p className="text-muted-foreground">Manage your product catalog</p>
         <h1 className="text-3xl font-bold">Productos</h1>
         <p className="text-muted-foreground">Vista operativa del inventario por tienda y categoría online.</p>
       </div>
 
       <Card>
         <CardHeader>
-<<<<<<< HEAD
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle>Product List</CardTitle>
-            <div className="flex items-center gap-4">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Listado de productos</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Busca por nombre, código o código de barras.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar productos..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <span className="text-sm text-muted-foreground">{resultsLabel}</span>
-              <span className="text-sm text-muted-foreground">
-                {resultsLabel}
-              </span>
-=======
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle>Listado de productos</CardTitle>
-                {/* <p className="text-sm text-muted-foreground">Busca por nombre, código o código de barras.</p> */}
+                <p className="text-sm text-muted-foreground">Busca por nombre, código o código de barras.</p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -391,7 +331,6 @@ export default function ProductsPage() {
 
                 <span className="text-sm text-muted-foreground">{resultsLabel}</span>
               </div>
->>>>>>> main
             </div>
 
             {/* Filtros (con etiquetas arriba) */}
@@ -489,11 +428,13 @@ export default function ProductsPage() {
             <div className="flex items-center gap-3">
               <Button onClick={aplicarFiltros} className="gap-2">Aplicar filtros</Button>
               <Button variant="outline" onClick={resetFiltros}>Limpiar filtros</Button>
-             
+              <span className="text-xs text-muted-foreground">
+                (Los cambios en los selectores no se aplican hasta presionar “Aplicar filtros”)
+              </span>
             </div>
 
             {/* Chips de filtros APLICADOS */}
-            {/* <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               {aExistencia !== ALL && <Badge variant="secondary">Existencia: {aExistencia === 'con' ? 'Con' : 'Sin'}</Badge>}
               {aAlmacen !== ALL && <Badge variant="secondary">Almacén: {aAlmacen}</Badge>}
               {aSuministrador !== ALL && <Badge variant="secondary">Suministrador: {aSuministrador}</Badge>}
@@ -501,95 +442,15 @@ export default function ProductsPage() {
               {aMarca !== ALL && <Badge variant="secondary">Marca: {aMarca}</Badge>}
               {aHabilitado !== ALL && <Badge variant="secondary">Habilitado: {aHabilitado}</Badge>}
               {aActivado !== ALL && <Badge variant="secondary">Activado: {aActivado}</Badge>}
-            </div> */}
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="overflow-x-auto">
           {loading ? (
-<<<<<<< HEAD
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : (
-            <Table className="min-w-[1300px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>_id</TableHead>
-                  <TableHead>org_id</TableHead>
-                  <TableHead>idTienda</TableHead>
-                  <TableHead>product_code</TableHead>
-                  <TableHead>barcode</TableHead>
-                  <TableHead>name</TableHead>
-                  <TableHead>brand</TableHead>
-                  <TableHead>category_id</TableHead>
-                  <TableHead>category_path</TableHead>
-                  <TableHead>uom</TableHead>
-                  <TableHead>units_per_box</TableHead>
-                  <TableHead>supplier_id</TableHead>
-                  <TableHead>provider_id</TableHead>
-                  <TableHead>mgmt_mode</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>created_at</TableHead>
-                  <TableHead>updated_at</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={17} className="text-center py-8 text-muted-foreground">
-                      No products found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  products.map((p) => {
-                    const statusVariant =
-                      p.status === 'active' ? 'default' : p.status === 'pending' ? 'secondary' : 'destructive';
-                    const mgmtVariant = p.mgmt_mode === 'managed' ? 'outline' : 'secondary';
-
-                    return (
-                      <TableRow key={p._id}>
-                        <TableCell className="font-mono text-xs">{fmt(p._id)}</TableCell>
-                        <TableCell className="font-mono text-xs">{fmt(p.org_id)}</TableCell>
-                        <TableCell className="font-mono text-xs">{fmt(p.idTienda)}</TableCell>
-                        <TableCell className="font-mono text-xs">{fmt(p.product_code)}</TableCell>
-                        <TableCell className="font-mono text-xs">{fmt(p.barcode)}</TableCell>
-                        <TableCell className="font-medium">{fmt(p.name)}</TableCell>
-                        <TableCell>{fmt(p.brand)}</TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">{fmt(p.category_id)}</span>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {Array.isArray(p.category_path) && p.category_path.length > 0
-                            ? p.category_path.join(' › ')
-                            : '—'}
-                        </TableCell>
-                        <TableCell>{fmt(p.uom)}</TableCell>
-                        <TableCell>{fmt(p.units_per_box)}</TableCell>
-                        <TableCell className="font-mono text-xs">{fmt(p.supplier_id)}</TableCell>
-                        <TableCell className="font-mono text-xs">{fmt(p.provider_id)}</TableCell>
-                        <TableCell>
-                          <Badge variant={mgmtVariant}>{fmt(p.mgmt_mode)}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariant}>{fmt(p.status)}</Badge>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">{fmtDate(p.created_at)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{fmtDate(p.updated_at)}</TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-            <div className="py-8 text-center text-muted-foreground">
-              Cargando productos…
-            </div>
-          ) : products.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              No se encontraron productos.
-            </div>
-=======
             <div className="py-8 text-center text-muted-foreground">Cargando productos…</div>
           ) : filtered.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">No se encontraron productos.</div>
->>>>>>> main
           ) : (
             <Table className="min-w-[1400px]">
               <TableHeader>
