@@ -28,8 +28,19 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 - **Frontend**: Next.js 14 (App Router), React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API Routes, Mongoose ODM
 - **Database**: MongoDB (local o Atlas)
-- **Auth**: JWT con flag toggleable (AUTH_DISABLED=true para dev)
+- **Auth**: Sesiones HTTP-only con RBAC multi-tenant (roles dinámicos y permisos por organización)
 - **Multitenancy**: org_id filtrado en todas las queries
+- **Importaciones inteligentes**: Carga masiva desde archivos .xlsx o Google Sheets con validaciones y historial
+
+### Roles iniciales
+- `superadmin`: acceso global, gestiona roles y organizaciones
+- `org_admin`: administra usuarios, catálogos y reglas dentro de su organización
+- `manager_ops`: operaciones de inventario, generación/aprobación de planes y órdenes
+- `manager_commercial`: catálogo y listas de precios
+- `support`: herramientas de soporte e inventario utilitario
+- `auditor`: acceso de solo lectura con exportaciones
+- `operador`: movimientos operativos básicos
+- `read_only`: observador sin permisos de escritura
 
 ## 📦 Installation
 
@@ -45,18 +56,26 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 yarn install
 ```
 
-2. **Configure environment** (ya configurado en .env):
+2. **Configure environment**:
 ```bash
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=inventory_replenishment_db
-NEXT_PUBLIC_BASE_URL=https://stockflow-295.preview.emergentagent.com
 ORG_ID_DEFAULT=ELINEAS
-AUTH_DISABLED=true
+JWT_SECRET=change-me-super-secret
+ALLOWED_ORIGIN=http://localhost:3000
+BCRYPT_SALT_ROUNDS=12
+DEFAULT_SUPERADMIN_EMAIL=superadmin@example.com
+DEFAULT_SUPERADMIN_PASSWORD=ChangeMeNow!2025
+GOOGLE_SERVICE_ACCOUNT_JSON_INLINE='{"client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\\n..."}'
+GOOGLE_OAUTH_CLIENT_ID=your-oauth-client.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=your-oauth-secret
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/integrations/google/oauth/callback
 ```
 
-3. **Seed database**:
+3. **Seed database y roles**:
 ```bash
 npm run seed
+npm run seed:auth
 ```
 
 Esto crea:
@@ -67,13 +86,46 @@ Esto crea:
 - ✅ 4,650 inventory snapshots (50 productos × 3 tiendas × 31 días)
 - ✅ 50 price lists
 - ✅ 3 replenishment rules (global + por categoría + por tienda)
+- ✅ Roles/Permisos base y usuario superadmin (credenciales arriba)
 
 4. **Start development server**:
 ```bash
 npm run dev
 ```
 
-App disponible en: https://stockflow-295.preview.emergentagent.com
+App disponible en: https://stockflow-295.preview.emergentagent.com (ruta de login: `/login`)
+
+## 📥 Importaciones de productos
+
+El módulo de importaciones permite poblar el catálogo sin depender de `seed.js`.
+
+### Fuentes soportadas
+
+- **Archivos .xlsx locales**: se suben desde `/imports`, se convierten mediante Google Drive y se procesan con validaciones estrictas.
+- **Google Sheets**: puedes importar una hoja puntual o todo el spreadsheet (concatenando todas las hojas).
+- **OAuth opcional**: los usuarios pueden vincular su cuenta de Google para acceder a documentos privados; por defecto se usa el service account definido en las variables de entorno.
+
+### Flujo backend
+
+1. `POST /api/imports/products/upload` recibe un `FormData` con el archivo `.xlsx`.
+2. El archivo se sube temporalmente a Google Drive (`drive.file`), se convierte a spreadsheet y se lee vía `sheets.values`.
+3. `importProductsFromValues` normaliza columnas obligatorias (`Categoría Online`, `Cód. Prod.`, `Precio`, etc.), convierte tipos y aborta si hay errores.
+4. Se realiza `upsert` en `products` (respetando `replaceExisting`), se registra la acción en `imports` y se genera un `AuditLog`.
+5. `GET /api/imports/history` devuelve el historial multi-tenant integrable en reportes.
+
+### Configuración requerida
+
+- **Service Account**: define `GOOGLE_SERVICE_ACCOUNT_JSON_INLINE` o combina `GOOGLE_SERVICE_ACCOUNT_EMAIL` + `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`. Este usuario necesita `drive.file` y `sheets.readonly`.
+- **OAuth cliente**: define `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` y `GOOGLE_OAUTH_REDIRECT_URI` si quieres que cada usuario conecte su propio Drive (beneficios: acceso a archivos privados sin compartirlos con TI, auditoría por usuario, revocación inmediata desde la UI).
+- **Permiso RBAC**: sólo roles con `imports.manage` (superadmin, org_admin, manager_ops, manager_commercial, support) pueden usar `/imports`.
+
+### UI `/imports`
+
+- Selector de archivo .xlsx con opciones de reemplazo, detección de encabezados y modo OAuth.
+- Importación directa desde Google Sheets: listado de hojas, modo "single" o "all" y switch para OAuth.
+- Estado de vinculación de Google y botón para conectar/desconectar.
+- Estadísticas (filas procesadas, insertados, actualizados, duplicados) + preview de las primeras filas.
+- Historial con resumen por lote y badges de resultados.
 
 ## 🎯 Usage
 

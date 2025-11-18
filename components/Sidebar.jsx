@@ -6,22 +6,35 @@ import {
   Package,
   Warehouse,
   RefreshCw,
-  ShoppingCart
+  ShoppingCart,
+  UserCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useAuthSession } from '@/components/providers/AuthSessionProvider';
+import { PERMISSIONS } from '@/lib/auth/permissions';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Inventory', href: '/inventory', icon: Warehouse },
   { name: 'Replenishment', href: '/replenishment', icon: RefreshCw },
-  { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart }
+  { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
+  { name: 'Importaciones', href: '/imports', icon: FileSpreadsheet, permission: PERMISSIONS.IMPORTS_MANAGE },
+  { name: 'Perfil', href: '/profile', icon: UserCircle }
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, permissions } = useAuthSession();
+
+  async function handleSignOut() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  }
 
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r">
@@ -31,6 +44,9 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
           const Icon = item.icon;
+          if (item.permission && !permissions?.includes(item.permission)) {
+            return null;
+          }
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Button
@@ -48,8 +64,13 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t">
-        <p className="text-xs text-muted-foreground">v1.0 • ELINEAS</p>
+      <div className="border-t p-4">
+        <div className="mb-2 text-sm font-medium">{user?.full_name || 'Usuario'}</div>
+        <div className="mb-4 text-xs text-muted-foreground">{user?.email}</div>
+        <Button onClick={handleSignOut} variant="outline" className="w-full">
+          Cerrar sesión
+        </Button>
+        <p className="mt-4 text-xs text-muted-foreground">v1.0 • ELINEAS</p>
       </div>
     </div>
   );
