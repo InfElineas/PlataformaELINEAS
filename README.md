@@ -42,16 +42,6 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 - `operador`: movimientos operativos básicos
 - `read_only`: observador sin permisos de escritura
 
-### Roles iniciales
-- `superadmin`: acceso global, gestiona roles y organizaciones
-- `org_admin`: administra usuarios, catálogos y reglas dentro de su organización
-- `manager_ops`: operaciones de inventario, generación/aprobación de planes y órdenes
-- `manager_commercial`: catálogo y listas de precios
-- `support`: herramientas de soporte e inventario utilitario
-- `auditor`: acceso de solo lectura con exportaciones
-- `operador`: movimientos operativos básicos
-- `read_only`: observador sin permisos de escritura
-
 ## 📦 Installation
 
 ### Prerequisites
