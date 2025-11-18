@@ -1,14 +1,11 @@
 import Sidebar from '@/components/Sidebar';
 import { AuthSessionProvider } from '@/components/providers/AuthSessionProvider';
 import { getSessionFromCookies } from '@/lib/auth/session';
-import { redirect } from 'next/navigation';
 
 export default async function AppLayout({ children }) {
+  // El middleware ya garantiza que aquí solo entra gente autenticada.
+  // Si por alguna razón no hay sesión, simplemente no rompemos la app.
   const session = await getSessionFromCookies();
-
-  if (!session?.user) {
-    redirect('/login');
-  }
 
   return (
     <AuthSessionProvider initialSession={session}>

@@ -245,6 +245,7 @@ async function seed() {
       category_path: safePath(cat),
       category_id: cat.slug,
       supplier_id: sup._id.toString(),
+       supplier_name: sup.name,  
       status: 'active',
       mgmt_mode: 'managed',
     });
