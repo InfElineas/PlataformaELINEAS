@@ -5,14 +5,11 @@ import Category from '@/lib/models/Category';
 import Store from '@/lib/models/Store';
 import Supplier from '@/lib/models/Supplier';
 import InventorySnapshot from '@/lib/models/InventorySnapshot';
-import PriceList from '@/lib/models/PriceList';
 import ReplenishmentRule from '@/lib/models/ReplenishmentRule';
 import ReplenishmentPlan from '@/lib/models/ReplenishmentPlan';
 import PurchaseOrder from '@/lib/models/PurchaseOrder';
 import { generateReplenishmentPlan } from '@/lib/replenishment-engine';
-import { format } from 'date-fns';
-
-const ORG_ID = process.env.ORG_ID_DEFAULT || 'ELINEAS';
+import { requirePermission, PERMISSIONS } from '@/lib/auth';
 
 // Helper to parse path segments
 function parsePath(request) {
@@ -22,28 +19,80 @@ function parsePath(request) {
   return { segments, searchParams: url.searchParams };
 }
 
+function resolvePermission(method, segments) {
+  if (segments.length === 0) {
+    return { permission: null, orgScoped: false };
+  }
+
+  const resource = segments[0];
+
+  switch (resource) {
+    case 'products':
+      return {
+        permission: method === 'GET' ? PERMISSIONS.CATALOG_READ : PERMISSIONS.CATALOG_WRITE,
+        orgScoped: true
+      };
+    case 'stores':
+      return {
+        permission: method === 'GET' ? PERMISSIONS.CATALOG_READ : PERMISSIONS.CATALOG_WRITE,
+        orgScoped: true
+      };
+    case 'suppliers':
+    case 'categories':
+      return { permission: PERMISSIONS.CATALOG_READ, orgScoped: true };
+    case 'inventory':
+      return { permission: PERMISSIONS.INVENTORY_READ, orgScoped: true };
+    case 'rules':
+      return { permission: PERMISSIONS.CATALOG_READ, orgScoped: true };
+    case 'replenishment':
+      if (method === 'POST' && segments.length >= 2 && segments[1] === 'plan') {
+        return { permission: PERMISSIONS.REPLENISHMENT_GENERATE, orgScoped: true };
+      }
+      if (method === 'POST' && segments.length === 4 && segments[3] === 'approve') {
+        return { permission: PERMISSIONS.REPLENISHMENT_APPROVE, orgScoped: true };
+      }
+      return { permission: PERMISSIONS.REPLENISHMENT_READ, orgScoped: true };
+    case 'purchase-orders':
+      return {
+        permission: method === 'POST' ? PERMISSIONS.ORDERS_WRITE : PERMISSIONS.ORDERS_READ,
+        orgScoped: true
+      };
+    default:
+      return { permission: null, orgScoped: true };
+  }
+}
+
 // Error handler
-function errorResponse(message, status = 400) {
-  return NextResponse.json({ error: message }, { status });
+function errorResponse(message, status = 400, request) {
+  const init = { status };
+  if (request) {
+    init.headers = corsHeaders(request);
+  }
+  return NextResponse.json({ error: message }, init);
 }
 
 // CORS
-function corsHeaders() {
+function corsHeaders(request) {
+  const fallbackOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
+  const origin = request?.headers.get('origin') || fallbackOrigin;
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+    Vary: 'Origin'
   };
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 200, headers: corsHeaders() });
+export async function OPTIONS(request) {
+  return new NextResponse(null, { status: 200, headers: corsHeaders(request) });
 }
 
 // ============== PRODUCTS ==============
-async function handleProducts(request, segments, searchParams) {
+async function handleProducts(request, segments, searchParams, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   if (method === 'GET' && segments.length === 1) {
     const search = searchParams.get('search') || '';
@@ -53,7 +102,7 @@ async function handleProducts(request, segments, searchParams) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    const query = { org_id: ORG_ID };
+    const query = { org_id: orgId };
     
     if (search) {
       query.$or = [
@@ -76,93 +125,97 @@ async function handleProducts(request, segments, searchParams) {
       page,
       limit,
       totalPages: Math.ceil(total / limit)
-    }, { headers: corsHeaders() });
+    }, { headers: corsHeaders(request) });
   }
 
   if (method === 'POST' && segments.length === 1) {
     const body = await request.json();
-    const product = await Product.create({ ...body, org_id: ORG_ID });
-    return NextResponse.json({ data: product }, { status: 201, headers: corsHeaders() });
+    const product = await Product.create({ ...body, org_id: orgId });
+    return NextResponse.json({ data: product }, { status: 201, headers: corsHeaders(request) });
   }
 
   if (method === 'GET' && segments.length === 2) {
     const productId = segments[1];
-    const product = await Product.findOne({ _id: productId, org_id: ORG_ID });
-    if (!product) return errorResponse('Product not found', 404);
-    return NextResponse.json({ data: product }, { headers: corsHeaders() });
+    const product = await Product.findOne({ _id: productId, org_id: orgId });
+    if (!product) return errorResponse('Product not found', 404, request);
+    return NextResponse.json({ data: product }, { headers: corsHeaders(request) });
   }
 
   if (method === 'PUT' && segments.length === 2) {
     const productId = segments[1];
     const body = await request.json();
     const product = await Product.findOneAndUpdate(
-      { _id: productId, org_id: ORG_ID },
+      { _id: productId, org_id: orgId },
       { ...body, updated_at: new Date() },
       { new: true }
     );
-    if (!product) return errorResponse('Product not found', 404);
-    return NextResponse.json({ data: product }, { headers: corsHeaders() });
+    if (!product) return errorResponse('Product not found', 404, request);
+    return NextResponse.json({ data: product }, { headers: corsHeaders(request) });
   }
 
   if (method === 'DELETE' && segments.length === 2) {
     const productId = segments[1];
-    const product = await Product.findOneAndDelete({ _id: productId, org_id: ORG_ID });
-    if (!product) return errorResponse('Product not found', 404);
-    return NextResponse.json({ message: 'Product deleted' }, { headers: corsHeaders() });
+    const product = await Product.findOneAndDelete({ _id: productId, org_id: orgId });
+    if (!product) return errorResponse('Product not found', 404, request);
+    return NextResponse.json({ message: 'Product deleted' }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid products endpoint', 404);
+  return errorResponse('Invalid products endpoint', 404, request);
 }
 
 // ============== STORES ==============
-async function handleStores(request, segments) {
+async function handleStores(request, segments, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   if (method === 'GET' && segments.length === 1) {
-    const stores = await Store.find({ org_id: ORG_ID }).sort({ name: 1 }).lean();
-    return NextResponse.json({ data: stores }, { headers: corsHeaders() });
+    const stores = await Store.find({ org_id: orgId }).sort({ name: 1 }).lean();
+    return NextResponse.json({ data: stores }, { headers: corsHeaders(request) });
   }
 
   if (method === 'POST' && segments.length === 1) {
     const body = await request.json();
-    const store = await Store.create({ ...body, org_id: ORG_ID });
-    return NextResponse.json({ data: store }, { status: 201, headers: corsHeaders() });
+    const store = await Store.create({ ...body, org_id: orgId });
+    return NextResponse.json({ data: store }, { status: 201, headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid stores endpoint', 404);
+  return errorResponse('Invalid stores endpoint', 404, request);
 }
 
 // ============== SUPPLIERS ==============
-async function handleSuppliers(request, segments) {
+async function handleSuppliers(request, segments, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   if (method === 'GET' && segments.length === 1) {
-    const suppliers = await Supplier.find({ org_id: ORG_ID }).sort({ name: 1 }).lean();
-    return NextResponse.json({ data: suppliers }, { headers: corsHeaders() });
+    const suppliers = await Supplier.find({ org_id: orgId }).sort({ name: 1 }).lean();
+    return NextResponse.json({ data: suppliers }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid suppliers endpoint', 404);
+  return errorResponse('Invalid suppliers endpoint', 404, request);
 }
 
 // ============== CATEGORIES ==============
-async function handleCategories(request, segments) {
+async function handleCategories(request, segments, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   if (method === 'GET' && segments.length === 1) {
-    const categories = await Category.find({ org_id: ORG_ID }).sort({ path: 1 }).lean();
-    return NextResponse.json({ data: categories }, { headers: corsHeaders() });
+    const categories = await Category.find({ org_id: orgId }).sort({ path: 1 }).lean();
+    return NextResponse.json({ data: categories }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid categories endpoint', 404);
+  return errorResponse('Invalid categories endpoint', 404, request);
 }
 
 // ============== INVENTORY ==============
-async function handleInventory(request, segments, searchParams) {
+async function handleInventory(request, segments, searchParams, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   if (method === 'GET' && segments.length === 1) {
     const date = searchParams.get('date');
@@ -172,7 +225,7 @@ async function handleInventory(request, segments, searchParams) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const skip = (page - 1) * limit;
 
-    const query = { org_id: ORG_ID };
+    const query = { org_id: orgId };
     if (date) query.date = new Date(date);
     if (storeId) query.store_id = storeId;
     if (productId) query.product_id = productId;
@@ -183,7 +236,7 @@ async function handleInventory(request, segments, searchParams) {
     ]);
 
     const productIds = [...new Set(snapshots.map(s => s.product_id))];
-    const products = await Product.find({ _id: { $in: productIds }, org_id: ORG_ID }).lean();
+    const products = await Product.find({ _id: { $in: productIds }, org_id: orgId }).lean();
     const productMap = Object.fromEntries(products.map(p => [p._id.toString(), p]));
 
     const enriched = snapshots.map(s => ({
@@ -197,29 +250,31 @@ async function handleInventory(request, segments, searchParams) {
       page,
       limit,
       totalPages: Math.ceil(total / limit)
-    }, { headers: corsHeaders() });
+    }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid inventory endpoint', 404);
+  return errorResponse('Invalid inventory endpoint', 404, request);
 }
 
 // ============== REPLENISHMENT RULES ==============
-async function handleRules(request, segments) {
+async function handleRules(request, segments, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   if (method === 'GET' && segments.length === 1) {
-    const rules = await ReplenishmentRule.find({ org_id: ORG_ID }).sort({ priority: -1 }).lean();
-    return NextResponse.json({ data: rules }, { headers: corsHeaders() });
+    const rules = await ReplenishmentRule.find({ org_id: orgId }).sort({ priority: -1 }).lean();
+    return NextResponse.json({ data: rules }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid rules endpoint', 404);
+  return errorResponse('Invalid rules endpoint', 404, request);
 }
 
 // ============== REPLENISHMENT PLANS ==============
-async function handleReplenishment(request, segments, searchParams) {
+async function handleReplenishment(request, segments, searchParams, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   // POST /api/replenishment/plan - Generate new plan
   if (method === 'POST' && segments.length === 2 && segments[1] === 'plan') {
@@ -227,14 +282,14 @@ async function handleReplenishment(request, segments, searchParams) {
     const { plan_date, store_id } = body;
 
     if (!plan_date || !store_id) {
-      return errorResponse('plan_date and store_id required');
+      return errorResponse('plan_date and store_id required', 400, request);
     }
 
-    console.log('🔄 Generating replenishment plan...', { plan_date, store_id });
-    
-    const planItems = await generateReplenishmentPlan(ORG_ID, store_id, plan_date);
+    console.log('🔄 Generating replenishment plan...', { plan_date, store_id, orgId });
+
+    const planItems = await generateReplenishmentPlan(orgId, store_id, plan_date);
     const saved = await ReplenishmentPlan.insertMany(planItems);
-    
+
     console.log(`✅ Generated ${saved.length} plan items`);
 
     return NextResponse.json({
@@ -245,7 +300,7 @@ async function handleReplenishment(request, segments, searchParams) {
         items_to_restock: saved.filter(p => p.recommended_qty > 0).length,
         total_recommended_qty: saved.reduce((sum, p) => sum + p.recommended_qty, 0)
       }
-    }, { status: 201, headers: corsHeaders() });
+    }, { status: 201, headers: corsHeaders(request) });
   }
 
   // GET /api/replenishment/plans - List plans
@@ -254,26 +309,26 @@ async function handleReplenishment(request, segments, searchParams) {
     const status = searchParams.get('status');
     const planDate = searchParams.get('plan_date');
 
-    const query = { org_id: ORG_ID };
+    const query = { org_id: orgId };
     if (storeId) query.store_id = storeId;
     if (status) query.status = status;
     if (planDate) query.plan_date = new Date(planDate);
 
     const plans = await ReplenishmentPlan.find(query).sort({ plan_date: -1, recommended_qty: -1 }).lean();
 
-    return NextResponse.json({ data: plans }, { headers: corsHeaders() });
+    return NextResponse.json({ data: plans }, { headers: corsHeaders(request) });
   }
 
   // POST /api/replenishment/plans/:id/approve - Approve plan
   if (method === 'POST' && segments.length === 4 && segments[1] === 'plans' && segments[3] === 'approve') {
     const planId = segments[2];
-    const plan = await ReplenishmentPlan.findOne({ _id: planId, org_id: ORG_ID });
-    
-    if (!plan) return errorResponse('Plan not found', 404);
+    const plan = await ReplenishmentPlan.findOne({ _id: planId, org_id: orgId });
+
+    if (!plan) return errorResponse('Plan not found', 404, request);
 
     await ReplenishmentPlan.updateMany(
       {
-        org_id: ORG_ID,
+        org_id: orgId,
         plan_date: plan.plan_date,
         store_id: plan.store_id,
         status: 'draft'
@@ -283,16 +338,17 @@ async function handleReplenishment(request, segments, searchParams) {
 
     return NextResponse.json({
       message: 'Plan approved successfully'
-    }, { headers: corsHeaders() });
+    }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid replenishment endpoint', 404);
+  return errorResponse('Invalid replenishment endpoint', 404, request);
 }
 
 // ============== PURCHASE ORDERS ==============
-async function handlePurchaseOrders(request, segments, searchParams) {
+async function handlePurchaseOrders(request, segments, searchParams, context) {
   await connectDB();
   const method = request.method;
+  const { orgId } = context;
 
   // POST /api/purchase-orders/from-plan - Create POs from approved plan
   if (method === 'POST' && segments.length === 2 && segments[1] === 'from-plan') {
@@ -300,7 +356,7 @@ async function handlePurchaseOrders(request, segments, searchParams) {
     const { plan_date, store_id } = body;
 
     const plans = await ReplenishmentPlan.find({
-      org_id: ORG_ID,
+      org_id: orgId,
       plan_date: new Date(plan_date),
       store_id,
       status: 'approved',
@@ -308,11 +364,11 @@ async function handlePurchaseOrders(request, segments, searchParams) {
     }).lean();
 
     if (plans.length === 0) {
-      return errorResponse('No approved plans found to convert', 400);
+      return errorResponse('No approved plans found to convert', 400, request);
     }
 
     const productIds = plans.map(p => p.product_id);
-    const products = await Product.find({ _id: { $in: productIds }, org_id: ORG_ID }).lean();
+    const products = await Product.find({ _id: { $in: productIds }, org_id: orgId }).lean();
     const productMap = Object.fromEntries(products.map(p => [p._id.toString(), p]));
 
     // Group by supplier
@@ -334,14 +390,14 @@ async function handlePurchaseOrders(request, segments, searchParams) {
     }
 
     const supplierIds = Object.keys(bySupplier);
-    const suppliers = await Supplier.find({ _id: { $in: supplierIds }, org_id: ORG_ID }).lean();
+    const suppliers = await Supplier.find({ _id: { $in: supplierIds }, org_id: orgId }).lean();
     const supplierMap = Object.fromEntries(suppliers.map(s => [s._id.toString(), s]));
 
     const createdPOs = [];
     for (const [supplierId, lines] of Object.entries(bySupplier)) {
       const supplier = supplierMap[supplierId];
       const po = await PurchaseOrder.create({
-        org_id: ORG_ID,
+        org_id: orgId,
         po_number: `PO-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         supplier_id: supplierId,
         supplier_name: supplier?.name || 'Unknown',
@@ -360,94 +416,106 @@ async function handlePurchaseOrders(request, segments, searchParams) {
     return NextResponse.json({
       message: `Created ${createdPOs.length} purchase orders`,
       data: createdPOs
-    }, { status: 201, headers: corsHeaders() });
+    }, { status: 201, headers: corsHeaders(request) });
   }
 
   // GET /api/purchase-orders - List POs
   if (method === 'GET' && segments.length === 1) {
     const status = searchParams.get('status');
-    const query = { org_id: ORG_ID };
+    const query = { org_id: orgId };
     if (status) query.status = status;
 
     const pos = await PurchaseOrder.find(query).sort({ created_at: -1 }).lean();
-    return NextResponse.json({ data: pos }, { headers: corsHeaders() });
+    return NextResponse.json({ data: pos }, { headers: corsHeaders(request) });
   }
 
-  return errorResponse('Invalid purchase-orders endpoint', 404);
+  return errorResponse('Invalid purchase-orders endpoint', 404, request);
 }
 
 // ============== MAIN ROUTER ==============
 export async function GET(request) {
   try {
     const { segments, searchParams } = parsePath(request);
+    const { permission, orgScoped } = resolvePermission('GET', segments);
+    const context = await requirePermission(request, permission, { orgScoped });
 
     if (segments.length === 0) {
-      return NextResponse.json({ message: 'Inventory & Replenishment API v1.0' }, { headers: corsHeaders() });
+      return NextResponse.json({ message: 'Inventory & Replenishment API v1.0' }, { headers: corsHeaders(request) });
     }
 
     const resource = segments[0];
 
     switch (resource) {
-      case 'products': return handleProducts(request, segments, searchParams);
-      case 'stores': return handleStores(request, segments);
-      case 'suppliers': return handleSuppliers(request, segments);
-      case 'categories': return handleCategories(request, segments);
-      case 'inventory': return handleInventory(request, segments, searchParams);
-      case 'rules': return handleRules(request, segments);
-      case 'replenishment': return handleReplenishment(request, segments, searchParams);
-      case 'purchase-orders': return handlePurchaseOrders(request, segments, searchParams);
-      default: return errorResponse('Resource not found', 404);
+      case 'products': return handleProducts(request, segments, searchParams, context);
+      case 'stores': return handleStores(request, segments, context);
+      case 'suppliers': return handleSuppliers(request, segments, context);
+      case 'categories': return handleCategories(request, segments, context);
+      case 'inventory': return handleInventory(request, segments, searchParams, context);
+      case 'rules': return handleRules(request, segments, context);
+      case 'replenishment': return handleReplenishment(request, segments, searchParams, context);
+      case 'purchase-orders': return handlePurchaseOrders(request, segments, searchParams, context);
+      default: return errorResponse('Resource not found', 404, request);
     }
   } catch (error) {
     console.error('API Error:', error);
-    return errorResponse(error.message, 500);
+    const status = error.status || 500;
+    return errorResponse(error.message || 'Unexpected error', status, request);
   }
 }
 
 export async function POST(request) {
   try {
     const { segments, searchParams } = parsePath(request);
+    const { permission, orgScoped } = resolvePermission('POST', segments);
+    const context = await requirePermission(request, permission, { orgScoped });
     const resource = segments[0];
 
     switch (resource) {
-      case 'products': return handleProducts(request, segments, searchParams);
-      case 'stores': return handleStores(request, segments);
-      case 'replenishment': return handleReplenishment(request, segments, searchParams);
-      case 'purchase-orders': return handlePurchaseOrders(request, segments, searchParams);
-      default: return errorResponse('Resource not found', 404);
+      case 'products': return handleProducts(request, segments, searchParams, context);
+      case 'stores': return handleStores(request, segments, context);
+      case 'replenishment': return handleReplenishment(request, segments, searchParams, context);
+      case 'purchase-orders': return handlePurchaseOrders(request, segments, searchParams, context);
+      default: return errorResponse('Resource not found', 404, request);
     }
   } catch (error) {
     console.error('API Error:', error);
-    return errorResponse(error.message, 500);
+    const status = error.status || 500;
+    return errorResponse(error.message || 'Unexpected error', status, request);
   }
 }
 
 export async function PUT(request) {
   try {
     const { segments, searchParams } = parsePath(request);
+    const { permission, orgScoped } = resolvePermission('PUT', segments);
+    const context = await requirePermission(request, permission, { orgScoped });
     const resource = segments[0];
 
     switch (resource) {
-      case 'products': return handleProducts(request, segments, searchParams);
-      default: return errorResponse('Resource not found', 404);
+      case 'products': return handleProducts(request, segments, searchParams, context);
+      default: return errorResponse('Resource not found', 404, request);
     }
   } catch (error) {
     console.error('API Error:', error);
-    return errorResponse(error.message, 500);
+    const status = error.status || 500;
+    return errorResponse(error.message || 'Unexpected error', status, request);
   }
 }
 
 export async function DELETE(request) {
   try {
     const { segments, searchParams } = parsePath(request);
+    const { permission, orgScoped } = resolvePermission('DELETE', segments);
+    const context = await requirePermission(request, permission, { orgScoped });
     const resource = segments[0];
 
     switch (resource) {
-      case 'products': return handleProducts(request, segments, searchParams);
-      default: return errorResponse('Resource not found', 404);
+      case 'products': return handleProducts(request, segments, searchParams, context);
+      default: return errorResponse('Resource not found', 404, request);
     }
   } catch (error) {
     console.error('API Error:', error);
-    return errorResponse(error.message, 500);
+    const status = error.status || 500;
+    return errorResponse(error.message || 'Unexpected error', status, request);
   }
 }
