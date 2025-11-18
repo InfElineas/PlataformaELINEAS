@@ -7,11 +7,14 @@ import {
   Warehouse,
   RefreshCw,
   ShoppingCart,
+  UserCircle,
+  FileSpreadsheet
   UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuthSession } from '@/components/providers/AuthSessionProvider';
+import { PERMISSIONS } from '@/lib/auth/permissions';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -19,12 +22,14 @@ const navigation = [
   { name: 'Inventory', href: '/inventory', icon: Warehouse },
   { name: 'Replenishment', href: '/replenishment', icon: RefreshCw },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
+  { name: 'Importaciones', href: '/imports', icon: FileSpreadsheet, permission: PERMISSIONS.IMPORTS_MANAGE },
   { name: 'Perfil', href: '/profile', icon: UserCircle }
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, permissions } = useAuthSession();
   const { user } = useAuthSession();
 
   async function handleSignOut() {
@@ -41,6 +46,9 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
           const Icon = item.icon;
+          if (item.permission && !permissions?.includes(item.permission)) {
+            return null;
+          }
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Button
