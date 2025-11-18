@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   UserCircle,
   FileSpreadsheet
+  UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, permissions } = useAuthSession();
+  const { user } = useAuthSession();
 
   async function handleSignOut() {
     await fetch('/api/auth/logout', { method: 'POST' });

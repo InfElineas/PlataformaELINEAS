@@ -10,6 +10,12 @@ export default async function AppLayout({ children }) {
     redirect('/login');
   }
 
+
+export default async function AppLayout({ children }) {
+  // El middleware ya garantiza que aquí solo entra gente autenticada.
+  // Si por alguna razón no hay sesión, simplemente no rompemos la app.
+  const session = await getSessionFromCookies();
+
   return (
     <AuthSessionProvider initialSession={session}>
       <div className="flex h-screen overflow-hidden">
