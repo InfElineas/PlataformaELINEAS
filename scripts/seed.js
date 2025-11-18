@@ -201,57 +201,225 @@ async function seed() {
   };
 
   // Tu muestra de datos (abreviado a lo esencial para seed de productos)
-  const productData = [
-    { category: 'bebidas-e-infusiones-bebidas-alcoholicas-cervezas', product_code: '8,41133E+12', name: 'Cerveza clásica Mahou (330 ml)', supplier: 'SEL CERVEZAS', unit: 'u' },
-    { category: 'alimentos-conservas-pescado-y-mariscos',            product_code: '8,4311E+12',   name: 'Sardinas enlatadas Olé (125 g / 4.4 oz)', supplier: 'SEL ALIMENTO', unit: 'u' },
-    { category: 'bebidas-e-infusiones-bebidas-sin-alcohol-jugos',    product_code: '8,4311E+12',   name: 'Jugo de mango Santa Isabel (1 L)', supplier: 'SEL JUGOS', unit: 'u' },
-    { category: 'bebidas-e-infusiones-bebidas-sin-alcohol-jugos',    product_code: 'NOFACT98248-2',name: 'Néctar multifrutas Santa Isabel (1 L)', supplier: 'SEL JUGOS', unit: 'u' },
-    { category: 'bebidas-e-infusiones-bebidas-sin-alcohol-jugos',    product_code: 'NOFACT1650142',name: 'Jugo tropical Don Simon (1 L)', supplier: 'SEL JUGOS', unit: 'u' },
-    { category: 'bebidas-e-infusiones-bebidas-sin-alcohol-bebidas-gaseadas', product_code: '8,4311E+12', name: 'Refresco gaseado de cola Santa (330 ml)', supplier: 'SEL BEBIDAS', unit: 'u' },
-    { category: 'bebidas-e-infusiones-bebidas-sin-alcohol-bebidas-gaseadas', product_code: '8,4311E+12', name: 'Refresco gaseado de naranja Santa (330 ml)', supplier: 'SEL BEBIDAS', unit: 'u' },
-    { category: 'bebidas-e-infusiones-bebidas-sin-alcohol-bebidas-gaseadas', product_code: '8,4311E+12', name: 'Refresco gaseado de lima y limón Santa (330 ml)', supplier: 'SEL REFRESCOS', unit: 'u' },
-    { category: 'alimentos-conservas-carnes-y-embutidos',            product_code: '8,41042E+12',  name: 'Fabada asturiana Carretilla (435 g / 15.34 oz)', supplier: 'SEL ALIMENTO', unit: 'u' },
-    { category: 'alimentos-aceites-y-grasas-aceite-vegetal',         product_code: '8,42203E+12',  name: 'Aceite refinado de girasol La Abuela (1 L)', supplier: 'SEL ALIMENTO', unit: 'u' },
-    { category: 'ferreteria-plomeria',                                product_code: '7,45304E+12',  name: 'Latiguillo flexible de 1/2" x 1/2" Griven DMA367-HSB2012', supplier: 'SEL FERRETERIA', unit: 'u' },
-    { category: 'ferreteria-miscelaneas',                             product_code: '7,45304E+12',  name: 'Cinta adhesiva para enmascarar de 2" Covo', supplier: 'SEL FERRETERIA', unit: 'u' },
-    { category: 'hogar-mobiliario-y-accesorios-utiles',               product_code: '7,45301E+12',  name: 'Baterías AAA Speed Energy (4 U)', supplier: 'S ELECTROCUBA6', unit: 'u' },
-    { category: 'hogar-productos-de-limpieza-accesorios-e-implementos', product_code: '7,45301E+12', name: 'Esponja de colores para fregar Matrix (4U)', supplier: 'SEL HOGAR', unit: 'u' },
-    { category: 'otros-productos-electrodomesticos-accesorios-y-otros', product_code: '7,45301E+12', name: 'Protector de voltaje 125 V Troen', supplier: 'SEL FERRETERIA', unit: 'u' },
-  ];
+    const productData = [
+  {
+    category: 'bebidas-e-infusiones-bebidas-alcoholicas-cervezas',
+    idTienda: '80290',
+    product_code: '8,41133E+12',          // Cód. Prod. TKC
+    name: 'Cerveza clásica Mahou (330 ml)',
+    supplier: 'SEL CERVEZAS',
+    unit: 'u',
+    existencia_fisica: 23,
+    reserva: 3,
+    disponible_tienda: 20,
+  },
+  {
+    category: 'alimentos-conservas-pescado-y-mariscos',
+    idTienda: '80291',
+    product_code: '8,4311E+12',
+    name: 'Sardinas enlatadas Olé (125 g / 4.4 oz)',
+    supplier: 'SEL ALIMENTO',
+    unit: 'u',
+    existencia_fisica: 10,
+    reserva: 0,
+    disponible_tienda: 8,
+  },
+  {
+    category: 'bebidas-e-infusiones-bebidas-sin-alcohol-jugos',
+    idTienda: '80292',
+    product_code: '8,4311E+12',
+    name: 'Jugo de mango Santa Isabel (1 L)',
+    supplier: 'SEL JUGOS',
+    unit: 'u',
+    existencia_fisica: 5,
+    reserva: 1,
+    disponible_tienda: 4,
+  },
+  {
+    category: 'bebidas-e-infusiones-bebidas-sin-alcohol-jugos',
+    idTienda: '80293',
+    product_code: 'NOFACT98248-2',
+    name: 'Néctar multifrutas Santa Isabel (1 L)',
+    supplier: 'SEL JUGOS',
+    unit: 'u',
+    existencia_fisica: 0,
+    reserva: 0,
+    disponible_tienda: 0,
+  },
+  {
+    category: 'bebidas-e-infusiones-bebidas-sin-alcohol-jugos',
+    idTienda: '80294',
+    product_code: 'NOFACT1650142',
+    name: 'Jugo tropical Don Simon (1 L)',
+    supplier: 'SEL JUGOS',
+    unit: 'u',
+    existencia_fisica: 12,
+    reserva: 2,
+    disponible_tienda: 10,
+  },
+  {
+    category: 'bebidas-e-infusiones-bebidas-sin-alcohol-bebidas-gaseadas',
+    idTienda: '80295',
+    product_code: '8,4311E+12',
+    name: 'Refresco gaseado de cola Santa (330 ml)',
+    supplier: 'SEL BEBIDAS',
+    unit: 'u',
+    existencia_fisica: 30,
+    reserva: 0,
+    disponible_tienda: 30,
+  },
+  {
+    category: 'bebidas-e-infusiones-bebidas-sin-alcohol-bebidas-gaseadas',
+    idTienda: '80296',
+    product_code: '8,4311E+12',
+    name: 'Refresco gaseado de naranja Santa (330 ml)',
+    supplier: 'SEL BEBIDAS',
+    unit: 'u',
+    existencia_fisica: 18,
+    reserva: 4,
+    disponible_tienda: 14,
+  },
+  {
+    category: 'bebidas-e-infusiones-bebidas-sin-alcohol-bebidas-gaseadas',
+    idTienda: '80297',
+    product_code: '8,4311E+12',
+    name: 'Refresco gaseado de lima y limón Santa (330 ml)',
+    supplier: 'SEL REFRESCOS',
+    unit: 'u',
+    existencia_fisica: 9,
+    reserva: 1,
+    disponible_tienda: 8,
+  },
+  {
+    category: 'alimentos-conservas-carnes-y-embutidos',
+    idTienda: '80298',
+    product_code: '8,41042E+12',
+    name: 'Fabada asturiana Carretilla (435 g / 15.34 oz)',
+    supplier: 'SEL ALIMENTO',
+    unit: 'u',
+    existencia_fisica: 4,
+    reserva: 0,
+    disponible_tienda: 4,
+  },
+  {
+    category: 'alimentos-aceites-y-grasas-aceite-vegetal',
+    idTienda: '80299',
+    product_code: '8,42203E+12',
+    name: 'Aceite refinado de girasol La Abuela (1 L)',
+    supplier: 'SEL ALIMENTO',
+    unit: 'u',
+    existencia_fisica: 20,
+    reserva: 5,
+    disponible_tienda: 15,
+  },
+  {
+    category: 'ferreteria-plomeria',
+    idTienda: '80300',
+    product_code: '7,45304E+12',
+    name: 'Latiguillo flexible de 1/2" x 1/2" Griven DMA367-HSB2012',
+    supplier: 'SEL FERRETERIA',
+    unit: 'u',
+    existencia_fisica: 6,
+    reserva: 0,
+    disponible_tienda: 6,
+  },
+  {
+    category: 'ferreteria-miscelaneas',
+    idTienda: '80301',
+    product_code: '7,45304E+12',
+    name: 'Cinta adhesiva para enmascarar de 2" Covo',
+    supplier: 'SEL FERRETERIA',
+    unit: 'u',
+    existencia_fisica: 15,
+    reserva: 2,
+    disponible_tienda: 13,
+  },
+  {
+    category: 'hogar-mobiliario-y-accesorios-utiles',
+    idTienda: '80302',
+    product_code: '7,45301E+12',
+    name: 'Baterías AAA Speed Energy (4 U)',
+    supplier: 'S ELECTROCUBA6',
+    unit: 'u',
+    existencia_fisica: 0,
+    reserva: 0,
+    disponible_tienda: 0,
+  },
+  {
+    category: 'hogar-productos-de-limpieza-accesorios-e-implementos',
+    idTienda: '80303',
+    product_code: '7,45301E+12',
+    name: 'Esponja de colores para fregar Matrix (4U)',
+    supplier: 'SEL HOGAR',
+    unit: 'u',
+    existencia_fisica: 7,
+    reserva: 1,
+    disponible_tienda: 6,
+  },
+  {
+    category: 'otros-productos-electrodomesticos-accesorios-y-otros',
+    idTienda: '80304',
+    product_code: '7,45301E+12',
+    name: 'Protector de voltaje 125 V Troen',
+    supplier: 'SEL FERRETERIA',
+    unit: 'u',
+    existencia_fisica: 3,
+    reserva: 0,
+    disponible_tienda: 3,
+  },
+];
 
   const createdProducts = [];
-  let productCode = 1000;
+let productCode = 1000;
 
-  for (const prod of productData) {
-    const cat = resolveCategory(String(prod.category).trim());
-    if (!cat) throw new Error(`Categoría no encontrada para "${prod.name}" -> "${prod.category}"`);
+for (const prod of productData) {
+  const cat = resolveCategory(String(prod.category).trim());
+  if (!cat) throw new Error(`Categoría no encontrada para "${prod.name}" -> "${prod.category}"`);
 
-    const sup = resolveSupplier(prod.supplier);
-    if (!sup) throw new Error(`Proveedor no encontrado para "${prod.name}" -> "${prod.supplier}"`);
+  const sup = resolveSupplier(prod.supplier);
+  if (!sup) throw new Error(`Proveedor no encontrado para "${prod.name}" -> "${prod.supplier}"`);
 
-    const uom = (String(prod.unit || 'unit').toLowerCase() === 'u') ? 'unit' : String(prod.unit || 'unit').toLowerCase();
-    const upb = prod.units_per_box ?? guessUPB(cat.slug);
-    const barcode = onlyDigits(prod.product_code) || `${Math.floor(Math.random() * 1e12)}`;
-    const brand = prod.brand || brandFromName(prod.name, sup.name);
+  const uom =
+    (String(prod.unit || 'unit').toLowerCase() === 'u')
+      ? 'unit'
+      : String(prod.unit || 'unit').toLowerCase();
+  const upb = prod.units_per_box ?? guessUPB(cat.slug);
 
-    const doc = await Product.create({
-      org_id: ORG_ID,
-      product_code: `PROD-${productCode++}`,
-      barcode,
-      name: prod.name,
-      brand,
-      uom,
-      units_per_box: upb,
-      category_path: safePath(cat),
-      category_id: cat.slug,
-      supplier_id: sup._id.toString(),
-       supplier_name: sup.name,  
-      status: 'active',
-      mgmt_mode: 'managed',
-    });
-    createdProducts.push(doc);
-  }
+  const tkcCodeRaw = String(prod.product_code || '').trim(); // Cód. Prod. TKC
+  const barcode = onlyDigits(tkcCodeRaw) || `${Math.floor(Math.random() * 1e12)}`;
+  const brand = prod.brand || brandFromName(prod.name, sup.name);
 
+  const doc = await Product.create({
+    org_id: ORG_ID,
+
+    idTienda: prod.idTienda ?? prod.id_tienda ?? '',
+
+    // Código interno de StockFlow
+    product_code: `PROD-${productCode++}`,
+
+    // Código TKC + derivados
+    tkc_code: tkcCodeRaw,
+    barcode,
+    name: prod.name,
+    brand,
+    uom,
+    units_per_box: upb,
+    category_path: safePath(cat),
+    category_id: cat.slug,
+
+    supplier_id: sup._id.toString(),
+    supplier_name: sup.name,
+
+    existencia_fisica: prod.existencia_fisica ?? 0,
+    reserva:           prod.reserva ?? 0,
+    disponible_tienda: prod.disponible_tienda ?? 0,
+
+    status: 'active',
+    mgmt_mode: 'managed',
+  });
+
+  createdProducts.push(doc);
+}
   const allProducts = await Product.find({ org_id: ORG_ID });
 
   // ──────────────────────────────────────────────────────────────────────────────

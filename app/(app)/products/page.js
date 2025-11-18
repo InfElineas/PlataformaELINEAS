@@ -62,12 +62,12 @@ function getCategoriaOnline(p) {
 }
 
 function getIdTienda(p) {
-  return p.idTienda ?? p.store_code ?? p.store_id ?? '';
+  return p.idTienda ?? '';
 }
 
 function getCodProducto(p) {
-  // Ajusta: si el código de TKC va en otro campo
-  return p.product_code ?? p.barcode ?? '';
+  // Primero el código TKC, si no, el interno
+  return p.tkc_code ?? p.product_code ?? p.barcode ?? '';
 }
 
 function getSuministrador(p) {
@@ -75,13 +75,12 @@ function getSuministrador(p) {
 }
 
 function getEF(p) {
-  // Existencia física
   return toNumber(
     p.existencia_fisica ??
-      p.exist_fisica ??
-      p.physical_stock ??
-      p.stock ??
-      0
+    p.exist_fisica ??
+    p.physical_stock ??
+    p.stock ??
+    0
   );
 }
 
@@ -90,13 +89,12 @@ function getReserva(p) {
 }
 
 function getDisponibleTienda(p) {
-  // Disponibilidad en tienda
   return toNumber(
     p.disponible_tienda ??
-      p.disponible ??
-      p.available_store ??
-      p.available ??
-      0
+    p.disponible ??
+    p.available_store ??
+    p.available ??
+    0
   );
 }
 
