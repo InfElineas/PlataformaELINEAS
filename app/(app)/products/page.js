@@ -1,20 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-
-// ===== Helpers genéricos =====
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 function fmt(val) {
   if (val === null || val === undefined || val === '') return '—';
@@ -51,9 +42,6 @@ function toNumber(raw, fallback = 0) {
   return Number.isNaN(n) ? fallback : n;
 }
 
-// ===== Mapear campos del modelo a los conceptos de negocio =====
-// OJO: si tus nombres reales son otros, solo ajusta aquí.
-
 function getCategoriaOnline(p) {
   if (Array.isArray(p.category_path) && p.category_path.length > 0) {
     return p.category_path.join(' - ');
@@ -66,7 +54,6 @@ function getIdTienda(p) {
 }
 
 function getCodProducto(p) {
-  // Primero el código TKC, si no, el interno
   return p.tkc_code ?? p.product_code ?? p.barcode ?? '';
 }
 
@@ -77,10 +64,10 @@ function getSuministrador(p) {
 function getEF(p) {
   return toNumber(
     p.existencia_fisica ??
-    p.exist_fisica ??
-    p.physical_stock ??
-    p.stock ??
-    0
+      p.exist_fisica ??
+      p.physical_stock ??
+      p.stock ??
+      0,
   );
 }
 
@@ -91,10 +78,10 @@ function getReserva(p) {
 function getDisponibleTienda(p) {
   return toNumber(
     p.disponible_tienda ??
-    p.disponible ??
-    p.available_store ??
-    p.available ??
-    0
+      p.disponible ??
+      p.available_store ??
+      p.available ??
+      0,
   );
 }
 
@@ -106,85 +93,64 @@ function getNoAlmacen(p) {
   return p.no_almacen ?? p.warehouse_code ?? p.store_warehouse ?? '';
 }
 
-// ===== Lógica de estados =====
-
-// Estado de anuncio (TKC / front)
 function getEstadoAnuncio(p) {
   const EF = getEF(p);
   const ID = getCodProducto(p);
-  const status = p.status || ''; // por ejemplo: 'active', 'inactive', 'dead'
+  const status = p.status || '';
 
-  // Sin ID
   if (!ID || ID === '') {
     return EF === 0 ? 'SIN ID EF = 0' : 'SIN ID EF > 0';
   }
 
-  // Activo
   if (status === 'active') {
     return 'ACTIVADO';
   }
 
-  // Muerto
   if (status === 'dead' || status === 'muerto') {
     return EF === 0 ? 'DESACTIVADO MUERTO EF = 0' : 'DESACTIVADO MUERTO EF > 0';
   }
 
-  // Resto de desactivados
   return EF === 0 ? 'DESACTIVADO EF = 0' : 'DESACTIVADO EF > 0';
 }
 
-// Estado en tienda (condiciones con EF, T, A, ID)
 function getEstadoTienda(p) {
   const ID = getCodProducto(p);
   const EF = getEF(p);
-  const A = getReserva(p);          // Reserva
-  const T = getDisponibleTienda(p); // Disponibilidad en tienda
+  const A = getReserva(p);
+  const T = getDisponibleTienda(p);
 
-  // SIN ID
   if (!ID || ID === '') {
-    return EF === 0
-      ? 'SIN ID (ID = "" y EF = 0)'
-      : 'SIN ID (ID = "" y EF > 0)';
+    return EF === 0 ? 'SIN ID (ID = "" y EF = 0)' : 'SIN ID (ID = "" y EF > 0)';
   }
 
-  // AGOTADO
   if (EF === 0) {
     return 'AGOTADO (ID ≠ "" y EF = 0)';
   }
 
-  // SIN RESERVA
   if (A === 0 && T > 6) {
     return 'SIN RESERVA (A = 0 y T > 6)';
   }
 
-  // NO TIENDA
   if (T === 0) {
-    return EF > 10
-      ? 'NO TIENDA (T = 0 y EF > 10)'
-      : 'NO TIENDA (T = 0 y EF ≤ 10)';
+    return EF > 10 ? 'NO TIENDA (T = 0 y EF > 10)' : 'NO TIENDA (T = 0 y EF ≤ 10)';
   }
 
-  // ULTIMAS PIEZAS (1 < T < A ≤ 10)
   if (T > 1 && T < A && A <= 10) {
     return 'ULTIMAS PIEZAS (1 < T < A ≤ 10)';
   }
 
-  // ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)
   if (A >= 0 && A < T && T <= 10) {
     return 'ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)';
   }
 
-  // PROXIMO (T ≤ 10)
   if (T <= 10) {
     return 'PROXIMO (T ≤ 10)';
   }
 
-  // DISPONIBLE (T ≤ A)
   if (T <= A) {
     return 'DISPONIBLE (T ≤ A)';
   }
 
-  // DISPONIBLE (A < T)
   return 'DISPONIBLE (A < T)';
 }
 
@@ -203,15 +169,13 @@ function getBadgeVariantTienda(label) {
   return 'destructive';
 }
 
-// ===== Página de Productos =====
-
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const id = setTimeout(() => loadProducts(search), 250); // debounce
+    const id = setTimeout(() => loadProducts(search), 300);
     return () => clearTimeout(id);
   }, [search]);
 
@@ -242,7 +206,7 @@ export default function ProductsPage() {
 
   const resultsLabel = useMemo(
     () => (loading ? 'Cargando…' : `${products.length} resultado(s)`),
-    [loading, products.length]
+    [loading, products.length],
   );
 
   return (
@@ -273,22 +237,16 @@ export default function ProductsPage() {
                   className="pl-10"
                 />
               </div>
-              <span className="text-sm text-muted-foreground">
-                {resultsLabel}
-              </span>
+              <span className="text-sm text-muted-foreground">{resultsLabel}</span>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="overflow-x-auto">
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">
-              Cargando productos…
-            </div>
+            <div className="py-8 text-center text-muted-foreground">Cargando productos…</div>
           ) : products.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              No se encontraron productos.
-            </div>
+            <div className="py-8 text-center text-muted-foreground">No se encontraron productos.</div>
           ) : (
             <Table className="min-w-[1400px]">
               <TableHeader>
@@ -329,48 +287,24 @@ export default function ProductsPage() {
 
                   return (
                     <TableRow key={p._id}>
-                      <TableCell className="text-sm">
-                        {fmt(categoriaOnline)}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {fmt(idTienda)}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {fmt(codProducto)}
-                      </TableCell>
-                      <TableCell className="text-sm font-medium">
-                        {fmt(p.name)}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {fmt(suministrador)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number.isNaN(EF) ? '—' : EF}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number.isNaN(A) ? '—' : A}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number.isNaN(T) ? '—' : T}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {fmtMoney(precioCosto)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {fmt(noAlmacen)}
-                      </TableCell>
+                      <TableCell className="text-sm">{fmt(categoriaOnline)}</TableCell>
+                      <TableCell className="font-mono text-xs">{fmt(idTienda)}</TableCell>
+                      <TableCell className="font-mono text-xs">{fmt(codProducto)}</TableCell>
+                      <TableCell className="text-sm font-medium">{fmt(p.name)}</TableCell>
+                      <TableCell className="text-sm">{fmt(suministrador)}</TableCell>
+                      <TableCell className="text-right">{Number.isNaN(EF) ? '—' : EF}</TableCell>
+                      <TableCell className="text-right">{Number.isNaN(A) ? '—' : A}</TableCell>
+                      <TableCell className="text-right">{Number.isNaN(T) ? '—' : T}</TableCell>
+                      <TableCell className="text-right">{fmtMoney(precioCosto)}</TableCell>
+                      <TableCell className="text-right">{fmt(noAlmacen)}</TableCell>
                       <TableCell>
                         <Badge variant={anuncioVariant}>{estadoAnuncio}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={tiendaVariant}>{estadoTienda}</Badge>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">
-                        {fmtDate(p.created_at)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">
-                        {fmtDate(p.updated_at)}
-                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{fmtDate(p.created_at)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{fmtDate(p.updated_at)}</TableCell>
                     </TableRow>
                   );
                 })}
