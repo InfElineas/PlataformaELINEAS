@@ -1,45 +1,65 @@
 import { NextResponse } from 'next/server';
-import { verifySessionToken, SESSION_COOKIE } from '@/lib/auth/session';
 
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/healthz'];
-const PUBLIC_API_PATHS = ['/api/auth/login', '/api/auth/logout', '/api/auth/session', '/api/healthz'];
+const SESSION_COOKIE = 'sf_session';
+const HOME_PATH = '/';
 
-export function middleware(request) {
-  const { pathname } = request.nextUrl;
+/**
+ * @param {import('next/server').NextRequest} req
+ */
+export function middleware(req) {
+  const { pathname, searchParams } = req.nextUrl;
+  const isAuth = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
 
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/assets') ||
-    pathname.startsWith('/.well-known')
-  ) {
+  const isLogin = pathname === '/login';
+  const isApi   = pathname.startsWith('/api');
+  const isStatic =
+    pathname.startsWith('/_next') || pathname === '/favicon.ico';
+
+  // 0) Nunca tocamos estáticos
+  if (isStatic) {
     return NextResponse.next();
   }
 
-  if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
-    return NextResponse.next();
-  }
+  // 1) Rutas de login
+  if (isLogin) {
+    // Si YA está autenticado y entra a /login → mandarlo al HOME_PATH o al "next"
+    if (isAuth) {
+      const nextParam = searchParams.get('next');
+      const target =
+        nextParam && nextParam !== '/login' ? nextParam : HOME_PATH;
 
-  if (PUBLIC_API_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
-    return NextResponse.next();
-  }
-
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const session = verifySessionToken(token);
-
-  if (!session) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const url = req.nextUrl.clone();
+      url.pathname = target;
+      url.search = '';
+      return NextResponse.redirect(url);
     }
 
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('next', pathname);
-    return NextResponse.redirect(loginUrl);
+    // No autenticado → dejar ver /login sin tocar nada
+    return NextResponse.next();
   }
 
+  // 2) API de auth (login/logout) u otras API → las dejamos pasar
+  if (isApi) {
+    return NextResponse.next();
+  }
+
+  // 3) Rutas protegidas (todo lo demás)
+  if (!isAuth) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+
+    url.search = '';
+    const nextPath = pathname === '/' ? HOME_PATH : pathname;
+    url.searchParams.set('next', nextPath);
+
+    return NextResponse.redirect(url);
+  }
+
+  // 4) Autenticado en ruta protegida → continuar
   return NextResponse.next();
 }
 
+// Matcher genérico, el filtro real lo hacemos dentro
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
