@@ -27,7 +27,8 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuthSession();
+  const { user, permissions } = useAuthSession();
+  
 
   async function handleSignOut() {
     await fetch('/api/auth/logout', { method: 'POST' });

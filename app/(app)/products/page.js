@@ -1,11 +1,35 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Settings2 } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+
+/* ================= Helpers ================= */
 
 function fmt(val) {
   if (val === null || val === undefined || val === '') return '—';
@@ -42,6 +66,8 @@ function toNumber(raw, fallback = 0) {
   return Number.isNaN(n) ? fallback : n;
 }
 
+/* ===== Map de campos según tu modelo actual (ajustables) ===== */
+
 function getCategoriaOnline(p) {
   if (Array.isArray(p.category_path) && p.category_path.length > 0) {
     return p.category_path.join(' - ');
@@ -58,7 +84,13 @@ function getCodProducto(p) {
 }
 
 function getSuministrador(p) {
-  return p.supplier_name ?? p.provider_name ?? p.provider_id ?? p.supplier_id ?? '';
+  return (
+    p.supplier_name ??
+    p.provider_name ??
+    p.provider_id ??
+    p.supplier_id ??
+    ''
+  );
 }
 
 function getEF(p) {
@@ -67,7 +99,7 @@ function getEF(p) {
       p.exist_fisica ??
       p.physical_stock ??
       p.stock ??
-      0,
+      0
   );
 }
 
@@ -81,7 +113,7 @@ function getDisponibleTienda(p) {
       p.disponible ??
       p.available_store ??
       p.available ??
-      0,
+      0
   );
 }
 
@@ -93,12 +125,22 @@ function getNoAlmacen(p) {
   return p.no_almacen ?? p.warehouse_code ?? p.store_warehouse ?? '';
 }
 
+function getMarca(p) {
+  return p.brand ?? '';
+}
+
+function getActivado(p) {
+  return (p.status ?? '') === 'active';
+}
+
+/* ===== Estados derivados para badges ===== */
+
 function getEstadoAnuncio(p) {
   const EF = getEF(p);
   const ID = getCodProducto(p);
   const status = p.status || '';
 
-  if (!ID || ID === '') {
+  if (!ID) {
     return EF === 0 ? 'SIN ID EF = 0' : 'SIN ID EF > 0';
   }
 
@@ -107,7 +149,9 @@ function getEstadoAnuncio(p) {
   }
 
   if (status === 'dead' || status === 'muerto') {
-    return EF === 0 ? 'DESACTIVADO MUERTO EF = 0' : 'DESACTIVADO MUERTO EF > 0';
+    return EF === 0
+      ? 'DESACTIVADO MUERTO EF = 0'
+      : 'DESACTIVADO MUERTO EF > 0';
   }
 
   return EF === 0 ? 'DESACTIVADO EF = 0' : 'DESACTIVADO EF > 0';
@@ -119,8 +163,10 @@ function getEstadoTienda(p) {
   const A = getReserva(p);
   const T = getDisponibleTienda(p);
 
-  if (!ID || ID === '') {
-    return EF === 0 ? 'SIN ID (ID = "" y EF = 0)' : 'SIN ID (ID = "" y EF > 0)';
+  if (!ID) {
+    return EF === 0
+      ? 'SIN ID (ID = "" y EF = 0)'
+      : 'SIN ID (ID = "" y EF > 0)';
   }
 
   if (EF === 0) {
@@ -132,7 +178,9 @@ function getEstadoTienda(p) {
   }
 
   if (T === 0) {
-    return EF > 10 ? 'NO TIENDA (T = 0 y EF > 10)' : 'NO TIENDA (T = 0 y EF ≤ 10)';
+    return EF > 10
+      ? 'NO TIENDA (T = 0 y EF > 10)'
+      : 'NO TIENDA (T = 0 y EF ≤ 10)';
   }
 
   if (T > 1 && T < A && A <= 10) {
@@ -154,14 +202,14 @@ function getEstadoTienda(p) {
   return 'DISPONIBLE (A < T)';
 }
 
-function getBadgeVariantAnuncio(label) {
+function badgeVariantAnuncio(label) {
   if (label.startsWith('ACTIVADO')) return 'default';
   if (label.startsWith('SIN ID')) return 'secondary';
   if (label.startsWith('DESACTIVADO')) return 'destructive';
   return 'outline';
 }
 
-function getBadgeVariantTienda(label) {
+function badgeVariantTienda(label) {
   if (label.startsWith('DISPONIBLE')) return 'default';
   if (label.startsWith('PROXIMO') || label.startsWith('ULTIMAS PIEZAS')) {
     return 'secondary';
@@ -169,13 +217,55 @@ function getBadgeVariantTienda(label) {
   return 'destructive';
 }
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+/* ================= Página ================= */
 
+const ALL = '__ALL__';
+
+export default function ProductsPage() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  // Filtros PENDIENTES (selección del usuario)
+  const [pExistencia, setPExistencia] = useState(ALL);
+  const [pAlmacen, setPAlmacen] = useState(ALL);
+  const [pSuministrador, setPSuministrador] = useState(ALL);
+  const [pCategoria, setPCategoria] = useState(ALL);
+  const [pMarca, setPMarca] = useState(ALL);
+  const [pHabilitado, setPHabilitado] = useState(ALL);
+  const [pActivado, setPActivado] = useState(ALL);
+
+  // Filtros APLICADOS
+  const [aExistencia, setAExistencia] = useState(ALL);
+  const [aAlmacen, setAAlmacen] = useState(ALL);
+  const [aSuministrador, setASuministrador] = useState(ALL);
+  const [aCategoria, setACategoria] = useState(ALL);
+  const [aMarca, setAMarca] = useState(ALL);
+  const [aHabilitado, setAHabilitado] = useState(ALL);
+  const [aActivado, setAActivado] = useState(ALL);
+
+  // Columnas visibles
+  const [cols, setCols] = useState({
+    categoria: true,
+    idTienda: true,
+    codProducto: true,
+    nombre: true,
+    suministrador: true,
+    exist: true,
+    reserva: true,
+    dispTienda: true,
+    precioCosto: true,
+    noAlmacen: true,
+    estadoAnuncio: true,
+    estadoTienda: true,
+    creado: true,
+    actualizado: true,
+    marca: false,
+  });
+
+  // Carga de datos (debounce por búsqueda)
   useEffect(() => {
-    const id = setTimeout(() => loadProducts(search), 300);
+    const id = setTimeout(() => loadProducts(search), 250);
     return () => clearTimeout(id);
   }, [search]);
 
@@ -189,25 +279,143 @@ export default function ProductsPage() {
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: 'no-store',
       });
-
-      if (!res.ok) {
-        throw new Error(`Error ${res.status}`);
-      }
-
+      if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
-      setProducts(Array.isArray(data.data) ? data.data : []);
+      setRows(Array.isArray(data.data) ? data.data : []);
     } catch (e) {
       console.error('Load products failed', e);
-      setProducts([]);
+      setRows([]);
     } finally {
       setLoading(false);
     }
   }
 
+  // Opciones de filtros derivadas de los datos actuales
+  const opciones = useMemo(() => {
+    const almacenes = new Set();
+    const sumin = new Set();
+    const categorias = new Set();
+    const marcas = new Set();
+
+    rows.forEach((p) => {
+      const nal = String(getNoAlmacen(p) || '').trim();
+      if (nal) almacenes.add(nal);
+
+      const sup = String(getSuministrador(p) || '').trim();
+      if (sup) sumin.add(sup);
+
+      const cat = String(getCategoriaOnline(p) || '').trim();
+      if (cat) categorias.add(cat);
+
+      const m = String(getMarca(p) || '').trim();
+      if (m) marcas.add(m);
+    });
+
+    const toArr = (s) => Array.from(s).sort((a, b) => a.localeCompare(b, 'es'));
+
+    return {
+      almacenes: toArr(almacenes),
+      suministradores: toArr(sumin),
+      categorias: toArr(categorias),
+      marcas: toArr(marcas),
+    };
+  }, [rows]);
+
+  // Aplicar y limpiar filtros (mover PENDIENTES → APLICADOS)
+  function aplicarFiltros() {
+    setAExistencia(pExistencia);
+    setAAlmacen(pAlmacen);
+    setASuministrador(pSuministrador);
+    setACategoria(pCategoria);
+    setAMarca(pMarca);
+    setAHabilitado(pHabilitado);
+    setAActivado(pActivado);
+  }
+
+  function resetFiltros() {
+    setPExistencia(ALL);
+    setPAlmacen(ALL);
+    setPSuministrador(ALL);
+    setPCategoria(ALL);
+    setPMarca(ALL);
+    setPHabilitado(ALL);
+    setPActivado(ALL);
+
+    setAExistencia(ALL);
+    setAAlmacen(ALL);
+    setASuministrador(ALL);
+    setACategoria(ALL);
+    setAMarca(ALL);
+    setAHabilitado(ALL);
+    setAActivado(ALL);
+  }
+
+  // Filtrado client-side usando filtros APLICADOS
+  const filtered = useMemo(() => {
+    return rows.filter((p) => {
+      const term = search.trim().toLowerCase();
+
+      const haySearch =
+        term.length === 0
+          ? true
+          : fmt(getCodProducto(p)).toLowerCase().includes(term) ||
+            fmt(p.name).toLowerCase().includes(term) ||
+            fmt(p.barcode).toLowerCase().includes(term);
+
+      if (!haySearch) return false;
+
+      const EF = getEF(p);
+      const T = getDisponibleTienda(p);
+      const nal = String(getNoAlmacen(p) || '');
+      const sup = String(getSuministrador(p) || '');
+      const cat = String(getCategoriaOnline(p) || '');
+      const marca = String(getMarca(p) || '');
+      const activado = getActivado(p);
+      const habilitado = T > 0;
+
+      if (aExistencia !== ALL) {
+        if (aExistencia === 'con' && !(EF > 0)) return false;
+        if (aExistencia === 'sin' && !(EF === 0)) return false;
+      }
+
+      if (aAlmacen !== ALL && nal !== aAlmacen) return false;
+      if (aSuministrador !== ALL && sup !== aSuministrador) return false;
+      if (aCategoria !== ALL && cat !== aCategoria) return false;
+      if (aMarca !== ALL && marca !== aMarca) return false;
+
+      if (aHabilitado !== ALL) {
+        if (aHabilitado === 'si' && !habilitado) return false;
+        if (aHabilitado === 'no' && habilitado) return false;
+      }
+
+      if (aActivado !== ALL) {
+        if (aActivado === 'si' && !activado) return false;
+        if (aActivado === 'no' && activado) return false;
+      }
+
+      return true;
+    });
+  }, [
+    rows,
+    search,
+    aExistencia,
+    aAlmacen,
+    aSuministrador,
+    aCategoria,
+    aMarca,
+    aHabilitado,
+    aActivado,
+  ]);
+
   const resultsLabel = useMemo(
-    () => (loading ? 'Cargando…' : `${products.length} resultado(s)`),
-    [loading, products.length],
+    () => (loading ? 'Cargando…' : `${filtered.length} resultado(s)`),
+    [loading, filtered.length]
   );
+
+  // Helper para columnas visibles
+  const setCol = (k, v) => setCols((c) => ({ ...c, [k]: v }));
+
+  /* ================= Render ================= */
 
   return (
     <div className="p-8">
@@ -220,55 +428,345 @@ export default function ProductsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Listado de productos</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Busca por nombre, código o código de barras.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar productos..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle>Listado de productos</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Busca por nombre, código o código de barras.
+                </p>
               </div>
-              <span className="text-sm text-muted-foreground">{resultsLabel}</span>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar productos..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Columnas visibles */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Settings2 className="h-4 w-4" />
+                      Columnas visibles
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="max-h-80 overflow-auto"
+                  >
+                    <DropdownMenuCheckboxItem
+                      checked={cols.categoria}
+                      onCheckedChange={(v) => setCol('categoria', !!v)}
+                    >
+                      Categoría Online
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.idTienda}
+                      onCheckedChange={(v) => setCol('idTienda', !!v)}
+                    >
+                      Id Tienda
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.codProducto}
+                      onCheckedChange={(v) => setCol('codProducto', !!v)}
+                    >
+                      Cod. Producto
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.nombre}
+                      onCheckedChange={(v) => setCol('nombre', !!v)}
+                    >
+                      Nombre
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.marca}
+                      onCheckedChange={(v) => setCol('marca', !!v)}
+                    >
+                      Marca
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.suministrador}
+                      onCheckedChange={(v) => setCol('suministrador', !!v)}
+                    >
+                      Suministrador
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.exist}
+                      onCheckedChange={(v) => setCol('exist', !!v)}
+                    >
+                      Existencia Física
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.reserva}
+                      onCheckedChange={(v) => setCol('reserva', !!v)}
+                    >
+                      Reserva
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.dispTienda}
+                      onCheckedChange={(v) => setCol('dispTienda', !!v)}
+                    >
+                      Disp. Tienda
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.precioCosto}
+                      onCheckedChange={(v) => setCol('precioCosto', !!v)}
+                    >
+                      Precio Costo
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.noAlmacen}
+                      onCheckedChange={(v) => setCol('noAlmacen', !!v)}
+                    >
+                      No. Almacén
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.estadoAnuncio}
+                      onCheckedChange={(v) => setCol('estadoAnuncio', !!v)}
+                    >
+                      Estado de Anuncio
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.estadoTienda}
+                      onCheckedChange={(v) => setCol('estadoTienda', !!v)}
+                    >
+                      Estado en tienda
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.creado}
+                      onCheckedChange={(v) => setCol('creado', !!v)}
+                    >
+                      Creado
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={cols.actualizado}
+                      onCheckedChange={(v) => setCol('actualizado', !!v)}
+                    >
+                      Actualizado
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <span className="text-sm text-muted-foreground">
+                  {resultsLabel}
+                </span>
+              </div>
+            </div>
+
+            {/* Filtros */}
+            <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-7">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Existencia
+                </span>
+                <Select value={pExistencia} onValueChange={setPExistencia}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Existencia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>(Todas)</SelectItem>
+                    <SelectItem value="con">Con existencia (&gt; 0)</SelectItem>
+                    <SelectItem value="sin">Sin existencia (= 0)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Almacén</span>
+                <Select value={pAlmacen} onValueChange={setPAlmacen}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Almacén" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 overflow-auto">
+                    <SelectItem value={ALL}>(Todos)</SelectItem>
+                    {opciones.almacenes.map((a) => (
+                      <SelectItem key={a} value={a}>
+                        {a}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Suministrador
+                </span>
+                <Select
+                  value={pSuministrador}
+                  onValueChange={setPSuministrador}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Suministrador" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 overflow-auto">
+                    <SelectItem value={ALL}>(Todos)</SelectItem>
+                    {opciones.suministradores.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Categoría Online
+                </span>
+                <Select value={pCategoria} onValueChange={setPCategoria}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Categoría Online" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 overflow-auto">
+                    <SelectItem value={ALL}>(Todas)</SelectItem>
+                    {opciones.categorias.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Marca</span>
+                <Select value={pMarca} onValueChange={setPMarca}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Marca" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 overflow-auto">
+                    <SelectItem value={ALL}>(Todas)</SelectItem>
+                    {opciones.marcas.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Habilitado
+                </span>
+                <Select value={pHabilitado} onValueChange={setPHabilitado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Habilitado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>(Todos)</SelectItem>
+                    <SelectItem value="si">Sí</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Activado
+                </span>
+                <Select value={pActivado} onValueChange={setPActivado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Activado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>(Todos)</SelectItem>
+                    <SelectItem value="si">Sí</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Botones filtros */}
+            <div className="flex items-center gap-3">
+              <Button onClick={aplicarFiltros} className="gap-2">
+                Aplicar filtros
+              </Button>
+              <Button variant="outline" onClick={resetFiltros}>
+                Limpiar filtros
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                (Los selectores se aplican al presionar “Aplicar filtros”)
+              </span>
+            </div>
+
+            {/* Chips filtros aplicados */}
+            <div className="flex flex-wrap gap-2">
+              {aExistencia !== ALL && (
+                <Badge variant="secondary">
+                  Existencia: {aExistencia === 'con' ? 'Con' : 'Sin'}
+                </Badge>
+              )}
+              {aAlmacen !== ALL && (
+                <Badge variant="secondary">Almacén: {aAlmacen}</Badge>
+              )}
+              {aSuministrador !== ALL && (
+                <Badge variant="secondary">
+                  Suministrador: {aSuministrador}
+                </Badge>
+              )}
+              {aCategoria !== ALL && (
+                <Badge variant="secondary">Categoría: {aCategoria}</Badge>
+              )}
+              {aMarca !== ALL && (
+                <Badge variant="secondary">Marca: {aMarca}</Badge>
+              )}
+              {aHabilitado !== ALL && (
+                <Badge variant="secondary">Habilitado: {aHabilitado}</Badge>
+              )}
+              {aActivado !== ALL && (
+                <Badge variant="secondary">Activado: {aActivado}</Badge>
+              )}
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="overflow-x-auto">
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">Cargando productos…</div>
-          ) : products.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">No se encontraron productos.</div>
+            <div className="py-8 text-center text-muted-foreground">
+              Cargando productos…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              No se encontraron productos.
+            </div>
           ) : (
             <Table className="min-w-[1400px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Categoría Online</TableHead>
-                  <TableHead>Id Tienda</TableHead>
-                  <TableHead>Cod. Producto</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Suministrador</TableHead>
-                  <TableHead>Existencia Física (EF)</TableHead>
-                  <TableHead>Reserva (A)</TableHead>
-                  <TableHead>Disp. Tienda (T)</TableHead>
-                  <TableHead>Precio Costo</TableHead>
-                  <TableHead>No. Almacén</TableHead>
-                  <TableHead>Estado de Anuncio</TableHead>
-                  <TableHead>Estado en tienda</TableHead>
-                  <TableHead>Creado</TableHead>
-                  <TableHead>Actualizado</TableHead>
+                  {cols.categoria && <TableHead>Categoría Online</TableHead>}
+                  {cols.idTienda && <TableHead>Id Tienda</TableHead>}
+                  {cols.codProducto && <TableHead>Cod. Producto</TableHead>}
+                  {cols.nombre && <TableHead>Nombre</TableHead>}
+                  {cols.marca && <TableHead>Marca</TableHead>}
+                  {cols.suministrador && <TableHead>Suministrador</TableHead>}
+                  {cols.exist && (
+                    <TableHead>Existencia Física (EF)</TableHead>
+                  )}
+                  {cols.reserva && <TableHead>Reserva (A)</TableHead>}
+                  {cols.dispTienda && <TableHead>Disp. Tienda (T)</TableHead>}
+                  {cols.precioCosto && <TableHead>Precio Costo</TableHead>}
+                  {cols.noAlmacen && <TableHead>No. Almacén</TableHead>}
+                  {cols.estadoAnuncio && (
+                    <TableHead>Estado de Anuncio</TableHead>
+                  )}
+                  {cols.estadoTienda && (
+                    <TableHead>Estado en tienda</TableHead>
+                  )}
+                  {cols.creado && <TableHead>Creado</TableHead>}
+                  {cols.actualizado && <TableHead>Actualizado</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((p) => {
+                {filtered.map((p) => {
                   const categoriaOnline = getCategoriaOnline(p);
                   const idTienda = getIdTienda(p);
                   const codProducto = getCodProducto(p);
@@ -278,33 +776,93 @@ export default function ProductsPage() {
                   const T = getDisponibleTienda(p);
                   const precioCosto = getPrecioCosto(p);
                   const noAlmacen = getNoAlmacen(p);
-
+                  const marca = getMarca(p);
                   const estadoAnuncio = getEstadoAnuncio(p);
                   const estadoTienda = getEstadoTienda(p);
-
-                  const anuncioVariant = getBadgeVariantAnuncio(estadoAnuncio);
-                  const tiendaVariant = getBadgeVariantTienda(estadoTienda);
+                  const anuncioVariant = badgeVariantAnuncio(estadoAnuncio);
+                  const tiendaVariant = badgeVariantTienda(estadoTienda);
 
                   return (
                     <TableRow key={p._id}>
-                      <TableCell className="text-sm">{fmt(categoriaOnline)}</TableCell>
-                      <TableCell className="font-mono text-xs">{fmt(idTienda)}</TableCell>
-                      <TableCell className="font-mono text-xs">{fmt(codProducto)}</TableCell>
-                      <TableCell className="text-sm font-medium">{fmt(p.name)}</TableCell>
-                      <TableCell className="text-sm">{fmt(suministrador)}</TableCell>
-                      <TableCell className="text-right">{Number.isNaN(EF) ? '—' : EF}</TableCell>
-                      <TableCell className="text-right">{Number.isNaN(A) ? '—' : A}</TableCell>
-                      <TableCell className="text-right">{Number.isNaN(T) ? '—' : T}</TableCell>
-                      <TableCell className="text-right">{fmtMoney(precioCosto)}</TableCell>
-                      <TableCell className="text-right">{fmt(noAlmacen)}</TableCell>
-                      <TableCell>
-                        <Badge variant={anuncioVariant}>{estadoAnuncio}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={tiendaVariant}>{estadoTienda}</Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">{fmtDate(p.created_at)}</TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">{fmtDate(p.updated_at)}</TableCell>
+                      {cols.categoria && (
+                        <TableCell className="text-sm">
+                          {fmt(categoriaOnline)}
+                        </TableCell>
+                      )}
+                      {cols.idTienda && (
+                        <TableCell className="font-mono text-xs">
+                          {fmt(idTienda)}
+                        </TableCell>
+                      )}
+                      {cols.codProducto && (
+                        <TableCell className="font-mono text-xs">
+                          {fmt(codProducto)}
+                        </TableCell>
+                      )}
+                      {cols.nombre && (
+                        <TableCell className="text-sm font-medium">
+                          {fmt(p.name)}
+                        </TableCell>
+                      )}
+                      {cols.marca && (
+                        <TableCell className="text-sm">
+                          {fmt(marca)}
+                        </TableCell>
+                      )}
+                      {cols.suministrador && (
+                        <TableCell className="text-sm">
+                          {fmt(suministrador)}
+                        </TableCell>
+                      )}
+                      {cols.exist && (
+                        <TableCell className="text-right">
+                          {Number.isNaN(EF) ? '—' : EF}
+                        </TableCell>
+                      )}
+                      {cols.reserva && (
+                        <TableCell className="text-right">
+                          {Number.isNaN(A) ? '—' : A}
+                        </TableCell>
+                      )}
+                      {cols.dispTienda && (
+                        <TableCell className="text-right">
+                          {Number.isNaN(T) ? '—' : T}
+                        </TableCell>
+                      )}
+                      {cols.precioCosto && (
+                        <TableCell className="text-right">
+                          {fmtMoney(precioCosto)}
+                        </TableCell>
+                      )}
+                      {cols.noAlmacen && (
+                        <TableCell className="text-right">
+                          {fmt(noAlmacen)}
+                        </TableCell>
+                      )}
+                      {cols.estadoAnuncio && (
+                        <TableCell>
+                          <Badge variant={anuncioVariant}>
+                            {estadoAnuncio}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {cols.estadoTienda && (
+                        <TableCell>
+                          <Badge variant={tiendaVariant}>
+                            {estadoTienda}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {cols.creado && (
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {fmtDate(p.created_at)}
+                        </TableCell>
+                      )}
+                      {cols.actualizado && (
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {fmtDate(p.updated_at)}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
