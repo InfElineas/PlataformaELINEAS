@@ -15,6 +15,10 @@ const SUPERADMIN_EMAIL = process.env.DEFAULT_SUPERADMIN_EMAIL || 'superadmin@exa
 const SUPERADMIN_PASSWORD = process.env.DEFAULT_SUPERADMIN_PASSWORD || 'ChangeMeNow!2025';
 const SUPERADMIN_NAME = process.env.DEFAULT_SUPERADMIN_NAME || 'Super Admin';
 const SUPERADMIN_USERNAME = process.env.DEFAULT_SUPERADMIN_USERNAME || 'superadmin';
+const IMPORT_TEST_EMAIL = process.env.IMPORT_TEST_EMAIL || 'imports_tester@example.com';
+const IMPORT_TEST_PASSWORD = process.env.IMPORT_TEST_PASSWORD || 'ImportameEsto!2025';
+const IMPORT_TEST_NAME = process.env.IMPORT_TEST_NAME || 'Tester Importaciones';
+const IMPORT_TEST_USERNAME = process.env.IMPORT_TEST_USERNAME || 'imports.tester';
 
 async function upsertPermissions() {
   console.log('🔐 Seeding permissions...');
@@ -110,11 +114,50 @@ async function ensureSuperAdmin() {
   }
 }
 
+async function ensureImportsTester() {
+  console.log('👤 Ensuring imports tester account...');
+  let user = await User.findOne({ email: IMPORT_TEST_EMAIL.toLowerCase() });
+
+  if (!user) {
+    const password_hash = await hashPassword(IMPORT_TEST_PASSWORD);
+    user = await User.create({
+      org_id: DEFAULT_ORG_ID,
+      email: IMPORT_TEST_EMAIL.toLowerCase(),
+      full_name: IMPORT_TEST_NAME,
+      username: IMPORT_TEST_USERNAME.toLowerCase(),
+      password_hash,
+      email_verified_at: new Date(),
+      is_active: true
+    });
+    console.log(`✅ Created imports tester user ${IMPORT_TEST_EMAIL}`);
+  } else {
+    console.log('ℹ️ Imports tester user already exists, updating baseline fields...');
+    user.full_name = IMPORT_TEST_NAME;
+    user.username = IMPORT_TEST_USERNAME.toLowerCase();
+    if (!IMPORT_TEST_PASSWORD.startsWith('**unchanged**')) {
+      user.password_hash = await hashPassword(IMPORT_TEST_PASSWORD);
+    }
+    await user.save();
+  }
+
+  const opsRole = await Role.findOne({ key: 'manager_ops', scope: 'org', org_id: DEFAULT_ORG_ID });
+  if (!opsRole) {
+    throw new Error('Operations manager role missing');
+  }
+
+  await UserRole.updateOne(
+    { user_id: user._id, role_id: opsRole._id, org_id: DEFAULT_ORG_ID },
+    { user_id: user._id, role_id: opsRole._id, org_id: DEFAULT_ORG_ID },
+    { upsert: true }
+  );
+}
+
 async function seedAuth() {
   await connectDB();
   await upsertPermissions();
   await upsertRoles();
   await ensureSuperAdmin();
+  await ensureImportsTester();
   console.log('✅ Auth seeding completed');
   process.exit(0);
 }
