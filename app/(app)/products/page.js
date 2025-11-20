@@ -28,6 +28,7 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
+import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
 
 /* ================= Helpers ================= */
 
@@ -265,11 +266,14 @@ export default function ProductsPage() {
 
   // Carga de datos (debounce por búsqueda)
   useEffect(() => {
+        let cancelled = false;
     const id = setTimeout(() => loadProducts(search), 250);
     return () => clearTimeout(id);
   }, [search]);
 
   async function loadProducts(term) {
+     // Mostrar loading
+      swalLoading('Cargando productos', '');
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -282,8 +286,11 @@ export default function ProductsPage() {
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setRows(Array.isArray(data.data) ? data.data : []);
+      // Cerrar loading y mostrar success
+      swalSuccess('Productos cargados', '');
     } catch (e) {
-      console.error('Load products failed', e);
+       console.error(err);
+        swalError('Error al cargar productos', err.message || 'Revisa el backend o la conexión.');
       setRows([]);
     } finally {
       setLoading(false);
@@ -693,9 +700,9 @@ export default function ProductsPage() {
               <Button variant="outline" onClick={resetFiltros}>
                 Limpiar filtros
               </Button>
-              <span className="text-xs text-muted-foreground">
+              {/* <span className="text-xs text-muted-foreground">
                 (Los selectores se aplican al presionar “Aplicar filtros”)
-              </span>
+              </span> */}
             </div>
 
             {/* Chips filtros aplicados */}

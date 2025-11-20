@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
+import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
 
 export default function InventoryPage() {
   const [stores, setStores] = useState([]);
@@ -34,26 +35,37 @@ export default function InventoryPage() {
   }
 
   async function loadInventory() {
+    // Mostrar loading
+    swalLoading('Cargando inventario', '');
+    try {
     setLoading(true);
     const res = await fetch(`/api/inventory?date=${selectedDate}&store_id=${selectedStore}&limit=100`);
     const data = await res.json();
     setInventory(data.data || []);
-    setLoading(false);
+    // Cerrar loading y mostrar success
+    swalSuccess('Inventario cargado', '');
+    } catch (error) {
+      console.error(err);
+      swalError('Error al cargar inventario', err.message || 'Revisa el backend o la conexión.');
+    }
+     finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Inventory</h1>
-        <p className="text-muted-foreground">View stock levels across stores</p>
+        <h1 className="text-3xl font-bold">Inventorio</h1>
+        <p className="text-muted-foreground">Consultar los niveles de stock en todos los almacenes</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Inventory Snapshots</CardTitle>
+          {/* <CardTitle>Inventory Snapshots</CardTitle> */}
           <div className="flex gap-4 mt-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Store</label>
+              <label className="text-sm font-medium mb-2 block">Almacén</label>
               <Select value={selectedStore} onValueChange={setSelectedStore}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select store" />
@@ -68,7 +80,7 @@ export default function InventoryPage() {
               </Select>
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Date</label>
+              <label className="text-sm font-medium mb-2 block">Fecha</label>
               <input
                 type="date"
                 value={selectedDate}
@@ -85,19 +97,19 @@ export default function InventoryPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Physical Stock</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
-                  <TableHead className="text-right">Boxes</TableHead>
-                  <TableHead className="text-right">Cost Price</TableHead>
-                  <TableHead className="text-right">Shop Price</TableHead>
+                  <TableHead>Producto</TableHead>
+                  <TableHead className="text-right">Stock físico</TableHead>
+                  <TableHead className="text-right">Unidades</TableHead>
+                  <TableHead className="text-right">Cajas</TableHead>
+                  <TableHead className="text-right">Precio de costo</TableHead>
+                  <TableHead className="text-right">Precio de venta</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {inventory.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No inventory data for selected date and store
+                      No hay datos de inventario para la fecha y almacén seleccionados
                     </TableCell>
                   </TableRow>
                 ) : (

@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import { Sparkles, CheckCircle, ShoppingCart, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
+import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
+
 
 export default function ReplenishmentPage() {
   const [stores, setStores] = useState([]);
@@ -30,12 +32,24 @@ export default function ReplenishmentPage() {
   }, [selectedStore, planDate]);
 
   async function loadStores() {
+     // Mostrar loading
+      swalLoading('Cargando reabastecimiento', '');
+    try {
     const res = await fetch('/api/stores');
     const data = await res.json();
     setStores(data.data || []);
     if (data.data?.length > 0) {
       setSelectedStore(data.data[0]._id);
     }
+    // Cerrar loading y mostrar success
+    swalSuccess('Reabastecimiento cargado', '');
+    } catch (error) {
+       console.error(err);
+        swalError('Error al cargar reabastecimiento', err.message || 'Revisa el backend o la conexión.');
+    }finally {
+      setLoading(false);
+    }
+  
   }
 
   async function loadExistingPlan() {
@@ -134,10 +148,10 @@ export default function ReplenishmentPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Sparkles className="h-8 w-8 text-primary" />
-            Replenishment Planner
+            Planificador de reabastecimiento
           </h1>
           <p className="text-muted-foreground">
-            Generate intelligent restocking recommendations
+            Generar recomendaciones inteligentes de reabastecimiento de existencias
           </p>
         </div>
 
@@ -148,7 +162,7 @@ export default function ReplenishmentPage() {
           <CardContent>
             <div className="flex gap-4 items-end">
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Store</label>
+                <label className="text-sm font-medium mb-2 block">Almacén</label>
                 <Select value={selectedStore} onValueChange={setSelectedStore}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select store" />
@@ -163,7 +177,7 @@ export default function ReplenishmentPage() {
                 </Select>
               </div>
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Plan Date</label>
+                <label className="text-sm font-medium mb-2 block">Fecha</label>
                 <input
                   type="date"
                   value={planDate}
@@ -177,7 +191,7 @@ export default function ReplenishmentPage() {
                 className="gap-2"
               >
                 <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-                {generating ? 'Generating...' : 'Generate Plan'}
+                {generating ? 'Generando…' : 'Generar plan'}
               </Button>
             </div>
           </CardContent>
@@ -190,15 +204,15 @@ export default function ReplenishmentPage() {
                 <div className="grid grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary">{plan.length}</div>
-                    <div className="text-sm text-muted-foreground">Total Items</div>
+                    <div className="text-sm text-muted-foreground">Total Elementos</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">{itemsToRestock.length}</div>
-                    <div className="text-sm text-muted-foreground">Need Restocking</div>
+                    <div className="text-sm text-muted-foreground">Necesita reabastecimiento</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">{totalRecommendedQty}</div>
-                    <div className="text-sm text-muted-foreground">Total Qty to Order</div>
+                    <div className="text-sm text-muted-foreground">Cantidad total a pedir</div>
                   </div>
                   <div className="text-center">
                     <Badge 
@@ -215,18 +229,18 @@ export default function ReplenishmentPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Replenishment Recommendations</CardTitle>
+                  <CardTitle>Recomendaciones de reabastecimiento</CardTitle>
                   <div className="flex gap-2">
-                    {planStatus === 'draft' && (
+                    {planStatus === 'borrador' && (
                       <Button onClick={approvePlan} variant="default" className="gap-2">
                         <CheckCircle className="h-4 w-4" />
-                        Approve Plan
+                        Aprobar plan
                       </Button>
                     )}
-                    {planStatus === 'approved' && (
+                    {planStatus === 'aprobado' && (
                       <Button onClick={createPOs} variant="default" className="gap-2">
                         <ShoppingCart className="h-4 w-4" />
-                        Create Purchase Orders
+                        Crear órdenes de compra
                       </Button>
                     )}
                   </div>
@@ -234,19 +248,19 @@ export default function ReplenishmentPage() {
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                  <div className="text-center py-8 text-muted-foreground">Cargando…</div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-right">Current Stock</TableHead>
-                        <TableHead className="text-right">Target Stock</TableHead>
-                        <TableHead className="text-right">Avg Daily Demand</TableHead>
-                        <TableHead className="text-right">Days of Cover</TableHead>
-                        <TableHead className="text-right">Seasonality</TableHead>
-                        <TableHead className="text-right font-bold">Recommended Qty</TableHead>
-                        <TableHead>Reason</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Stock actual</TableHead>
+                        <TableHead className="text-right">Stock objetivo</TableHead>
+                        <TableHead className="text-right">Demanda diaria promedio</TableHead>
+                        <TableHead className="text-right">Días de cobertura</TableHead>
+                        <TableHead className="text-right">Señales de temporada</TableHead>
+                        <TableHead className="text-right font-bold">Cantidad recomendada</TableHead>
+                        <TableHead>Motivo</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -269,7 +283,7 @@ export default function ReplenishmentPage() {
                       {plan.filter(p => p.recommended_qty > 0).length === 0 && (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            No items need restocking at this time
+                            No hay elementos que necesitan reabastecimiento en este momento
                           </TableCell>
                         </TableRow>
                       )}
@@ -285,9 +299,9 @@ export default function ReplenishmentPage() {
           <Card>
             <CardContent className="py-16 text-center">
               <Sparkles className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Plan Generated Yet</h3>
+              <h3 className="text-lg font-semibold mb-2">Aún no se generó ningún plan</h3>
               <p className="text-muted-foreground mb-4">
-                Select a store and date, then click "Generate Plan" to create intelligent restocking recommendations.
+                Selecciona una tienda y fecha, luego haz clic en "Generar plan" para crear recomendaciones de reabastecimiento inteligentes.
               </p>
             </CardContent>
           </Card>

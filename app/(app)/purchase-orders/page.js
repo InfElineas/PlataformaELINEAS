@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { ShoppingCart } from 'lucide-react';
+import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
+
 
 export default function PurchaseOrdersPage() {
   const [pos, setPos] = useState([]);
@@ -16,11 +18,23 @@ export default function PurchaseOrdersPage() {
   }, []);
 
   async function loadPOs() {
+     // Mostrar loading
+      swalLoading('Cargando órdenes de compra', '');
+    try {
     setLoading(true);
     const res = await fetch('/api/purchase-orders');
     const data = await res.json();
     setPos(data.data || []);
+    // Cerrar loading y mostrar success
+    swalSuccess('Órdenes de compra cargadas', '');
     setLoading(false);
+    } catch (error) {
+       console.error(err);
+        swalError('Error al cargar órdenes de compra', err.message || 'Revisa el backend o la conexión.');
+    }finally {
+      setLoading(false);
+    }
+  
   }
 
   return (
@@ -28,35 +42,35 @@ export default function PurchaseOrdersPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <ShoppingCart className="h-8 w-8" />
-          Purchase Orders
+          Órdenes de compra
         </h1>
-        <p className="text-muted-foreground">Manage purchase orders generated from replenishment plans</p>
+        <p className="text-muted-foreground">Administrar órdenes de compra generadas a partir de planes de reabastecimiento</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Purchase Orders List</CardTitle>
+          <CardTitle>Lista de órdenes de compra</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">Cargando…</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO Number</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead className="text-right">Total Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Número de órden</TableHead>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead>Elementos</TableHead>
+                  <TableHead className="text-right">Cantidad total</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Creado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pos.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No purchase orders yet. Generate and approve a replenishment plan first.
+                      Aún no hay órdenes de compra. Genera y aproba un plan de reabastecimiento primero.
                     </TableCell>
                   </TableRow>
                 ) : (

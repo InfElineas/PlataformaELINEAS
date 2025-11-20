@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuthSession } from '@/components/providers/AuthSessionProvider';
 import { PERMISSIONS } from '@/lib/auth/permissions';
+import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
 
 function SectionTitle({ title, description }) {
   return (

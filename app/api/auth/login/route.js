@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateUser, createSessionResponse, maskUserForResponse } from '@/lib/auth';
 import { ForbiddenError, UnauthorizedError } from '@/lib/auth/errors';
+import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
 
 export async function POST(request) {
   try {

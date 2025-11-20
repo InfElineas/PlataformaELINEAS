@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { swalLoading, swalSuccess, swalError, swalClose } from '@/lib/swal';
 
 export default function LoginForm({ redirectTo = '/' }) {
   const router = useRouter();
@@ -18,28 +19,47 @@ export default function LoginForm({ redirectTo = '/' }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
     setLoading(true);
     setError('');
+    swalLoading('Autenticando...', 'Validando credenciales');
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: identifier, password, rememberMe })
+        body: JSON.stringify({ email: identifier, password, rememberMe }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Login failed' }));
-        setError(data.error || 'Invalid credentials');
-        setLoading(false);
+        // cerrar el loading y mostrar error visual
+        swalClose();
+        const msg = data.error || 'Credenciales inválidas';
+        setError(msg);
+        await swalError('Error de login', msg);
         return;
       }
 
-      router.push(redirectTo || '/');
-      router.refresh();
+      // éxito: cerrar loading y mostrar success
+      swalClose();
+      await swalSuccess('Bienvenido', '');
+
+      setLoading(false);
+
+      // pequeña pausa para que se vea el swal antes de navegar
+      setTimeout(() => {
+        router.push(redirectTo || '/');
+        router.refresh();
+      }, 200);
     } catch (err) {
-      console.error('Login request failed', err);
+      console.error(err);
+      swalClose();
+      const msg = err.message || 'No se pudo iniciar sesión.';
       setError('Unable to complete login. Please try again.');
+      await swalError('Error de login', msg);
+    } finally {
       setLoading(false);
     }
   }
@@ -71,7 +91,11 @@ export default function LoginForm({ redirectTo = '/' }) {
       </div>
       <div className="flex items-center justify-between">
         <label className="flex items-center space-x-2 text-sm">
-          <Checkbox id="remember" checked={rememberMe} onCheckedChange={(value) => setRememberMe(Boolean(value))} />
+          <Checkbox
+            id="remember"
+            checked={rememberMe}
+            onCheckedChange={(value) => setRememberMe(Boolean(value))}
+          />
           <span>Recordarme</span>
         </label>
         <a href="/forgot-password" className="text-sm text-primary hover:underline">
@@ -79,7 +103,11 @@ export default function LoginForm({ redirectTo = '/' }) {
         </a>
       </div>
       {error && (
-        <div className={cn('rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive')}>
+        <div
+          className={cn(
+            'rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive',
+          )}
+        >
           {error}
         </div>
       )}
