@@ -37,25 +37,25 @@ export default function Dashboard() {
 
   const cards = [
     {
-      title: "Total Products",
+      title: "Productos totales",
       value: stats.totalProducts,
       icon: Package,
       color: "text-blue-600",
     },
     {
-      title: "Stores",
+      title: "Tiendas",
       value: stats.totalStores,
       icon: Warehouse,
       color: "text-green-600",
     },
     {
-      title: "Low Stock Items",
+      title: "Próximos a agotarse",
       value: stats.lowStockItems,
       icon: AlertCircle,
       color: "text-orange-600",
     },
     {
-      title: "Pending POs",
+      title: "Órdenes pendientes",
       value: stats.pendingPOs,
       icon: TrendingUp,
       color: "text-purple-600",
@@ -65,9 +65,9 @@ export default function Dashboard() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">Tablero general</h1>
         <p className="text-muted-foreground">
-          Overview of your inventory system
+          Vista general de tu sistema de inventarios
         </p>
       </div>
 
@@ -93,28 +93,30 @@ export default function Dashboard() {
       <div className="mt-8">
         <Card>
           <CardHeader>
-            <CardTitle>Quick Start</CardTitle>
+            <CardTitle>Inicio rápido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <h3 className="font-semibold mb-2">
-                🎯 Generate Replenishment Plan
+                🎯 Generar plan de reabastecimiento
               </h3>
               <p className="text-sm text-muted-foreground">
-                Go to Replenishment to generate intelligent restocking
-                suggestions based on your inventory data.
+                Ir a Reabastecimiento para generar sugerencias basadas en tus
+                datos de inventario.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">📦 Manage Products</h3>
+              <h3 className="font-semibold mb-2">📦 Administrar productos</h3>
               <p className="text-sm text-muted-foreground">
-                View and edit your product catalog in the Products section.
+                Visualizar y editar tu catálogo de productos en la sección de
+                Productos.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">📊 Check Inventory</h3>
+              <h3 className="font-semibold mb-2">📊 Comprobar inventario</h3>
               <p className="text-sm text-muted-foreground">
-                Monitor stock levels across all stores in the Inventory view.
+                Monitorear niveles de inventario a lo largo de todas las tiendas
+                en la vista de inventario.
               </p>
             </div>
           </CardContent>

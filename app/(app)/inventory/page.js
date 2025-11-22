@@ -61,19 +61,21 @@ export default function InventoryPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Inventory</h1>
-        <p className="text-muted-foreground">View stock levels across stores</p>
+        <h1 className="text-3xl font-bold">Inventacio</h1>
+        <p className="text-muted-foreground">
+          Ver niveles de inventario a lo largo de las tiendas
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Inventory Snapshots</CardTitle>
+          <CardTitle>Instantáneas de inventario</CardTitle>
           <div className="flex gap-4 mt-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Store</label>
+              <label className="text-sm font-medium mb-2 block">Tienda</label>
               <Select value={selectedStore} onValueChange={setSelectedStore}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select store" />
+                  <SelectValue placeholder="Seleccionar tienda" />
                 </SelectTrigger>
                 <SelectContent>
                   {stores.map((store) => (
@@ -85,7 +87,7 @@ export default function InventoryPage() {
               </Select>
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Date</label>
+              <label className="text-sm font-medium mb-2 block">Fecha</label>
               <input
                 type="date"
                 value={selectedDate}
@@ -98,18 +100,20 @@ export default function InventoryPage() {
         <CardContent>
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Loading...
+              Cargando...
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Physical Stock</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
-                  <TableHead className="text-right">Boxes</TableHead>
-                  <TableHead className="text-right">Cost Price</TableHead>
-                  <TableHead className="text-right">Shop Price</TableHead>
+                  <TableHead>Producto</TableHead>
+                  <TableHead className="text-right">
+                    Existencia física
+                  </TableHead>
+                  <TableHead className="text-right">Dunidades</TableHead>
+                  <TableHead className="text-right">Cajas</TableHead>
+                  <TableHead className="text-right">Precio Costo</TableHead>
+                  <TableHead className="text-right">Precio Tienda</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -119,7 +123,8 @@ export default function InventoryPage() {
                       colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
-                      No inventory data for selected date and store
+                      No hay datos de inventario para la fecha y tienda
+                      seleccionadas
                     </TableCell>
                   </TableRow>
                 ) : (

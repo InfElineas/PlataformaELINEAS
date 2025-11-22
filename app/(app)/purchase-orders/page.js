@@ -35,32 +35,32 @@ export default function PurchaseOrdersPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <ShoppingCart className="h-8 w-8" />
-          Purchase Orders
+          Órdenes de compra
         </h1>
         <p className="text-muted-foreground">
-          Manage purchase orders generated from replenishment plans
+          Administra órdenes de compra generadas por planes de reabastecimiento
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Purchase Orders List</CardTitle>
+          <CardTitle>Listado de órdenes de compra</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Loading...
+              Cargando...
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO Number</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead className="text-right">Total Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Número de OC</TableHead>
+                  <TableHead>Suministrador</TableHead>
+                  <TableHead>Objetos</TableHead>
+                  <TableHead className="text-right">Cantidad total</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Creado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -70,8 +70,8 @@ export default function PurchaseOrdersPage() {
                       colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
-                      No purchase orders yet. Generate and approve a
-                      replenishment plan first.
+                      Aún no hay órdenes de compra. Genera y aprueba un plan de
+                      reabastecimiento primero.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -81,7 +81,7 @@ export default function PurchaseOrdersPage() {
                         {po.po_number}
                       </TableCell>
                       <TableCell>{po.supplier_name}</TableCell>
-                      <TableCell>{po.lines?.length || 0} items</TableCell>
+                      <TableCell>{po.lines?.length || 0} objetos</TableCell>
                       <TableCell className="text-right">
                         ${po.total_amount?.toFixed(2) || "0.00"}
                       </TableCell>
@@ -101,7 +101,7 @@ export default function PurchaseOrdersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(po.created_at), "MMM dd, yyyy")}
+                        {format(new Date(po.created_at), "dd MMM, yyyy")}
                       </TableCell>
                     </TableRow>
                   ))
