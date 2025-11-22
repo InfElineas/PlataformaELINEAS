@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Search, Settings2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { Search, Settings2 } from "lucide-react";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -14,48 +14,48 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 /* ================= Helpers ================= */
 
 function fmt(val) {
-  if (val === null || val === undefined || val === '') return '—';
+  if (val === null || val === undefined || val === "") return "—";
   return String(val);
 }
 
 function fmtDate(val) {
-  if (!val) return '—';
+  if (!val) return "—";
   const d = new Date(val);
   return Number.isNaN(d.getTime())
-    ? '—'
-    : d.toLocaleString('es-ES', {
-        year: '2-digit',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
+    ? "—"
+    : d.toLocaleString("es-ES", {
+        year: "2-digit",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
       });
 }
 
 function fmtMoney(val) {
   const n = Number(val);
-  if (Number.isNaN(n)) return '—';
-  return n.toLocaleString('es-ES', {
-    style: 'currency',
-    currency: 'USD',
+  if (Number.isNaN(n)) return "—";
+  return n.toLocaleString("es-ES", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -70,36 +70,28 @@ function toNumber(raw, fallback = 0) {
 
 function getCategoriaOnline(p) {
   if (Array.isArray(p.category_path) && p.category_path.length > 0) {
-    return p.category_path.join(' - ');
+    return p.category_path.join(" - ");
   }
-  return p.category_name || p.category_id || '—';
+  return p.category_name || p.category_id || "—";
 }
 
 function getIdTienda(p) {
-  return p.idTienda ?? '';
+  return p.idTienda ?? "";
 }
 
 function getCodProducto(p) {
-  return p.tkc_code ?? p.product_code ?? p.barcode ?? '';
+  return p.tkc_code ?? p.product_code ?? p.barcode ?? "";
 }
 
 function getSuministrador(p) {
   return (
-    p.supplier_name ??
-    p.provider_name ??
-    p.provider_id ??
-    p.supplier_id ??
-    ''
+    p.supplier_name ?? p.provider_name ?? p.provider_id ?? p.supplier_id ?? ""
   );
 }
 
 function getEF(p) {
   return toNumber(
-    p.existencia_fisica ??
-      p.exist_fisica ??
-      p.physical_stock ??
-      p.stock ??
-      0
+    p.existencia_fisica ?? p.exist_fisica ?? p.physical_stock ?? p.stock ?? 0,
   );
 }
 
@@ -113,7 +105,7 @@ function getDisponibleTienda(p) {
       p.disponible ??
       p.available_store ??
       p.available ??
-      0
+      0,
   );
 }
 
@@ -122,15 +114,15 @@ function getPrecioCosto(p) {
 }
 
 function getNoAlmacen(p) {
-  return p.no_almacen ?? p.warehouse_code ?? p.store_warehouse ?? '';
+  return p.no_almacen ?? p.warehouse_code ?? p.store_warehouse ?? "";
 }
 
 function getMarca(p) {
-  return p.brand ?? '';
+  return p.brand ?? "";
 }
 
 function getActivado(p) {
-  return (p.status ?? '') === 'active';
+  return (p.status ?? "") === "active";
 }
 
 /* ===== Estados derivados para badges ===== */
@@ -138,23 +130,21 @@ function getActivado(p) {
 function getEstadoAnuncio(p) {
   const EF = getEF(p);
   const ID = getCodProducto(p);
-  const status = p.status || '';
+  const status = p.status || "";
 
   if (!ID) {
-    return EF === 0 ? 'SIN ID EF = 0' : 'SIN ID EF > 0';
+    return EF === 0 ? "SIN ID EF = 0" : "SIN ID EF > 0";
   }
 
-  if (status === 'active') {
-    return 'ACTIVADO';
+  if (status === "active") {
+    return "ACTIVADO";
   }
 
-  if (status === 'dead' || status === 'muerto') {
-    return EF === 0
-      ? 'DESACTIVADO MUERTO EF = 0'
-      : 'DESACTIVADO MUERTO EF > 0';
+  if (status === "dead" || status === "muerto") {
+    return EF === 0 ? "DESACTIVADO MUERTO EF = 0" : "DESACTIVADO MUERTO EF > 0";
   }
 
-  return EF === 0 ? 'DESACTIVADO EF = 0' : 'DESACTIVADO EF > 0';
+  return EF === 0 ? "DESACTIVADO EF = 0" : "DESACTIVADO EF > 0";
 }
 
 function getEstadoTienda(p) {
@@ -164,9 +154,7 @@ function getEstadoTienda(p) {
   const T = getDisponibleTienda(p);
 
   if (!ID) {
-    return EF === 0
-      ? 'SIN ID (ID = "" y EF = 0)'
-      : 'SIN ID (ID = "" y EF > 0)';
+    return EF === 0 ? 'SIN ID (ID = "" y EF = 0)' : 'SIN ID (ID = "" y EF > 0)';
   }
 
   if (EF === 0) {
@@ -174,57 +162,57 @@ function getEstadoTienda(p) {
   }
 
   if (A === 0 && T > 6) {
-    return 'SIN RESERVA (A = 0 y T > 6)';
+    return "SIN RESERVA (A = 0 y T > 6)";
   }
 
   if (T === 0) {
     return EF > 10
-      ? 'NO TIENDA (T = 0 y EF > 10)'
-      : 'NO TIENDA (T = 0 y EF ≤ 10)';
+      ? "NO TIENDA (T = 0 y EF > 10)"
+      : "NO TIENDA (T = 0 y EF ≤ 10)";
   }
 
   if (T > 1 && T < A && A <= 10) {
-    return 'ULTIMAS PIEZAS (1 < T < A ≤ 10)';
+    return "ULTIMAS PIEZAS (1 < T < A ≤ 10)";
   }
 
   if (A >= 0 && A < T && T <= 10) {
-    return 'ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)';
+    return "ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)";
   }
 
   if (T <= 10) {
-    return 'PROXIMO (T ≤ 10)';
+    return "PROXIMO (T ≤ 10)";
   }
 
   if (T <= A) {
-    return 'DISPONIBLE (T ≤ A)';
+    return "DISPONIBLE (T ≤ A)";
   }
 
-  return 'DISPONIBLE (A < T)';
+  return "DISPONIBLE (A < T)";
 }
 
 function badgeVariantAnuncio(label) {
-  if (label.startsWith('ACTIVADO')) return 'default';
-  if (label.startsWith('SIN ID')) return 'secondary';
-  if (label.startsWith('DESACTIVADO')) return 'destructive';
-  return 'outline';
+  if (label.startsWith("ACTIVADO")) return "default";
+  if (label.startsWith("SIN ID")) return "secondary";
+  if (label.startsWith("DESACTIVADO")) return "destructive";
+  return "outline";
 }
 
 function badgeVariantTienda(label) {
-  if (label.startsWith('DISPONIBLE')) return 'default';
-  if (label.startsWith('PROXIMO') || label.startsWith('ULTIMAS PIEZAS')) {
-    return 'secondary';
+  if (label.startsWith("DISPONIBLE")) return "default";
+  if (label.startsWith("PROXIMO") || label.startsWith("ULTIMAS PIEZAS")) {
+    return "secondary";
   }
-  return 'destructive';
+  return "destructive";
 }
 
 /* ================= Página ================= */
 
-const ALL = '__ALL__';
+const ALL = "__ALL__";
 
 export default function ProductsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   // Filtros PENDIENTES (selección del usuario)
   const [pExistencia, setPExistencia] = useState(ALL);
@@ -273,17 +261,17 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (term) params.set('search', term);
-      params.set('limit', '100');
+      if (term) params.set("search", term);
+      params.set("limit", "100");
 
       const res = await fetch(`/api/products?${params.toString()}`, {
-        cache: 'no-store',
+        cache: "no-store",
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setRows(Array.isArray(data.data) ? data.data : []);
     } catch (e) {
-      console.error('Load products failed', e);
+      console.error("Load products failed", e);
       setRows([]);
     } finally {
       setLoading(false);
@@ -298,20 +286,20 @@ export default function ProductsPage() {
     const marcas = new Set();
 
     rows.forEach((p) => {
-      const nal = String(getNoAlmacen(p) || '').trim();
+      const nal = String(getNoAlmacen(p) || "").trim();
       if (nal) almacenes.add(nal);
 
-      const sup = String(getSuministrador(p) || '').trim();
+      const sup = String(getSuministrador(p) || "").trim();
       if (sup) sumin.add(sup);
 
-      const cat = String(getCategoriaOnline(p) || '').trim();
+      const cat = String(getCategoriaOnline(p) || "").trim();
       if (cat) categorias.add(cat);
 
-      const m = String(getMarca(p) || '').trim();
+      const m = String(getMarca(p) || "").trim();
       if (m) marcas.add(m);
     });
 
-    const toArr = (s) => Array.from(s).sort((a, b) => a.localeCompare(b, 'es'));
+    const toArr = (s) => Array.from(s).sort((a, b) => a.localeCompare(b, "es"));
 
     return {
       almacenes: toArr(almacenes),
@@ -366,16 +354,16 @@ export default function ProductsPage() {
 
       const EF = getEF(p);
       const T = getDisponibleTienda(p);
-      const nal = String(getNoAlmacen(p) || '');
-      const sup = String(getSuministrador(p) || '');
-      const cat = String(getCategoriaOnline(p) || '');
-      const marca = String(getMarca(p) || '');
+      const nal = String(getNoAlmacen(p) || "");
+      const sup = String(getSuministrador(p) || "");
+      const cat = String(getCategoriaOnline(p) || "");
+      const marca = String(getMarca(p) || "");
       const activado = getActivado(p);
       const habilitado = T > 0;
 
       if (aExistencia !== ALL) {
-        if (aExistencia === 'con' && !(EF > 0)) return false;
-        if (aExistencia === 'sin' && !(EF === 0)) return false;
+        if (aExistencia === "con" && !(EF > 0)) return false;
+        if (aExistencia === "sin" && !(EF === 0)) return false;
       }
 
       if (aAlmacen !== ALL && nal !== aAlmacen) return false;
@@ -384,13 +372,13 @@ export default function ProductsPage() {
       if (aMarca !== ALL && marca !== aMarca) return false;
 
       if (aHabilitado !== ALL) {
-        if (aHabilitado === 'si' && !habilitado) return false;
-        if (aHabilitado === 'no' && habilitado) return false;
+        if (aHabilitado === "si" && !habilitado) return false;
+        if (aHabilitado === "no" && habilitado) return false;
       }
 
       if (aActivado !== ALL) {
-        if (aActivado === 'si' && !activado) return false;
-        if (aActivado === 'no' && activado) return false;
+        if (aActivado === "si" && !activado) return false;
+        if (aActivado === "no" && activado) return false;
       }
 
       return true;
@@ -408,8 +396,8 @@ export default function ProductsPage() {
   ]);
 
   const resultsLabel = useMemo(
-    () => (loading ? 'Cargando…' : `${filtered.length} resultado(s)`),
-    [loading, filtered.length]
+    () => (loading ? "Cargando…" : `${filtered.length} resultado(s)`),
+    [loading, filtered.length],
   );
 
   // Helper para columnas visibles
@@ -462,91 +450,91 @@ export default function ProductsPage() {
                   >
                     <DropdownMenuCheckboxItem
                       checked={cols.categoria}
-                      onCheckedChange={(v) => setCol('categoria', !!v)}
+                      onCheckedChange={(v) => setCol("categoria", !!v)}
                     >
                       Categoría Online
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.idTienda}
-                      onCheckedChange={(v) => setCol('idTienda', !!v)}
+                      onCheckedChange={(v) => setCol("idTienda", !!v)}
                     >
                       Id Tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.codProducto}
-                      onCheckedChange={(v) => setCol('codProducto', !!v)}
+                      onCheckedChange={(v) => setCol("codProducto", !!v)}
                     >
                       Cod. Producto
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.nombre}
-                      onCheckedChange={(v) => setCol('nombre', !!v)}
+                      onCheckedChange={(v) => setCol("nombre", !!v)}
                     >
                       Nombre
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.marca}
-                      onCheckedChange={(v) => setCol('marca', !!v)}
+                      onCheckedChange={(v) => setCol("marca", !!v)}
                     >
                       Marca
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.suministrador}
-                      onCheckedChange={(v) => setCol('suministrador', !!v)}
+                      onCheckedChange={(v) => setCol("suministrador", !!v)}
                     >
                       Suministrador
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.exist}
-                      onCheckedChange={(v) => setCol('exist', !!v)}
+                      onCheckedChange={(v) => setCol("exist", !!v)}
                     >
                       Existencia Física
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.reserva}
-                      onCheckedChange={(v) => setCol('reserva', !!v)}
+                      onCheckedChange={(v) => setCol("reserva", !!v)}
                     >
                       Reserva
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.dispTienda}
-                      onCheckedChange={(v) => setCol('dispTienda', !!v)}
+                      onCheckedChange={(v) => setCol("dispTienda", !!v)}
                     >
                       Disp. Tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.precioCosto}
-                      onCheckedChange={(v) => setCol('precioCosto', !!v)}
+                      onCheckedChange={(v) => setCol("precioCosto", !!v)}
                     >
                       Precio Costo
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.noAlmacen}
-                      onCheckedChange={(v) => setCol('noAlmacen', !!v)}
+                      onCheckedChange={(v) => setCol("noAlmacen", !!v)}
                     >
                       No. Almacén
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoAnuncio}
-                      onCheckedChange={(v) => setCol('estadoAnuncio', !!v)}
+                      onCheckedChange={(v) => setCol("estadoAnuncio", !!v)}
                     >
                       Estado de Anuncio
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoTienda}
-                      onCheckedChange={(v) => setCol('estadoTienda', !!v)}
+                      onCheckedChange={(v) => setCol("estadoTienda", !!v)}
                     >
                       Estado en tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.creado}
-                      onCheckedChange={(v) => setCol('creado', !!v)}
+                      onCheckedChange={(v) => setCol("creado", !!v)}
                     >
                       Creado
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.actualizado}
-                      onCheckedChange={(v) => setCol('actualizado', !!v)}
+                      onCheckedChange={(v) => setCol("actualizado", !!v)}
                     >
                       Actualizado
                     </DropdownMenuCheckboxItem>
@@ -669,9 +657,7 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Activado
-                </span>
+                <span className="text-xs text-muted-foreground">Activado</span>
                 <Select value={pActivado} onValueChange={setPActivado}>
                   <SelectTrigger>
                     <SelectValue placeholder="Activado" />
@@ -702,7 +688,7 @@ export default function ProductsPage() {
             <div className="flex flex-wrap gap-2">
               {aExistencia !== ALL && (
                 <Badge variant="secondary">
-                  Existencia: {aExistencia === 'con' ? 'Con' : 'Sin'}
+                  Existencia: {aExistencia === "con" ? "Con" : "Sin"}
                 </Badge>
               )}
               {aAlmacen !== ALL && (
@@ -748,9 +734,7 @@ export default function ProductsPage() {
                   {cols.nombre && <TableHead>Nombre</TableHead>}
                   {cols.marca && <TableHead>Marca</TableHead>}
                   {cols.suministrador && <TableHead>Suministrador</TableHead>}
-                  {cols.exist && (
-                    <TableHead>Existencia Física (EF)</TableHead>
-                  )}
+                  {cols.exist && <TableHead>Existencia Física (EF)</TableHead>}
                   {cols.reserva && <TableHead>Reserva (A)</TableHead>}
                   {cols.dispTienda && <TableHead>Disp. Tienda (T)</TableHead>}
                   {cols.precioCosto && <TableHead>Precio Costo</TableHead>}
@@ -758,9 +742,7 @@ export default function ProductsPage() {
                   {cols.estadoAnuncio && (
                     <TableHead>Estado de Anuncio</TableHead>
                   )}
-                  {cols.estadoTienda && (
-                    <TableHead>Estado en tienda</TableHead>
-                  )}
+                  {cols.estadoTienda && <TableHead>Estado en tienda</TableHead>}
                   {cols.creado && <TableHead>Creado</TableHead>}
                   {cols.actualizado && <TableHead>Actualizado</TableHead>}
                 </TableRow>
@@ -805,9 +787,7 @@ export default function ProductsPage() {
                         </TableCell>
                       )}
                       {cols.marca && (
-                        <TableCell className="text-sm">
-                          {fmt(marca)}
-                        </TableCell>
+                        <TableCell className="text-sm">{fmt(marca)}</TableCell>
                       )}
                       {cols.suministrador && (
                         <TableCell className="text-sm">
@@ -816,17 +796,17 @@ export default function ProductsPage() {
                       )}
                       {cols.exist && (
                         <TableCell className="text-right">
-                          {Number.isNaN(EF) ? '—' : EF}
+                          {Number.isNaN(EF) ? "—" : EF}
                         </TableCell>
                       )}
                       {cols.reserva && (
                         <TableCell className="text-right">
-                          {Number.isNaN(A) ? '—' : A}
+                          {Number.isNaN(A) ? "—" : A}
                         </TableCell>
                       )}
                       {cols.dispTienda && (
                         <TableCell className="text-right">
-                          {Number.isNaN(T) ? '—' : T}
+                          {Number.isNaN(T) ? "—" : T}
                         </TableCell>
                       )}
                       {cols.precioCosto && (
@@ -848,9 +828,7 @@ export default function ProductsPage() {
                       )}
                       {cols.estadoTienda && (
                         <TableCell>
-                          <Badge variant={tiendaVariant}>
-                            {estadoTienda}
-                          </Badge>
+                          <Badge variant={tiendaVariant}>{estadoTienda}</Badge>
                         </TableCell>
                       )}
                       {cols.creado && (

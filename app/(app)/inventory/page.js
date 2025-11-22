@@ -1,16 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
 
 export default function InventoryPage() {
   const [stores, setStores] = useState([]);
-  const [selectedStore, setSelectedStore] = useState('');
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedStore, setSelectedStore] = useState("");
+  const [selectedDate, setSelectedDate] = useState(
+    format(new Date(), "yyyy-MM-dd"),
+  );
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +40,7 @@ export default function InventoryPage() {
   }, [selectedStore, selectedDate]);
 
   async function loadStores() {
-    const res = await fetch('/api/stores');
+    const res = await fetch("/api/stores");
     const data = await res.json();
     setStores(data.data || []);
     if (data.data?.length > 0) {
@@ -35,7 +50,9 @@ export default function InventoryPage() {
 
   async function loadInventory() {
     setLoading(true);
-    const res = await fetch(`/api/inventory?date=${selectedDate}&store_id=${selectedStore}&limit=100`);
+    const res = await fetch(
+      `/api/inventory?date=${selectedDate}&store_id=${selectedStore}&limit=100`,
+    );
     const data = await res.json();
     setInventory(data.data || []);
     setLoading(false);
@@ -59,7 +76,7 @@ export default function InventoryPage() {
                   <SelectValue placeholder="Select store" />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map(store => (
+                  {stores.map((store) => (
                     <SelectItem key={store._id} value={store._id}>
                       {store.name}
                     </SelectItem>
@@ -80,7 +97,9 @@ export default function InventoryPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">
+              Loading...
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -96,22 +115,37 @@ export default function InventoryPage() {
               <TableBody>
                 {inventory.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-muted-foreground"
+                    >
                       No inventory data for selected date and store
                     </TableCell>
                   </TableRow>
                 ) : (
                   inventory.map((item) => (
                     <TableRow key={item._id}>
-                      <TableCell className="font-medium">{item.product_name}</TableCell>
-                      <TableCell className="text-right">{item.physical_stock}</TableCell>
-                      <TableCell className="text-right">{item.stock_units || '-'}</TableCell>
-                      <TableCell className="text-right">{item.stock_boxes || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        {item.price_cost ? `$${item.price_cost.toFixed(2)}` : '-'}
+                      <TableCell className="font-medium">
+                        {item.product_name}
                       </TableCell>
                       <TableCell className="text-right">
-                        {item.price_shop ? `$${item.price_shop.toFixed(2)}` : '-'}
+                        {item.physical_stock}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.stock_units || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.stock_boxes || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.price_cost
+                          ? `$${item.price_cost.toFixed(2)}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.price_shop
+                          ? `$${item.price_shop.toFixed(2)}`
+                          : "-"}
                       </TableCell>
                     </TableRow>
                   ))

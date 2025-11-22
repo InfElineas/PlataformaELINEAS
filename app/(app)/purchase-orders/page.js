@@ -1,11 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { ShoppingCart } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { ShoppingCart } from "lucide-react";
 
 export default function PurchaseOrdersPage() {
   const [pos, setPos] = useState([]);
@@ -17,7 +24,7 @@ export default function PurchaseOrdersPage() {
 
   async function loadPOs() {
     setLoading(true);
-    const res = await fetch('/api/purchase-orders');
+    const res = await fetch("/api/purchase-orders");
     const data = await res.json();
     setPos(data.data || []);
     setLoading(false);
@@ -30,7 +37,9 @@ export default function PurchaseOrdersPage() {
           <ShoppingCart className="h-8 w-8" />
           Purchase Orders
         </h1>
-        <p className="text-muted-foreground">Manage purchase orders generated from replenishment plans</p>
+        <p className="text-muted-foreground">
+          Manage purchase orders generated from replenishment plans
+        </p>
       </div>
 
       <Card>
@@ -39,7 +48,9 @@ export default function PurchaseOrdersPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">
+              Loading...
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -55,32 +66,42 @@ export default function PurchaseOrdersPage() {
               <TableBody>
                 {pos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No purchase orders yet. Generate and approve a replenishment plan first.
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-muted-foreground"
+                    >
+                      No purchase orders yet. Generate and approve a
+                      replenishment plan first.
                     </TableCell>
                   </TableRow>
                 ) : (
                   pos.map((po) => (
                     <TableRow key={po._id}>
-                      <TableCell className="font-mono font-medium">{po.po_number}</TableCell>
+                      <TableCell className="font-mono font-medium">
+                        {po.po_number}
+                      </TableCell>
                       <TableCell>{po.supplier_name}</TableCell>
                       <TableCell>{po.lines?.length || 0} items</TableCell>
                       <TableCell className="text-right">
-                        ${po.total_amount?.toFixed(2) || '0.00'}
+                        ${po.total_amount?.toFixed(2) || "0.00"}
                       </TableCell>
                       <TableCell>
-                        <Badge 
+                        <Badge
                           variant={
-                            po.status === 'draft' ? 'outline' :
-                            po.status === 'submitted' ? 'default' :
-                            po.status === 'received' ? 'secondary' : 'destructive'
+                            po.status === "draft"
+                              ? "outline"
+                              : po.status === "submitted"
+                                ? "default"
+                                : po.status === "received"
+                                  ? "secondary"
+                                  : "destructive"
                           }
                         >
                           {po.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(po.created_at), 'MMM dd, yyyy')}
+                        {format(new Date(po.created_at), "MMM dd, yyyy")}
                       </TableCell>
                     </TableRow>
                   ))

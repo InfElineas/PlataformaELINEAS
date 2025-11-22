@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -8,31 +8,30 @@ import {
   RefreshCw,
   ShoppingCart,
   UserCircle,
-  FileSpreadsheet
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useAuthSession } from '@/components/providers/AuthSessionProvider';
+  FileSpreadsheet,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useAuthSession } from "@/components/providers/AuthSessionProvider";
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Inventory', href: '/inventory', icon: Warehouse },
-  { name: 'Replenishment', href: '/replenishment', icon: RefreshCw },
-  { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
-  { name: 'Importaciones', href: '/imports', icon: FileSpreadsheet },
-  { name: 'Perfil', href: '/profile', icon: UserCircle }
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Products", href: "/products", icon: Package },
+  { name: "Inventory", href: "/inventory", icon: Warehouse },
+  { name: "Replenishment", href: "/replenishment", icon: RefreshCw },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart },
+  { name: "Importaciones", href: "/imports", icon: FileSpreadsheet },
+  { name: "Perfil", href: "/profile", icon: UserCircle },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, permissions } = useAuthSession();
-  
 
   async function handleSignOut() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
     router.refresh();
   }
 
@@ -44,15 +43,14 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Button
               key={item.name}
-              variant={isActive ? 'secondary' : 'ghost'}
-              className={cn(
-                'w-full justify-start',
-                isActive && 'bg-secondary'
-              )}
+              variant={isActive ? "secondary" : "ghost"}
+              className={cn("w-full justify-start", isActive && "bg-secondary")}
               onClick={() => router.push(item.href)}
             >
               <Icon className="mr-3 h-5 w-5" />
@@ -62,7 +60,9 @@ export default function Sidebar() {
         })}
       </nav>
       <div className="border-t p-4">
-        <div className="mb-2 text-sm font-medium">{user?.full_name || 'Usuario'}</div>
+        <div className="mb-2 text-sm font-medium">
+          {user?.full_name || "Usuario"}
+        </div>
         <div className="mb-4 text-xs text-muted-foreground">{user?.email}</div>
         <Button onClick={handleSignOut} variant="outline" className="w-full">
           Cerrar sesión
