@@ -15,11 +15,11 @@ import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/components/providers/AuthSessionProvider";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Products", href: "/products", icon: Package },
-  { name: "Inventory", href: "/inventory", icon: Warehouse },
-  { name: "Replenishment", href: "/replenishment", icon: RefreshCw },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart },
+  { name: "Tablero general", href: "/", icon: LayoutDashboard },
+  { name: "Productos", href: "/products", icon: Package },
+  { name: "Inventario", href: "/inventory", icon: Warehouse },
+  { name: "Reabastecimiento", href: "/replenishment", icon: RefreshCw },
+  { name: "Órdenes de compra", href: "/purchase-orders", icon: ShoppingCart },
   { name: "Importaciones", href: "/imports", icon: FileSpreadsheet },
   { name: "Perfil", href: "/profile", icon: UserCircle },
 ];

@@ -55,7 +55,7 @@ export default function Dashboard() {
       color: "text-orange-600",
     },
     {
-      title: "Órdenes pendientes",
+      title: "Órdenes de compra",
       value: stats.pendingPOs,
       icon: TrendingUp,
       color: "text-purple-600",
