@@ -5,6 +5,7 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 ## 🚀 Features
 
 ### Core Business Logic
+
 - **Intelligent Replenishment Engine**: Cálculo automático de cantidades de reabastecimiento basado en:
   - Stock actual vs. target stock
   - Demanda diaria promedio (calculada de snapshots históricos)
@@ -17,14 +18,14 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 - **Hierarchical Rules System**: Configuración flexible con jerarquía:
   - Global (organización)
   - Por tienda
-  - Por categoría  
+  - Por categoría
   - Por producto específico
-  
 - **Multi-Store Management**: Gestión de múltiples tiendas y bodegas
 - **Purchase Order Generation**: Agrupa recomendaciones por proveedor automáticamente
 - **Historical Inventory Tracking**: 30+ días de snapshots de inventario seeded
 
 ### Technical Stack
+
 - **Frontend**: Next.js 14 (App Router), React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API Routes, Mongoose ODM
 - **Database**: MongoDB (local o Atlas)
@@ -33,6 +34,7 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 - **Importaciones inteligentes**: Carga masiva desde archivos .xlsx o Google Sheets con validaciones y historial
 
 ### Roles iniciales
+
 - `superadmin`: acceso global, gestiona roles y organizaciones
 - `org_admin`: administra usuarios, catálogos y reglas dentro de su organización
 - `manager_ops`: operaciones de inventario, generación/aprobación de planes y órdenes
@@ -45,6 +47,7 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 ## 📦 Installation
 
 ### Prerequisites
+
 - Node.js 20+
 - MongoDB (local or Atlas)
 - Yarn
@@ -52,11 +55,13 @@ Sistema inteligente de gestión de inventario y reabastecimiento con motor de c�
 ### Quick Start
 
 1. **Install dependencies**:
+
 ```bash
 yarn install
 ```
 
 2. **Configure environment**:
+
 ```bash
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=inventory_replenishment_db
@@ -73,12 +78,14 @@ GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/integrations/google/oauth/ca
 ```
 
 3. **Seed database y roles**:
+
 ```bash
 npm run seed
 npm run seed:auth
 ```
 
 Esto crea:
+
 - ✅ 8 categorías (flores, arreglos, accesorios con subcategorías)
 - ✅ 3 tiendas (1 bodega + 2 tiendas retail)
 - ✅ 5 proveedores
@@ -89,6 +96,7 @@ Esto crea:
 - ✅ Roles/Permisos base y usuario superadmin (credenciales arriba)
 
 4. **Start development server**:
+
 ```bash
 npm run dev
 ```
@@ -130,16 +138,19 @@ El módulo de importaciones permite poblar el catálogo sin depender de `seed.js
 ## 🎯 Usage
 
 ### 1. Dashboard
+
 - Vista general del sistema
 - KPIs: Total productos, tiendas, low stock items, pending POs
 - Quick start guide
 
 ### 2. Products
+
 - Lista completa de productos
 - Búsqueda y filtros
 - Categorización por tipo
 
 ### 3. Inventory
+
 - Consultar snapshots de inventario por:
   - Tienda
   - Fecha
@@ -147,6 +158,7 @@ El módulo de importaciones permite poblar el catálogo sin depender de `seed.js
 - Ver stock físico, unidades, cajas, precios
 
 ### 4. Replenishment Planner (⭐ CORE FEATURE)
+
 **El "Aha Moment" del sistema**
 
 1. Seleccionar tienda y fecha
@@ -171,6 +183,7 @@ El módulo de importaciones permite poblar el catálogo sin depender de `seed.js
 6. Click "Create Purchase Orders" para convertir en POs
 
 ### 5. Purchase Orders
+
 - Lista de POs generados
 - Agrupados automáticamente por proveedor
 - Ver líneas de cada PO
@@ -190,8 +203,8 @@ const seasonality = currentSeasonalityMultiplier(planDate, rules.seasonality);
 
 // 4. Calculate Target Stock
 const target = Math.ceil(
-  (rules.days_of_cover + rules.lead_time_days) * demand * seasonality 
-  + rules.safety_stock
+  (rules.days_of_cover + rules.lead_time_days) * demand * seasonality +
+    rules.safety_stock,
 );
 target = Math.max(target, rules.min_stock || 0);
 
@@ -218,7 +231,7 @@ if (rules.max_stock) {
 }
 
 // 10. Zero out inactive products
-if (product.status !== 'active') {
+if (product.status !== "active") {
   recommended = 0;
 }
 ```
@@ -226,6 +239,7 @@ if (product.status !== 'active') {
 ## 🗄️ Database Schema
 
 ### Collections
+
 - **products**: Catálogo con org_id, product_code, category_id, supplier_id
 - **categories**: Árbol jerárquico con path denormalizado
 - **stores**: Tiendas y bodegas (is_shop flag)
@@ -237,6 +251,7 @@ if (product.status !== 'active') {
 - **purchase_orders**: POs con lines agrupadas por proveedor
 
 ### Key Indexes
+
 ```javascript
 // Products
 { org_id: 1, product_code: 1 } // unique
@@ -255,6 +270,7 @@ if (product.status !== 'active') {
 ## 🔧 API Endpoints
 
 ### Products
+
 - `GET /api/products?search=&status=&category=&page=&limit=`
 - `POST /api/products`
 - `GET /api/products/:id`
@@ -262,19 +278,24 @@ if (product.status !== 'active') {
 - `DELETE /api/products/:id`
 
 ### Stores
+
 - `GET /api/stores`
 - `POST /api/stores`
 
 ### Suppliers
+
 - `GET /api/suppliers`
 
 ### Categories
+
 - `GET /api/categories`
 
 ### Inventory
+
 - `GET /api/inventory?date=&store_id=&product_id=`
 
 ### Replenishment
+
 - `POST /api/replenishment/plan` - Generate plan
   ```json
   { "plan_date": "2025-01-10", "store_id": "xxx" }
@@ -283,6 +304,7 @@ if (product.status !== 'active') {
 - `POST /api/replenishment/plans/:id/approve`
 
 ### Purchase Orders
+
 - `POST /api/purchase-orders/from-plan`
   ```json
   { "plan_date": "2025-01-10", "store_id": "xxx" }
@@ -291,6 +313,7 @@ if (product.status !== 'active') {
 - `GET /api/purchase-orders/:id`
 
 ### Rules (Admin)
+
 - `GET /api/rules`
 - `POST /api/rules`
 - `PUT /api/rules/:id`
@@ -299,6 +322,7 @@ if (product.status !== 'active') {
 ## 🧪 Testing
 
 ### Test Replenishment Engine
+
 ```bash
 # Generate plan for Bodega Central
 curl -X POST http://localhost:3000/api/replenishment/plan \
@@ -323,12 +347,14 @@ curl http://localhost:3000/api/purchase-orders
 ## 📊 Example Results
 
 From seed data:
+
 - **Total Items**: 50 products
 - **Items to Restock**: ~48 items
 - **Total Recommended Qty**: ~8,264 units
 - **Purchase Orders Created**: 5 (grouped by supplier)
 
 Sample calculations:
+
 ```
 Product: Rosa Roja Premium
 - Current Stock: 58
@@ -357,12 +383,14 @@ Product: Rosa Roja Premium
 ## 🚧 Roadmap
 
 ### Sprint 2 (Next)
+
 - [ ] UI para CRUD de replenishment rules
 - [ ] Dashboard con KPIs reales (rotación, rupturas, fill rate)
 - [ ] Simulador de escenarios (what-if analysis)
 - [ ] Exportación de planes a Excel/CSV
 
 ### Sprint 3 (Future)
+
 - [ ] Pronóstico con modelos estadísticos (media móvil, ETS)
 - [ ] Alertas automáticas (low stock, overstock)
 - [ ] Webhooks a proveedores
@@ -371,6 +399,7 @@ Product: Rosa Roja Premium
 ## 📝 Development Notes
 
 ### Code Structure
+
 ```
 /app
 ├── app/
@@ -394,6 +423,7 @@ Product: Rosa Roja Premium
 ```
 
 ### Best Practices Implemented
+
 - ✅ DRY: Reusable DataTable, Forms, Cards
 - ✅ SOLID light: Single responsibility components
 - ✅ Type safety: Mongoose schemas + Zod validation (partially)
@@ -404,6 +434,7 @@ Product: Rosa Roja Premium
 ## 🤝 Contributing
 
 ### Commit Convention
+
 ```
 feat: Add inventory snapshot upload
 fix: Correct seasonality multiplier calculation

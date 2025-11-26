@@ -42,13 +42,13 @@ export async function GET(request) {
 
   // Manejo de error devuelto por Google
   if (errorParam) {
-    redirectUrl.searchParams.set('google_oauth', 'error');
+    redirectUrl.searchParams.set("google_oauth", "error");
     return NextResponse.redirect(redirectUrl);
   }
 
   // Si no hay "code", algo fue mal
   if (!code) {
-    redirectUrl.searchParams.set('google_oauth', 'error');
+    redirectUrl.searchParams.set("google_oauth", "error");
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -60,8 +60,8 @@ export async function GET(request) {
     await AuditLog.create({
       org_id: session.orgId,
       user_id: session.user.id,
-      action: 'integrations.google.connected',
-      resource: 'integrations',
+      action: "integrations.google.connected",
+      resource: "integrations",
       resource_id: session.user.id,
       meta: { scopes: tokens.scope },
     });
