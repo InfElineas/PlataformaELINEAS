@@ -61,7 +61,7 @@ export default function InventoryPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Inventacio</h1>
+        <h1 className="text-3xl font-bold">Inventario</h1>
         <p className="text-muted-foreground">
           Ver niveles de inventario a lo largo de las tiendas
         </p>
