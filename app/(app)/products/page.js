@@ -417,16 +417,16 @@ export default function ProductsPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="lg:flex items-center justify-between gap-4">
+              <div class="max-lg:pb-2">
                 <CardTitle>Listado de productos</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Busca por nombre, código o código de barras.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="relative w-64">
+              <div className="lg:flex items-center grid gap-3">
+                <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Buscar productos..."
@@ -548,7 +548,7 @@ export default function ProductsPage() {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-7">
+            <div className="grid grid-cols-1 items-end gap-3 lg:grid-cols-7">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">
                   Existencia
@@ -672,7 +672,7 @@ export default function ProductsPage() {
             </div>
 
             {/* Botones filtros */}
-            <div className="flex items-center gap-3">
+            <div className="lg:flex max-lg:grid items-center gap-3">
               <Button onClick={aplicarFiltros} className="gap-2">
                 Aplicar filtros
               </Button>

@@ -70,7 +70,7 @@ export default function InventoryPage() {
       <Card>
         <CardHeader>
           <CardTitle>Instantáneas de inventario</CardTitle>
-          <div className="flex gap-4 mt-4">
+          <div className="md:flex gap-4 mt-4">
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Tienda</label>
               <Select value={selectedStore} onValueChange={setSelectedStore}>

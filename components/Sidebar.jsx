@@ -36,7 +36,7 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="flex h-full w-64 flex-col bg-card border-r">
+    <div className="flex h-full md:w-64 flex-col bg-card border-r">
       <div className="flex h-16 items-center px-6 border-b">
         <h1 className="text-xl font-bold text-primary">Elineas</h1>
       </div>

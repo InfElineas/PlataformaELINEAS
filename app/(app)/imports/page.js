@@ -331,7 +331,7 @@ export default function ImportsPage() {
           title="Importaciones"
           description="Carga productos desde plantillas de Excel o sincroniza hojas de Google Drive"
         />
-        <div className="flex items-center gap-3">
+        <div className="sm:flex max-sm:grid items-center gap-3">
           <Badge variant={user?.google_connected ? "default" : "secondary"}>
             Google {user?.google_connected ? "conectado" : "no vinculado"}
           </Badge>

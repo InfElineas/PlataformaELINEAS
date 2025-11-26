@@ -169,7 +169,7 @@ export default function ReplenishmentPage() {
             <CardTitle>Configuración del plan</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 items-end">
+            <div className="lg:flex max-lg:grid gap-4 items-end">
               <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">Tienda</label>
                 <Select value={selectedStore} onValueChange={setSelectedStore}>
