@@ -4,8 +4,9 @@ import { Inter } from "next/font/google";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "StockFlow - Inventory & Replenishment",
-  description: "Smart inventory management and replenishment system",
+  title: "ELÍNEAS - Plataforma de inventario y reabastecimiento",
+  description:
+    "Sistema inteligente para la gestión de inventario y reabastecimiento",
 };
 
 export default function RootLayout({ children }) {

@@ -788,7 +788,7 @@ async function seed() {
 
       idTienda: prod.idTienda ?? prod.id_tienda ?? "",
 
-      // Código interno de StockFlow
+      // Código interno de ELÍNEAS
       product_code: `PROD-${productCode++}`,
 
       // Código TKC + derivados
