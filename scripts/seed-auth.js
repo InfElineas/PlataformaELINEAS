@@ -13,15 +13,21 @@ import {
 } from "../lib/auth/permissions.js";
 import { hashPassword } from "../lib/auth/password.js";
 
-const DEFAULT_ORG_ID = process.env.ORG_ID_DEFAULT || 'ELINEAS';
-const SUPERADMIN_EMAIL = process.env.DEFAULT_SUPERADMIN_EMAIL || 'informaticoelineas3@gmail.com';
-const SUPERADMIN_PASSWORD = process.env.DEFAULT_SUPERADMIN_PASSWORD || 'ChangeMeNow!2025';
-const SUPERADMIN_NAME = process.env.DEFAULT_SUPERADMIN_NAME || 'Jasan Badell';
-const SUPERADMIN_USERNAME = process.env.DEFAULT_SUPERADMIN_USERNAME || 'jasanbadelldev';
-const IMPORT_TEST_EMAIL = process.env.IMPORT_TEST_EMAIL || 'imports_tester@example.com';
-const IMPORT_TEST_PASSWORD = process.env.IMPORT_TEST_PASSWORD || 'ImportameEsto!2025';
-const IMPORT_TEST_NAME = process.env.IMPORT_TEST_NAME || 'Tester Importaciones';
-const IMPORT_TEST_USERNAME = process.env.IMPORT_TEST_USERNAME || 'imports.tester';
+const DEFAULT_ORG_ID = process.env.ORG_ID_DEFAULT || "ELINEAS";
+const SUPERADMIN_EMAIL =
+  process.env.DEFAULT_SUPERADMIN_EMAIL || "informaticoelineas3@gmail.com";
+const SUPERADMIN_PASSWORD =
+  process.env.DEFAULT_SUPERADMIN_PASSWORD || "ChangeMeNow!2025";
+const SUPERADMIN_NAME = process.env.DEFAULT_SUPERADMIN_NAME || "Jasan Badell";
+const SUPERADMIN_USERNAME =
+  process.env.DEFAULT_SUPERADMIN_USERNAME || "jasanbadelldev";
+const IMPORT_TEST_EMAIL =
+  process.env.IMPORT_TEST_EMAIL || "imports_tester@example.com";
+const IMPORT_TEST_PASSWORD =
+  process.env.IMPORT_TEST_PASSWORD || "ImportameEsto!2025";
+const IMPORT_TEST_NAME = process.env.IMPORT_TEST_NAME || "Tester Importaciones";
+const IMPORT_TEST_USERNAME =
+  process.env.IMPORT_TEST_USERNAME || "imports.tester";
 
 async function upsertPermissions() {
   console.log("🔐 Seeding permissions...");
