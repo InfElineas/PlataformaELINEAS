@@ -44,8 +44,8 @@ export default function SidebarHandler() {
         <div className="flex h-full md:w-64 flex-col bg-card border-r overflow-contain">
           <div className="flex h-16 items-center px-6 border-b">
             <button onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <h1 className="text-xl font-bold text-primary text-blue-0">
-                <span className="text-red-0">E</span>líneas
+              <h1 className="text-xl font-bold text-primary text-blue-800">
+                <span className="text-red-800">E</span>líneas
               </h1>
             </button>
           </div>
@@ -85,12 +85,7 @@ export default function SidebarHandler() {
             >
               Cerrar sesión
             </Button>
-            <p className="mt-4 text-xs text-muted-foreground">
-              v1.0 •{" "}
-              <span className="text-blue-0">
-                <span className="text-red-0">E</span>líneas
-              </span>
-            </p>
+            <p className="mt-4 text-xs text-muted-foreground">v1.0 • Elíneas</p>
           </div>
         </div>
       }
