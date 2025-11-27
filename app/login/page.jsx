@@ -16,7 +16,10 @@ export default async function LoginPage({ searchParams }) {
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-background/60 p-8 shadow-2xl shadow-black/40 backdrop-blur">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold text-foreground">
-            Plataforma ELÍNEAS
+            Plataforma{" "}
+            <span className="text-blue-0">
+              <span className="text-red-0">E</span>líneas
+            </span>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Ingresa tus credenciales para continuar
@@ -25,7 +28,10 @@ export default async function LoginPage({ searchParams }) {
         <LoginForm redirectTo={redirectTo} />
       </div>
       <p className="mt-6 text-xs text-white/70">
-        © {new Date().getFullYear()} Plataforma ELÍNEAS
+        © {new Date().getFullYear()} Plataforma{" "}
+        <span className="text-blue-0">
+          <span className="text-red-0">E</span>líneas
+        </span>
       </p>
     </div>
   );

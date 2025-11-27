@@ -1,4 +1,4 @@
-# ELÍNEAS - Plataforma de inventario y reabastecimiento
+# Elíneas - Plataforma de inventario y reabastecimiento
 
 Sistema inteligente de gestión de inventario y reabastecimiento con motor de cálculo avanzado basado en demanda, estacionalidad y reglas configurables.
 
@@ -454,4 +454,4 @@ Built for ELINEAS - Sistema robusto de reabastecimiento inteligente con algoritm
 
 **Version**: 1.0.0  
 **Last Updated**: November 2025  
-**Org**: ELÍNEAS
+**Org**: Elíneas

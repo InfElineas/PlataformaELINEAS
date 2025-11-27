@@ -453,7 +453,7 @@ async function seed() {
     },
     {
       tkc_code: 789,
-      name: "ELíneas Electrocuba",
+      name: "Elíneas Electrocuba",
       is_shop: false,
       location: "Cerro",
     },
@@ -788,7 +788,7 @@ async function seed() {
 
       idTienda: prod.idTienda ?? prod.id_tienda ?? "",
 
-      // Código interno de ELÍNEAS
+      // Código interno de Elíneas
       product_code: `PROD-${productCode++}`,
 
       // Código TKC + derivados

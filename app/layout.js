@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "ELÍNEAS - Plataforma de inventario y reabastecimiento",
+  title: "Elíneas - Plataforma de inventario y reabastecimiento",
   description:
     "Sistema inteligente para la gestión de inventario y reabastecimiento",
 };
