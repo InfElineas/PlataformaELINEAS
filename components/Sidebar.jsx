@@ -47,7 +47,7 @@ export default function SidebarHandler() {
               className="flex"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              <h1 className="text-xl font-bold text-primary text-blue-800 mx-1">
+              <h1 className="text-xl font-bold text-blue-800 mx-1">
                 <span className="text-red-800">E</span>líneas
               </h1>
               <svg
@@ -111,7 +111,7 @@ export default function SidebarHandler() {
     >
       <div className="flex h-16 items-center px-6 bg-card border-b">
         <button className="flex" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          <h1 className="text-xl font-bold text-primary text-blue-800 mx-1">
+          <h1 className="text-xl font-bold text-blue-800 mx-1">
             <span className="text-red-800">E</span>líneas
           </h1>
           <svg
