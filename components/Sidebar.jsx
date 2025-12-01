@@ -102,6 +102,9 @@ export default function SidebarHandler() {
           left: 0,
         },
       }}
+      overlayClassName="overlay"
+      sidebarClassName="sidebar"
+      contentClassName="content"
       open={sidebarOpen}
       onSetOpen={setSidebarOpen}
     >
