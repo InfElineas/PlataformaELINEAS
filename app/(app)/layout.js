@@ -14,7 +14,9 @@ export default async function AppLayout({ children }) {
     <AuthSessionProvider initialSession={session}>
       <div className="md:flex md:h-screen overflow-hidden">
         <SidebarHandler />
-        <main className="flex-1 overflow-y-auto bg-background">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-background mt-16">
+          {children}
+        </main>
       </div>
     </AuthSessionProvider>
   );
