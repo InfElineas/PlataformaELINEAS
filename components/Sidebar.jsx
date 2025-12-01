@@ -95,6 +95,13 @@ export default function SidebarHandler() {
           </div>
         </div>
       }
+      styles={{
+        sidebar: {
+          position: "fixed",
+          top: 0,
+          left: 0,
+        },
+      }}
       open={sidebarOpen}
       onSetOpen={setSidebarOpen}
     >
