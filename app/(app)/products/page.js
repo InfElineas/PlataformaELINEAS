@@ -418,7 +418,7 @@ export default function ProductsPage() {
         <CardHeader>
           <div className="flex flex-col gap-4">
             <div className="lg:flex items-center justify-between gap-4">
-              <div class="max-lg:pb-2">
+              <div className="max-lg:pb-2">
                 <CardTitle>Listado de productos</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Busca por nombre, código o código de barras.
