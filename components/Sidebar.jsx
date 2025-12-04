@@ -102,9 +102,10 @@ export default function SidebarHandler() {
           left: 0,
         },
       }}
+      rootClassName="root h-16"
       overlayClassName="overlay"
       sidebarClassName="sidebar"
-      contentClassName="content"
+      contentClassName="content h-16"
       open={sidebarOpen}
       onSetOpen={setSidebarOpen}
     >
