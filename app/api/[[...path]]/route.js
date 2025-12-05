@@ -123,7 +123,6 @@ async function handleProducts(request, segments, searchParams, context) {
     const marca = searchParams.get("marca");
     const habilitado = searchParams.get("habilitado");
     const activado = searchParams.get("activado");
-    const includeFilters = searchParams.get("includeFilters") === "1";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(
       searchParams.get("perPage") || searchParams.get("limit") || "50",

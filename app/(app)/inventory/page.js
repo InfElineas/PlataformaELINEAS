@@ -102,8 +102,8 @@ function toSafeNumber(value, fallback = 0) {
 
 function getEF(item) {
   return toSafeNumber(
-    item.physical_stock ??
-      item.existencia_fisica ??
+    item.existencia_fisica ??
+      item.physical_stock ??
       item.exist_fisica ??
       item.ef
   );
@@ -111,14 +111,14 @@ function getEF(item) {
 
 function getA(item) {
   return toSafeNumber(
-    item.reserve_qty ?? item.reserva ?? item.A ?? item.almacen
+    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen
   );
 }
 
 function getT(item) {
   return toSafeNumber(
-    item.store_qty ??
-      item.disponible_tienda ??
+    item.disponible_tienda ??
+      item.store_qty ??
       item.disponible ??
       item.tienda
   );
@@ -249,10 +249,6 @@ export default function InventoryPage() {
   const [pExistencia, setPExistencia] = useState(ALL);
   const [pAlmacen, setPAlmacen] = useState(ALL);
   const [pSuministrador, setPSuministrador] = useState(ALL);
-  const [filterOptions, setFilterOptions] = useState({
-    warehouses: [],
-    suppliers: [],
-  });
 
   // filtros de análisis
   const [segmentId, setSegmentId] = useState("no_store"); // por defecto: T = 0
@@ -278,7 +274,6 @@ export default function InventoryPage() {
     try {
       const params = new URLSearchParams();
       params.set("perPage", "500");
-      params.set("includeFilters", "1");
       if (pExistencia !== ALL) params.set("existencia", pExistencia);
       if (pAlmacen !== ALL) params.set("almacen", pAlmacen);
       if (pSuministrador !== ALL)
@@ -312,6 +307,10 @@ export default function InventoryPage() {
   }
 
   // ================= Opciones de filtros globales =================
+
+  const filterOptions = useMemo(() => {
+    const warehouses = new Set();
+    const suppliers = new Set();
 
   const globalFilterOptions = filterOptions;
 
@@ -371,7 +370,7 @@ export default function InventoryPage() {
         adj.existencia_fisica !== undefined ||
         adj.reserva !== undefined ||
         adj.disponible_tienda !== undefined ||
-        (adj.reason && adj.reason !== NO_REASON) ||
+        (adj.reason && adj.reason !== "") ||
         (adj.note && adj.note.trim() !== "");
 
       if (!hasData) continue;
@@ -401,7 +400,7 @@ export default function InventoryPage() {
         existencia_fisica,
         reserva,
         disponible_tienda,
-        reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
+        reason: adj.reason || null,
         note: adj.note || "",
       });
     }
