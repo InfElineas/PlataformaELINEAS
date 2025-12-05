@@ -117,21 +117,76 @@ async function handleProducts(request, segments, searchParams, context) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
+    const existencia = searchParams.get("existencia");
+    const almacen = searchParams.get("almacen");
+    const suministrador = searchParams.get("suministrador");
+    const marca = searchParams.get("marca");
+    const habilitado = searchParams.get("habilitado");
+    const activado = searchParams.get("activado");
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(
+      searchParams.get("perPage") || searchParams.get("limit") || "50",
+    );
     const skip = (page - 1) * limit;
 
-    const query = { org_id: orgId };
+    const andFilters = [{ org_id: orgId }];
 
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { product_code: { $regex: search, $options: "i" } },
-        { barcode: { $regex: search, $options: "i" } },
-      ];
+      andFilters.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { product_code: { $regex: search, $options: "i" } },
+          { barcode: { $regex: search, $options: "i" } },
+        ],
+      });
     }
-    if (status) query.status = status;
-    if (category) query.category_id = category;
+
+    if (status) andFilters.push({ status });
+    if (category) andFilters.push({ category_id: category });
+
+    if (existencia === "con") {
+      andFilters.push({ physical_stock: { $gt: 0 } });
+    } else if (existencia === "sin") {
+      andFilters.push({ physical_stock: { $lte: 0 } });
+    }
+
+    if (almacen) {
+      andFilters.push({
+        $or: [
+          { no_almacen: almacen },
+          { warehouse_code: almacen },
+          { warehouse_name: almacen },
+        ],
+      });
+    }
+
+    if (suministrador) {
+      andFilters.push({
+        $or: [
+          { supplier_name: suministrador },
+          { provider_id: suministrador },
+          { supplier_id: suministrador },
+        ],
+      });
+    }
+
+    if (marca) {
+      andFilters.push({ brand: marca });
+    }
+
+    if (habilitado === "si") {
+      andFilters.push({ mgmt_mode: "managed" });
+    } else if (habilitado === "no") {
+      andFilters.push({ mgmt_mode: { $ne: "managed" } });
+    }
+
+    if (activado === "si") {
+      andFilters.push({ status: "active" });
+    } else if (activado === "no") {
+      andFilters.push({ status: { $ne: "active" } });
+    }
+
+    const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
     const [products, total] = await Promise.all([
       Product.find(query)

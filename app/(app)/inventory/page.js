@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,25 +89,6 @@ const ANALYSIS_SEGMENTS = [
     predicate: (item) => getT(item) === 0,
   },
 ];
-
-// ===== Helpers de mapeo de tienda / almacén =====
-
-function getStoreWarehouseCode(store) {
-  return (
-    store.warehouse_code || // ideal
-    store.code || // plan B
-    store.number || // plan C
-    store._id // último recurso
-  )?.toString();
-}
-
-function getStoreLabel(store) {
-  const code =
-    store.warehouse_code || store.code || store.number || "";
-  const name = store.name || "";
-  if (code && name) return `${code} · ${name}`;
-  return name || code || "Sin nombre";
-}
 
 // ===== Helpers de inventario =====
 
@@ -229,18 +209,13 @@ function badgeVariantEstadoTienda(label) {
 }
 
 export default function InventoryPage() {
-  const [stores, setStores] = useState([]);
-  const [selectedStoreId, setSelectedStoreId] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
-
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // filtros secundarios sobre el snapshot
-  const [warehouseFilter, setWarehouseFilter] = useState(ALL);
-  const [supplierFilter, setSupplierFilter] = useState(ALL);
+  // filtros globales
+  const [pExistencia, setPExistencia] = useState(ALL);
+  const [pAlmacen, setPAlmacen] = useState(ALL);
+  const [pSuministrador, setPSuministrador] = useState(ALL);
 
   // filtros de análisis
   const [segmentId, setSegmentId] = useState("no_store"); // por defecto: T = 0
@@ -252,49 +227,26 @@ export default function InventoryPage() {
   // ================= Efectos =================
 
   useEffect(() => {
-    loadStores();
-  }, []);
-
-  useEffect(() => {
-    if (selectedStoreId && selectedDate) {
+    const id = setTimeout(() => {
       loadInventory();
-      setWarehouseFilter(ALL);
-      setSupplierFilter(ALL);
       setAdjustments({});
-    }
-  }, [selectedStoreId, selectedDate]);
-
-  // ================= Fetch stores =================
-
-  async function loadStores() {
-    try {
-      const res = await fetch("/api/stores");
-      const data = await res.json();
-      const list = data.data || [];
-      setStores(list);
-      if (list.length > 0) {
-        // usamos _id para la API, pero mostramos código+nombre en el label
-        setSelectedStoreId(list[0]._id);
-      }
-    } catch (err) {
-      console.error("loadStores failed", err);
-      setStores([]);
-    }
-  }
+    }, 200);
+    return () => clearTimeout(id);
+  }, [pExistencia, pAlmacen, pSuministrador]);
 
   // ================= Fetch inventory =================
 
   async function loadInventory() {
-    if (!selectedStoreId || !selectedDate) return;
-
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set("date", selectedDate);
-      params.set("store_id", selectedStoreId);
+      params.set("perPage", "500");
+      if (pExistencia !== ALL) params.set("existencia", pExistencia);
+      if (pAlmacen !== ALL) params.set("almacen", pAlmacen);
+      if (pSuministrador !== ALL)
+        params.set("suministrador", pSuministrador);
 
-      // sin limit: queremos todo el snapshot para poder priorizar
-      const res = await fetch(`/api/inventory?${params.toString()}`, {
+      const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
       });
 
@@ -314,7 +266,7 @@ export default function InventoryPage() {
     }
   }
 
-  // ================= Opciones de filtros secundarios =================
+  // ================= Opciones de filtros globales =================
 
   const filterOptions = useMemo(() => {
     const warehouses = new Set();
@@ -339,25 +291,15 @@ export default function InventoryPage() {
   // ================= Inventario filtrado + segmentado =================
 
   const filteredInventory = useMemo(() => {
-    // 1) filtros secundarios (snapshot)
-    let base = inventory.filter((item) => {
-      const wh = getWarehouseLabel(item);
-      const sup = getSupplierLabel(item);
-
-      if (warehouseFilter !== ALL && wh !== warehouseFilter) return false;
-      if (supplierFilter !== ALL && sup !== supplierFilter) return false;
-
-      return true;
-    });
-
-    // 2) segmento de análisis (prioridades)
+    // 1) segmento de análisis (prioridades)
+    let base = [...inventory];
     const segment =
       ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) ||
       ANALYSIS_SEGMENTS[0];
 
     base = base.filter((item) => segment.predicate(item));
 
-    // 3) orden simple: primero los de mayor EF, luego por nombre
+    // 2) orden simple: primero los de mayor EF, luego por nombre
     base.sort((a, b) => {
       const efDiff = getEF(b) - getEF(a);
       if (efDiff !== 0) return efDiff;
@@ -366,15 +308,16 @@ export default function InventoryPage() {
       return nameA.localeCompare(nameB, "es");
     });
 
-    // 4) limitar cantidad de productos a analizar
+    // 3) limitar cantidad de productos a analizar
     const limit = Number(maxRows);
     if (!Number.isFinite(limit) || limit <= 0) return base;
     return base.slice(0, limit);
-  }, [inventory, warehouseFilter, supplierFilter, segmentId, maxRows]);
+  }, [inventory, segmentId, maxRows]);
 
   function resetFilters() {
-    setWarehouseFilter(ALL);
-    setSupplierFilter(ALL);
+    setPExistencia(ALL);
+    setPAlmacen(ALL);
+    setPSuministrador(ALL);
   }
 
   // ================= Edición de ajustes =================
@@ -424,9 +367,7 @@ export default function InventoryPage() {
 
       payload.push({
         snapshot_id: item._id,
-        product_id: item.product_id || item.product_code,
-        store_id: item.store_id || selectedStoreId,
-        date: selectedDate,
+        product_id: item.product_id || item.product_code || item._id,
         physical_stock: existencia_fisica,
         reserve_qty: reserva,
         store_qty: disponible_tienda,
@@ -473,60 +414,41 @@ export default function InventoryPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Inventario</h1>
         <p className="text-muted-foreground">
-          Ver niveles de inventario por almacén y fecha.
+          Ver niveles de inventario con filtros globales de existencias y
+          suministradores.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Instantáneas de inventario</CardTitle>
+          <CardTitle>Inventario</CardTitle>
 
-          {/* Filtros principales: almacén / fecha */}
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {/* Filtros globales */}
+          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Almacén
+                Existencia Física
               </label>
               <Select
-                value={selectedStoreId}
-                onValueChange={setSelectedStoreId}
+                value={pExistencia}
+                onValueChange={setPExistencia}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar almacén" />
+                  <SelectValue placeholder="(Todas)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store._id} value={store._id}>
-                      {getStoreLabel(store)}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value={ALL}>(Todas)</SelectItem>
+                  <SelectItem value="con">Con existencia (&gt; 0)</SelectItem>
+                  <SelectItem value="sin">Sin existencia (= 0)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Fecha
+                Almacén
               </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Filtros secundarios: almacén snapshot + suministrador */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium">
-                Almacén (en snapshot)
-              </label>
-              <Select
-                value={warehouseFilter}
-                onValueChange={setWarehouseFilter}
-              >
+              <Select value={pAlmacen} onValueChange={setPAlmacen}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
@@ -546,8 +468,8 @@ export default function InventoryPage() {
                 Suministrador
               </label>
               <Select
-                value={supplierFilter}
-                onValueChange={setSupplierFilter}
+                value={pSuministrador}
+                onValueChange={setPSuministrador}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
