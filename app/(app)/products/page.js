@@ -112,9 +112,9 @@ function getSuministrador(p) {
 
 function getEF(p) {
   return toNumber(
-    p.existencia_fisica ??
+    p.physical_stock ??
+      p.existencia_fisica ??
       p.exist_fisica ??
-      p.physical_stock ??
       p.stock ??
       0,
   );
@@ -122,8 +122,8 @@ function getEF(p) {
 
 function getReserva(p) {
   return toNumber(
-    p.reserva ??
-      p.reserve_qty ??
+    p.reserve_qty ??
+      p.reserva ??
       p.reserved ??
       p.reserved_qty ??
       0,
@@ -132,9 +132,9 @@ function getReserva(p) {
 
 function getDisponibleTienda(p) {
   return toNumber(
-    p.disponible_tienda ??
+    p.store_qty ??
+      p.disponible_tienda ??
       p.disponible ??
-      p.store_qty ??
       p.available_store ??
       p.available ??
       0,

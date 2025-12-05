@@ -152,6 +152,37 @@ function getSupplierLabel(item) {
   ).toString();
 }
 
+function normalizeOption(value) {
+  if (value === null || value === undefined) return "";
+  return value.toString().trim();
+}
+
+function mergeOptions(...lists) {
+  const set = new Set();
+  lists.flat().forEach((item) => {
+    const val = normalizeOption(item);
+    if (val) set.add(val);
+  });
+  return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+}
+
+function deriveOptionsFromInventory(inventory) {
+  const warehouses = new Set();
+  const suppliers = new Set();
+
+  inventory.forEach((item) => {
+    const wh = normalizeOption(getWarehouseLabel(item));
+    const sup = normalizeOption(getSupplierLabel(item));
+    if (wh) warehouses.add(wh);
+    if (sup) suppliers.add(sup);
+  });
+
+  return {
+    warehouses: Array.from(warehouses),
+    suppliers: Array.from(suppliers),
+  };
+}
+
 // ===== Estado tienda (mismo criterio que en Products) =====
 
 function getEstadoTienda(item) {
@@ -259,7 +290,14 @@ export default function InventoryPage() {
       }
 
       const data = await res.json();
-      setInventory(Array.isArray(data.data) ? data.data : []);
+      const rows = Array.isArray(data.data) ? data.data : [];
+      const derived = deriveOptionsFromInventory(rows);
+
+      setInventory(rows);
+      setFilterOptions({
+        warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
+        suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
+      });
     } catch (err) {
       console.error("loadInventory failed", err);
       setInventory([]);
@@ -274,21 +312,7 @@ export default function InventoryPage() {
     const warehouses = new Set();
     const suppliers = new Set();
 
-    inventory.forEach((item) => {
-      const wh = getWarehouseLabel(item).trim();
-      const sup = getSupplierLabel(item).trim();
-      if (wh) warehouses.add(wh);
-      if (sup) suppliers.add(sup);
-    });
-
-    const toArr = (set) =>
-      Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
-
-    return {
-      warehouses: toArr(warehouses),
-      suppliers: toArr(suppliers),
-    };
-  }, [inventory]);
+  const globalFilterOptions = filterOptions;
 
   // ================= Inventario filtrado + segmentado =================
 
@@ -305,8 +329,8 @@ export default function InventoryPage() {
     base.sort((a, b) => {
       const efDiff = getEF(b) - getEF(a);
       if (efDiff !== 0) return efDiff;
-      const nameA = (a.product_name || "").toString();
-      const nameB = (b.product_name || "").toString();
+      const nameA = (a.name || a.product_name || "").toString();
+      const nameB = (b.name || b.product_name || "").toString();
       return nameA.localeCompare(nameB, "es");
     });
 
@@ -456,7 +480,7 @@ export default function InventoryPage() {
                 </SelectTrigger>
                 <SelectContent className="max-h-72 overflow-auto">
                   <SelectItem value={ALL}>(Todos)</SelectItem>
-                  {filterOptions.warehouses.map((wh) => (
+                  {globalFilterOptions.warehouses.map((wh) => (
                     <SelectItem key={wh} value={wh}>
                       {wh}
                     </SelectItem>
@@ -478,7 +502,7 @@ export default function InventoryPage() {
                 </SelectTrigger>
                 <SelectContent className="max-h-72 overflow-auto">
                   <SelectItem value={ALL}>(Todos)</SelectItem>
-                  {filterOptions.suppliers.map((sup) => (
+                  {globalFilterOptions.suppliers.map((sup) => (
                     <SelectItem key={sup} value={sup}>
                       {sup}
                     </SelectItem>
@@ -609,7 +633,7 @@ export default function InventoryPage() {
                           {getProductCode(item)}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {item.product_name || "—"}
+                          {item.name || item.product_name || "—"}
                         </TableCell>
                         <TableCell className="text-sm">
                           {getSupplierLabel(item) || "—"}

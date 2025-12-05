@@ -193,9 +193,51 @@ async function handleProducts(request, segments, searchParams, context) {
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean({ virtuals: true }),
       Product.countDocuments(query),
     ]);
+
+    let meta;
+
+    if (includeFilters) {
+      const baseMatch = { org_id: orgId };
+
+      const [
+        warehouseCodes,
+        warehouseNames,
+        noAlmacenes,
+        supplierNames,
+        supplierIds,
+        brands,
+      ] = await Promise.all([
+        Product.distinct("warehouse_code", baseMatch),
+        Product.distinct("warehouse_name", baseMatch),
+        Product.distinct("no_almacen", baseMatch),
+        Product.distinct("supplier_name", baseMatch),
+        Product.distinct("provider_id", baseMatch),
+        Product.distinct("brand", baseMatch),
+      ]);
+
+      const normalize = (value) => {
+        if (value === null || value === undefined) return "";
+        return String(value).trim();
+      };
+
+      const mergeDistinct = (...arrays) => {
+        const set = new Set();
+        arrays.flat().forEach((item) => {
+          const val = normalize(item);
+          if (val) set.add(val);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+      };
+
+      meta = {
+        warehouses: mergeDistinct(warehouseCodes, warehouseNames, noAlmacenes),
+        suppliers: mergeDistinct(supplierNames, supplierIds),
+        brands: mergeDistinct(brands),
+      };
+    }
 
     return NextResponse.json(
       {
@@ -204,6 +246,7 @@ async function handleProducts(request, segments, searchParams, context) {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        meta,
       },
       { headers: corsHeaders(request) },
     );
