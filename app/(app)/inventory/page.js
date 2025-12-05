@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,8 @@ import {
 } from "@/components/ui/table";
 
 const ALL = "__ALL__";
+
+const NO_REASON = "__NONE__";
 
 const ADJUSTMENT_REASONS = [
   "Faltante Inventario",
@@ -91,25 +92,6 @@ const ANALYSIS_SEGMENTS = [
   },
 ];
 
-// ===== Helpers de mapeo de tienda / almacén =====
-
-function getStoreWarehouseCode(store) {
-  return (
-    store.warehouse_code || // ideal
-    store.code || // plan B
-    store.number || // plan C
-    store._id // último recurso
-  )?.toString();
-}
-
-function getStoreLabel(store) {
-  const code =
-    store.warehouse_code || store.code || store.number || "";
-  const name = store.name || "";
-  if (code && name) return `${code} · ${name}`;
-  return name || code || "Sin nombre";
-}
-
 // ===== Helpers de inventario =====
 
 function toSafeNumber(value, fallback = 0) {
@@ -154,9 +136,9 @@ function getProductCode(item) {
 
 function getWarehouseLabel(item) {
   return (
+    item.no_almacen ??
     item.warehouse_name ??
     item.warehouse_code ??
-    item.no_almacen ??
     ""
   ).toString();
 }
@@ -168,6 +150,37 @@ function getSupplierLabel(item) {
     item.supplier ??
     ""
   ).toString();
+}
+
+function normalizeOption(value) {
+  if (value === null || value === undefined) return "";
+  return value.toString().trim();
+}
+
+function mergeOptions(...lists) {
+  const set = new Set();
+  lists.flat().forEach((item) => {
+    const val = normalizeOption(item);
+    if (val) set.add(val);
+  });
+  return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+}
+
+function deriveOptionsFromInventory(inventory) {
+  const warehouses = new Set();
+  const suppliers = new Set();
+
+  inventory.forEach((item) => {
+    const wh = normalizeOption(getWarehouseLabel(item));
+    const sup = normalizeOption(getSupplierLabel(item));
+    if (wh) warehouses.add(wh);
+    if (sup) suppliers.add(sup);
+  });
+
+  return {
+    warehouses: Array.from(warehouses),
+    suppliers: Array.from(suppliers),
+  };
 }
 
 // ===== Estado tienda (mismo criterio que en Products) =====
@@ -229,72 +242,49 @@ function badgeVariantEstadoTienda(label) {
 }
 
 export default function InventoryPage() {
-  const [stores, setStores] = useState([]);
-  const [selectedStoreId, setSelectedStoreId] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
-
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // filtros secundarios sobre el snapshot
-  const [warehouseFilter, setWarehouseFilter] = useState(ALL);
-  const [supplierFilter, setSupplierFilter] = useState(ALL);
+  // filtros globales
+  const [pExistencia, setPExistencia] = useState(ALL);
+  const [pAlmacen, setPAlmacen] = useState(ALL);
+  const [pSuministrador, setPSuministrador] = useState(ALL);
+  const [filterOptions, setFilterOptions] = useState({
+    warehouses: [],
+    suppliers: [],
+  });
 
   // filtros de análisis
   const [segmentId, setSegmentId] = useState("no_store"); // por defecto: T = 0
   const [maxRows, setMaxRows] = useState(50);
 
-  // ajustes en edición: { [snapshotId]: { physical_stock, reserve_qty, store_qty, reason, note } }
+  // ajustes en edición: { [snapshotId]: { existencia_fisica, reserva, disponible_tienda, reason, note } }
   const [adjustments, setAdjustments] = useState({});
 
   // ================= Efectos =================
 
   useEffect(() => {
-    loadStores();
-  }, []);
-
-  useEffect(() => {
-    if (selectedStoreId && selectedDate) {
+    const id = setTimeout(() => {
       loadInventory();
-      setWarehouseFilter(ALL);
-      setSupplierFilter(ALL);
       setAdjustments({});
-    }
-  }, [selectedStoreId, selectedDate]);
-
-  // ================= Fetch stores =================
-
-  async function loadStores() {
-    try {
-      const res = await fetch("/api/stores");
-      const data = await res.json();
-      const list = data.data || [];
-      setStores(list);
-      if (list.length > 0) {
-        // usamos _id para la API, pero mostramos código+nombre en el label
-        setSelectedStoreId(list[0]._id);
-      }
-    } catch (err) {
-      console.error("loadStores failed", err);
-      setStores([]);
-    }
-  }
+    }, 200);
+    return () => clearTimeout(id);
+  }, [pExistencia, pAlmacen, pSuministrador]);
 
   // ================= Fetch inventory =================
 
   async function loadInventory() {
-    if (!selectedStoreId || !selectedDate) return;
-
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set("date", selectedDate);
-      params.set("store_id", selectedStoreId);
+      params.set("perPage", "500");
+      params.set("includeFilters", "1");
+      if (pExistencia !== ALL) params.set("existencia", pExistencia);
+      if (pAlmacen !== ALL) params.set("almacen", pAlmacen);
+      if (pSuministrador !== ALL)
+        params.set("suministrador", pSuministrador);
 
-      // sin limit: queremos todo el snapshot para poder priorizar
-      const res = await fetch(`/api/inventory?${params.toString()}`, {
+      const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
       });
 
@@ -305,7 +295,14 @@ export default function InventoryPage() {
       }
 
       const data = await res.json();
-      setInventory(Array.isArray(data.data) ? data.data : []);
+      const rows = Array.isArray(data.data) ? data.data : [];
+      const derived = deriveOptionsFromInventory(rows);
+
+      setInventory(rows);
+      setFilterOptions({
+        warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
+        suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
+      });
     } catch (err) {
       console.error("loadInventory failed", err);
       setInventory([]);
@@ -314,67 +311,40 @@ export default function InventoryPage() {
     }
   }
 
-  // ================= Opciones de filtros secundarios =================
+  // ================= Opciones de filtros globales =================
 
-  const filterOptions = useMemo(() => {
-    const warehouses = new Set();
-    const suppliers = new Set();
-
-    inventory.forEach((item) => {
-      const wh = getWarehouseLabel(item).trim();
-      const sup = getSupplierLabel(item).trim();
-      if (wh) warehouses.add(wh);
-      if (sup) suppliers.add(sup);
-    });
-
-    const toArr = (set) =>
-      Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
-
-    return {
-      warehouses: toArr(warehouses),
-      suppliers: toArr(suppliers),
-    };
-  }, [inventory]);
+  const globalFilterOptions = filterOptions;
 
   // ================= Inventario filtrado + segmentado =================
 
   const filteredInventory = useMemo(() => {
-    // 1) filtros secundarios (snapshot)
-    let base = inventory.filter((item) => {
-      const wh = getWarehouseLabel(item);
-      const sup = getSupplierLabel(item);
-
-      if (warehouseFilter !== ALL && wh !== warehouseFilter) return false;
-      if (supplierFilter !== ALL && sup !== supplierFilter) return false;
-
-      return true;
-    });
-
-    // 2) segmento de análisis (prioridades)
+    // 1) segmento de análisis (prioridades)
+    let base = [...inventory];
     const segment =
       ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) ||
       ANALYSIS_SEGMENTS[0];
 
     base = base.filter((item) => segment.predicate(item));
 
-    // 3) orden simple: primero los de mayor EF, luego por nombre
+    // 2) orden simple: primero los de mayor EF, luego por nombre
     base.sort((a, b) => {
       const efDiff = getEF(b) - getEF(a);
       if (efDiff !== 0) return efDiff;
-      const nameA = (a.product_name || "").toString();
-      const nameB = (b.product_name || "").toString();
+      const nameA = (a.name || a.product_name || "").toString();
+      const nameB = (b.name || b.product_name || "").toString();
       return nameA.localeCompare(nameB, "es");
     });
 
-    // 4) limitar cantidad de productos a analizar
+    // 3) limitar cantidad de productos a analizar
     const limit = Number(maxRows);
     if (!Number.isFinite(limit) || limit <= 0) return base;
     return base.slice(0, limit);
-  }, [inventory, warehouseFilter, supplierFilter, segmentId, maxRows]);
+  }, [inventory, segmentId, maxRows]);
 
   function resetFilters() {
-    setWarehouseFilter(ALL);
-    setSupplierFilter(ALL);
+    setPExistencia(ALL);
+    setPAlmacen(ALL);
+    setPSuministrador(ALL);
   }
 
   // ================= Edición de ajustes =================
@@ -398,38 +368,40 @@ export default function InventoryPage() {
       if (!adj) continue;
 
       const hasData =
-        adj.physical_stock !== undefined ||
-        adj.reserve_qty !== undefined ||
-        adj.store_qty !== undefined ||
-        (adj.reason && adj.reason !== "") ||
+        adj.existencia_fisica !== undefined ||
+        adj.reserva !== undefined ||
+        adj.disponible_tienda !== undefined ||
+        (adj.reason && adj.reason !== NO_REASON) ||
         (adj.note && adj.note.trim() !== "");
 
       if (!hasData) continue;
 
-      const physical_stock =
-        adj.physical_stock !== undefined && adj.physical_stock !== ""
-          ? toSafeNumber(adj.physical_stock, getEF(item))
+      const existencia_fisica =
+        adj.existencia_fisica !== undefined && adj.existencia_fisica !== ""
+          ? toSafeNumber(adj.existencia_fisica, getEF(item))
           : getEF(item);
 
-      const reserve_qty =
-        adj.reserve_qty !== undefined && adj.reserve_qty !== ""
-          ? toSafeNumber(adj.reserve_qty, getA(item))
+      const reserva =
+        adj.reserva !== undefined && adj.reserva !== ""
+          ? toSafeNumber(adj.reserva, getA(item))
           : getA(item);
 
-      const store_qty =
-        adj.store_qty !== undefined && adj.store_qty !== ""
-          ? toSafeNumber(adj.store_qty, getT(item))
+      const disponible_tienda =
+        adj.disponible_tienda !== undefined &&
+        adj.disponible_tienda !== ""
+          ? toSafeNumber(adj.disponible_tienda, getT(item))
           : getT(item);
 
       payload.push({
         snapshot_id: item._id,
-        product_id: item.product_id || item.product_code,
-        store_id: item.store_id || selectedStoreId,
-        date: selectedDate,
-        physical_stock,
-        reserve_qty,
-        store_qty,
-        reason: adj.reason || null,
+        product_id: item.product_id || item.product_code || item._id,
+        physical_stock: existencia_fisica,
+        reserve_qty: reserva,
+        store_qty: disponible_tienda,
+        existencia_fisica,
+        reserva,
+        disponible_tienda,
+        reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
         note: adj.note || "",
       });
     }
@@ -469,66 +441,47 @@ export default function InventoryPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Inventario</h1>
         <p className="text-muted-foreground">
-          Ver niveles de inventario por almacén y fecha.
+          Ver niveles de inventario con filtros globales de existencias y
+          suministradores.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Instantáneas de inventario</CardTitle>
+          <CardTitle>Inventario</CardTitle>
 
-          {/* Filtros principales: almacén / fecha */}
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {/* Filtros globales */}
+          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Almacén
+                Existencia Física
               </label>
               <Select
-                value={selectedStoreId}
-                onValueChange={setSelectedStoreId}
+                value={pExistencia}
+                onValueChange={setPExistencia}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar almacén" />
+                  <SelectValue placeholder="(Todas)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store._id} value={store._id}>
-                      {getStoreLabel(store)}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value={ALL}>(Todas)</SelectItem>
+                  <SelectItem value="con">Con existencia (&gt; 0)</SelectItem>
+                  <SelectItem value="sin">Sin existencia (= 0)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Fecha
+                Almacén
               </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Filtros secundarios: almacén snapshot + suministrador */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium">
-                Almacén (en snapshot)
-              </label>
-              <Select
-                value={warehouseFilter}
-                onValueChange={setWarehouseFilter}
-              >
+              <Select value={pAlmacen} onValueChange={setPAlmacen}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72 overflow-auto">
                   <SelectItem value={ALL}>(Todos)</SelectItem>
-                  {filterOptions.warehouses.map((wh) => (
+                  {globalFilterOptions.warehouses.map((wh) => (
                     <SelectItem key={wh} value={wh}>
                       {wh}
                     </SelectItem>
@@ -542,15 +495,15 @@ export default function InventoryPage() {
                 Suministrador
               </label>
               <Select
-                value={supplierFilter}
-                onValueChange={setSupplierFilter}
+                value={pSuministrador}
+                onValueChange={setPSuministrador}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72 overflow-auto">
                   <SelectItem value={ALL}>(Todos)</SelectItem>
-                  {filterOptions.suppliers.map((sup) => (
+                  {globalFilterOptions.suppliers.map((sup) => (
                     <SelectItem key={sup} value={sup}>
                       {sup}
                     </SelectItem>
@@ -664,13 +617,12 @@ export default function InventoryPage() {
                     const adj = adjustments[snapshotId] || {};
 
                     const efValue =
-                      adj.physical_stock ??
+                      adj.existencia_fisica ??
                       (getEF(item) !== 0 ? getEF(item) : "");
                     const aValue =
-                      adj.reserve_qty ??
-                      (getA(item) !== 0 ? getA(item) : "");
+                      adj.reserva ?? (getA(item) !== 0 ? getA(item) : "");
                     const tValue =
-                      adj.store_qty ??
+                      adj.disponible_tienda ??
                       (getT(item) !== 0 ? getT(item) : "");
 
                     return (
@@ -682,7 +634,7 @@ export default function InventoryPage() {
                           {getProductCode(item)}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {item.product_name || "—"}
+                          {item.name || item.product_name || "—"}
                         </TableCell>
                         <TableCell className="text-sm">
                           {getSupplierLabel(item) || "—"}
@@ -695,7 +647,7 @@ export default function InventoryPage() {
                             onChange={(e) =>
                               updateAdjustment(
                                 snapshotId,
-                                "physical_stock",
+                                "existencia_fisica",
                                 e.target.value
                               )
                             }
@@ -709,7 +661,7 @@ export default function InventoryPage() {
                             onChange={(e) =>
                               updateAdjustment(
                                 snapshotId,
-                                "reserve_qty",
+                                "reserva",
                                 e.target.value
                               )
                             }
@@ -723,7 +675,7 @@ export default function InventoryPage() {
                             onChange={(e) =>
                               updateAdjustment(
                                 snapshotId,
-                                "store_qty",
+                                "disponible_tienda",
                                 e.target.value
                               )
                             }
@@ -731,12 +683,12 @@ export default function InventoryPage() {
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={adj.reason || ""}
+                            value={adj.reason || NO_REASON}
                             onValueChange={(v) =>
                               updateAdjustment(
                                 snapshotId,
                                 "reason",
-                                v
+                                v || NO_REASON
                               )
                             }
                           >
@@ -744,7 +696,7 @@ export default function InventoryPage() {
                               <SelectValue placeholder="Seleccionar..." />
                             </SelectTrigger>
                             <SelectContent className="max-h-72 overflow-auto">
-                              <SelectItem value="">
+                              <SelectItem value={NO_REASON}>
                                 (Sin clasificación)
                               </SelectItem>
                               {ADJUSTMENT_REASONS.map((reason) => (
