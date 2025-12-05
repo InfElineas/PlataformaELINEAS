@@ -346,7 +346,7 @@ export default function InventoryPage() {
         adj.existencia_fisica !== undefined ||
         adj.reserva !== undefined ||
         adj.disponible_tienda !== undefined ||
-        (adj.reason && adj.reason !== NO_REASON) ||
+        (adj.reason && adj.reason !== "") ||
         (adj.note && adj.note.trim() !== "");
 
       if (!hasData) continue;
@@ -376,7 +376,7 @@ export default function InventoryPage() {
         existencia_fisica,
         reserva,
         disponible_tienda,
-        reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
+        reason: adj.reason || null,
         note: adj.note || "",
       });
     }

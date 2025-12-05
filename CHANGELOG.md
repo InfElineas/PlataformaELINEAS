@@ -7,7 +7,3 @@
 - `lib/imports/products.js`: `buildProductDocument()` ahora consume los campos normalizados y persiste existencias, reservas y almacenes en los lugares correctos.
 - `lib/models/Product.js`: se estandarizaron los campos de inventario en español con alias para nombres previos y se evitó la duplicidad de datos.
 - `app/api/imports/products/google/route.js`: mensajes de error inesperado en español y consistentes con el flujo de importación.
-
-## Filtros globales de inventario
-- `app/api/[[...path]]/route.js`: el handler de productos acepta filtros por existencia, almacén, suministrador, marca y estado de activación, además de respetar el parámetro `perPage`.
-- `app/(app)/inventory/page.js`: la vista de inventario usa filtros globales (existencia, almacén y suministrador) en vez de fecha o snapshot local, consultando directamente los productos de la base de datos.
