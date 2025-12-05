@@ -120,8 +120,8 @@ function toSafeNumber(value, fallback = 0) {
 
 function getEF(item) {
   return toSafeNumber(
-    item.physical_stock ??
-      item.existencia_fisica ??
+    item.existencia_fisica ??
+      item.physical_stock ??
       item.exist_fisica ??
       item.ef
   );
@@ -129,14 +129,14 @@ function getEF(item) {
 
 function getA(item) {
   return toSafeNumber(
-    item.reserve_qty ?? item.reserva ?? item.A ?? item.almacen
+    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen
   );
 }
 
 function getT(item) {
   return toSafeNumber(
-    item.store_qty ??
-      item.disponible_tienda ??
+    item.disponible_tienda ??
+      item.store_qty ??
       item.disponible ??
       item.tienda
   );
@@ -154,9 +154,9 @@ function getProductCode(item) {
 
 function getWarehouseLabel(item) {
   return (
+    item.no_almacen ??
     item.warehouse_name ??
     item.warehouse_code ??
-    item.no_almacen ??
     ""
   ).toString();
 }
@@ -246,7 +246,7 @@ export default function InventoryPage() {
   const [segmentId, setSegmentId] = useState("no_store"); // por defecto: T = 0
   const [maxRows, setMaxRows] = useState(50);
 
-  // ajustes en edición: { [snapshotId]: { physical_stock, reserve_qty, store_qty, reason, note } }
+  // ajustes en edición: { [snapshotId]: { existencia_fisica, reserva, disponible_tienda, reason, note } }
   const [adjustments, setAdjustments] = useState({});
 
   // ================= Efectos =================
@@ -398,27 +398,28 @@ export default function InventoryPage() {
       if (!adj) continue;
 
       const hasData =
-        adj.physical_stock !== undefined ||
-        adj.reserve_qty !== undefined ||
-        adj.store_qty !== undefined ||
+        adj.existencia_fisica !== undefined ||
+        adj.reserva !== undefined ||
+        adj.disponible_tienda !== undefined ||
         (adj.reason && adj.reason !== "") ||
         (adj.note && adj.note.trim() !== "");
 
       if (!hasData) continue;
 
-      const physical_stock =
-        adj.physical_stock !== undefined && adj.physical_stock !== ""
-          ? toSafeNumber(adj.physical_stock, getEF(item))
+      const existencia_fisica =
+        adj.existencia_fisica !== undefined && adj.existencia_fisica !== ""
+          ? toSafeNumber(adj.existencia_fisica, getEF(item))
           : getEF(item);
 
-      const reserve_qty =
-        adj.reserve_qty !== undefined && adj.reserve_qty !== ""
-          ? toSafeNumber(adj.reserve_qty, getA(item))
+      const reserva =
+        adj.reserva !== undefined && adj.reserva !== ""
+          ? toSafeNumber(adj.reserva, getA(item))
           : getA(item);
 
-      const store_qty =
-        adj.store_qty !== undefined && adj.store_qty !== ""
-          ? toSafeNumber(adj.store_qty, getT(item))
+      const disponible_tienda =
+        adj.disponible_tienda !== undefined &&
+        adj.disponible_tienda !== ""
+          ? toSafeNumber(adj.disponible_tienda, getT(item))
           : getT(item);
 
       payload.push({
@@ -426,9 +427,12 @@ export default function InventoryPage() {
         product_id: item.product_id || item.product_code,
         store_id: item.store_id || selectedStoreId,
         date: selectedDate,
-        physical_stock,
-        reserve_qty,
-        store_qty,
+        physical_stock: existencia_fisica,
+        reserve_qty: reserva,
+        store_qty: disponible_tienda,
+        existencia_fisica,
+        reserva,
+        disponible_tienda,
         reason: adj.reason || null,
         note: adj.note || "",
       });
@@ -664,13 +668,12 @@ export default function InventoryPage() {
                     const adj = adjustments[snapshotId] || {};
 
                     const efValue =
-                      adj.physical_stock ??
+                      adj.existencia_fisica ??
                       (getEF(item) !== 0 ? getEF(item) : "");
                     const aValue =
-                      adj.reserve_qty ??
-                      (getA(item) !== 0 ? getA(item) : "");
+                      adj.reserva ?? (getA(item) !== 0 ? getA(item) : "");
                     const tValue =
-                      adj.store_qty ??
+                      adj.disponible_tienda ??
                       (getT(item) !== 0 ? getT(item) : "");
 
                     return (
@@ -695,7 +698,7 @@ export default function InventoryPage() {
                             onChange={(e) =>
                               updateAdjustment(
                                 snapshotId,
-                                "physical_stock",
+                                "existencia_fisica",
                                 e.target.value
                               )
                             }
@@ -709,7 +712,7 @@ export default function InventoryPage() {
                             onChange={(e) =>
                               updateAdjustment(
                                 snapshotId,
-                                "reserve_qty",
+                                "reserva",
                                 e.target.value
                               )
                             }
@@ -723,7 +726,7 @@ export default function InventoryPage() {
                             onChange={(e) =>
                               updateAdjustment(
                                 snapshotId,
-                                "store_qty",
+                                "disponible_tienda",
                                 e.target.value
                               )
                             }
