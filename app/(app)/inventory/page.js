@@ -24,6 +24,8 @@ import {
 
 const ALL = "__ALL__";
 
+const NO_REASON = "__NONE__";
+
 const ADJUSTMENT_REASONS = [
   "Faltante Inventario",
   "Sobrante en inventario",
@@ -656,12 +658,12 @@ export default function InventoryPage() {
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={adj.reason || ""}
+                            value={adj.reason || NO_REASON}
                             onValueChange={(v) =>
                               updateAdjustment(
                                 snapshotId,
                                 "reason",
-                                v
+                                v || NO_REASON
                               )
                             }
                           >
@@ -669,7 +671,7 @@ export default function InventoryPage() {
                               <SelectValue placeholder="Seleccionar..." />
                             </SelectTrigger>
                             <SelectContent className="max-h-72 overflow-auto">
-                              <SelectItem value="">
+                              <SelectItem value={NO_REASON}>
                                 (Sin clasificación)
                               </SelectItem>
                               {ADJUSTMENT_REASONS.map((reason) => (
