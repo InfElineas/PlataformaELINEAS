@@ -140,7 +140,11 @@ export async function POST(request) {
     // Errores inesperados
     console.error("[IMPORT GOOGLE] Unexpected error:", error);
     return NextResponse.json(
-      { ok: false, error: error.message || "Error desconocido" },
+      {
+        ok: false,
+        error:
+          error?.message || "Error inesperado al importar productos desde Google",
+      },
       { status: 500 },
     );
   }
