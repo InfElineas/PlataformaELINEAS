@@ -102,8 +102,8 @@ function toSafeNumber(value, fallback = 0) {
 
 function getEF(item) {
   return toSafeNumber(
-    item.physical_stock ??
-      item.existencia_fisica ??
+    item.existencia_fisica ??
+      item.physical_stock ??
       item.exist_fisica ??
       item.ef
   );
@@ -111,14 +111,14 @@ function getEF(item) {
 
 function getA(item) {
   return toSafeNumber(
-    item.reserve_qty ?? item.reserva ?? item.A ?? item.almacen
+    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen
   );
 }
 
 function getT(item) {
   return toSafeNumber(
-    item.store_qty ??
-      item.disponible_tienda ??
+    item.disponible_tienda ??
+      item.store_qty ??
       item.disponible ??
       item.tienda
   );
