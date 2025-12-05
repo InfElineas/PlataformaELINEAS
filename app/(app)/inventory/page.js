@@ -152,6 +152,16 @@ function getSupplierLabel(item) {
   ).toString();
 }
 
+function getProductName(item) {
+  return (
+    item.name ??
+      item.product_name ??
+      item.product ??
+      item.title ??
+      ""
+  ).toString();
+}
+
 function normalizeOption(value) {
   if (value === null || value === undefined) return "";
   return value.toString().trim();
@@ -249,6 +259,10 @@ export default function InventoryPage() {
   const [pExistencia, setPExistencia] = useState(ALL);
   const [pAlmacen, setPAlmacen] = useState(ALL);
   const [pSuministrador, setPSuministrador] = useState(ALL);
+  const [filterOptions, setFilterOptions] = useState({
+    warehouses: [],
+    suppliers: [],
+  });
 
   // filtros de análisis
   const [segmentId, setSegmentId] = useState("no_store"); // por defecto: T = 0
@@ -274,6 +288,7 @@ export default function InventoryPage() {
     try {
       const params = new URLSearchParams();
       params.set("perPage", "500");
+      params.set("includeFilters", "1");
       if (pExistencia !== ALL) params.set("existencia", pExistencia);
       if (pAlmacen !== ALL) params.set("almacen", pAlmacen);
       if (pSuministrador !== ALL)
@@ -308,11 +323,17 @@ export default function InventoryPage() {
 
   // ================= Opciones de filtros globales =================
 
-  const filterOptions = useMemo(() => {
-    const warehouses = new Set();
-    const suppliers = new Set();
-
-  const globalFilterOptions = filterOptions;
+  const globalFilterOptions = useMemo(
+    () => ({
+      warehouses: Array.isArray(filterOptions?.warehouses)
+        ? filterOptions.warehouses
+        : [],
+      suppliers: Array.isArray(filterOptions?.suppliers)
+        ? filterOptions.suppliers
+        : [],
+    }),
+    [filterOptions],
+  );
 
   // ================= Inventario filtrado + segmentado =================
 
@@ -326,13 +347,13 @@ export default function InventoryPage() {
     base = base.filter((item) => segment.predicate(item));
 
     // 2) orden simple: primero los de mayor EF, luego por nombre
-    base.sort((a, b) => {
-      const efDiff = getEF(b) - getEF(a);
-      if (efDiff !== 0) return efDiff;
-      const nameA = (a.name || a.product_name || "").toString();
-      const nameB = (b.name || b.product_name || "").toString();
-      return nameA.localeCompare(nameB, "es");
-    });
+      base.sort((a, b) => {
+        const efDiff = getEF(b) - getEF(a);
+        if (efDiff !== 0) return efDiff;
+        const nameA = getProductName(a);
+        const nameB = getProductName(b);
+        return nameA.localeCompare(nameB, "es");
+      });
 
     // 3) limitar cantidad de productos a analizar
     const limit = Number(maxRows);
@@ -370,7 +391,7 @@ export default function InventoryPage() {
         adj.existencia_fisica !== undefined ||
         adj.reserva !== undefined ||
         adj.disponible_tienda !== undefined ||
-        (adj.reason && adj.reason !== "") ||
+        (adj.reason && adj.reason !== NO_REASON) ||
         (adj.note && adj.note.trim() !== "");
 
       if (!hasData) continue;
@@ -400,7 +421,7 @@ export default function InventoryPage() {
         existencia_fisica,
         reserva,
         disponible_tienda,
-        reason: adj.reason || null,
+        reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
         note: adj.note || "",
       });
     }
@@ -633,7 +654,7 @@ export default function InventoryPage() {
                           {getProductCode(item)}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {item.name || item.product_name || "—"}
+                          {getProductName(item) || "—"}
                         </TableCell>
                         <TableCell className="text-sm">
                           {getSupplierLabel(item) || "—"}
