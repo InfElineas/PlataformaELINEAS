@@ -135,3 +135,13 @@ code {
     @apply bg-background text-foreground;
   }
 }
+
+.content {
+  z-index: 3 !important;
+}
+.overlay {
+  z-index: 4 !important;
+}
+.sidebar {
+  z-index: 5 !important;
+}
