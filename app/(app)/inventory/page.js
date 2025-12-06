@@ -105,22 +105,19 @@ function getEF(item) {
     item.existencia_fisica ??
       item.physical_stock ??
       item.exist_fisica ??
-      item.ef
+      item.ef,
   );
 }
 
 function getA(item) {
   return toSafeNumber(
-    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen
+    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen,
   );
 }
 
 function getT(item) {
   return toSafeNumber(
-    item.disponible_tienda ??
-      item.store_qty ??
-      item.disponible ??
-      item.tienda
+    item.disponible_tienda ?? item.store_qty ?? item.disponible ?? item.tienda,
   );
 }
 
@@ -155,10 +152,10 @@ function getSupplierLabel(item) {
 function getProductName(item) {
   return (
     item.name ??
-      item.product_name ??
-      item.product ??
-      item.title ??
-      ""
+    item.product_name ??
+    item.product ??
+    item.title ??
+    ""
   ).toString();
 }
 
@@ -202,9 +199,7 @@ function getEstadoTienda(item) {
   const T = getT(item);
 
   if (!ID) {
-    return EF === 0
-      ? 'SIN ID (ID = "" y EF = 0)'
-      : 'SIN ID (ID = "" y EF > 0)';
+    return EF === 0 ? 'SIN ID (ID = "" y EF = 0)' : 'SIN ID (ID = "" y EF > 0)';
   }
 
   if (EF === 0) {
@@ -242,10 +237,7 @@ function getEstadoTienda(item) {
 
 function badgeVariantEstadoTienda(label) {
   if (label.startsWith("DISPONIBLE")) return "default";
-  if (
-    label.startsWith("PROXIMO") ||
-    label.startsWith("ULTIMAS PIEZAS")
-  ) {
+  if (label.startsWith("PROXIMO") || label.startsWith("ULTIMAS PIEZAS")) {
     return "secondary";
   }
   return "destructive";
@@ -291,8 +283,7 @@ export default function InventoryPage() {
       params.set("includeFilters", "1");
       if (pExistencia !== ALL) params.set("existencia", pExistencia);
       if (pAlmacen !== ALL) params.set("almacen", pAlmacen);
-      if (pSuministrador !== ALL)
-        params.set("suministrador", pSuministrador);
+      if (pSuministrador !== ALL) params.set("suministrador", pSuministrador);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -310,7 +301,10 @@ export default function InventoryPage() {
 
       setInventory(rows);
       setFilterOptions({
-        warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
+        warehouses: mergeOptions(
+          data.meta?.warehouses || [],
+          derived.warehouses,
+        ),
         suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
       });
     } catch (err) {
@@ -341,19 +335,18 @@ export default function InventoryPage() {
     // 1) segmento de análisis (prioridades)
     let base = [...inventory];
     const segment =
-      ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) ||
-      ANALYSIS_SEGMENTS[0];
+      ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) || ANALYSIS_SEGMENTS[0];
 
     base = base.filter((item) => segment.predicate(item));
 
     // 2) orden simple: primero los de mayor EF, luego por nombre
-      base.sort((a, b) => {
-        const efDiff = getEF(b) - getEF(a);
-        if (efDiff !== 0) return efDiff;
-        const nameA = getProductName(a);
-        const nameB = getProductName(b);
-        return nameA.localeCompare(nameB, "es");
-      });
+    base.sort((a, b) => {
+      const efDiff = getEF(b) - getEF(a);
+      if (efDiff !== 0) return efDiff;
+      const nameA = getProductName(a);
+      const nameB = getProductName(b);
+      return nameA.localeCompare(nameB, "es");
+    });
 
     // 3) limitar cantidad de productos a analizar
     const limit = Number(maxRows);
@@ -407,8 +400,7 @@ export default function InventoryPage() {
           : getA(item);
 
       const disponible_tienda =
-        adj.disponible_tienda !== undefined &&
-        adj.disponible_tienda !== ""
+        adj.disponible_tienda !== undefined && adj.disponible_tienda !== ""
           ? toSafeNumber(adj.disponible_tienda, getT(item))
           : getT(item);
 
@@ -476,10 +468,7 @@ export default function InventoryPage() {
               <label className="mb-2 block text-sm font-medium">
                 Existencia Física
               </label>
-              <Select
-                value={pExistencia}
-                onValueChange={setPExistencia}
-              >
+              <Select value={pExistencia} onValueChange={setPExistencia}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todas)" />
                 </SelectTrigger>
@@ -492,9 +481,7 @@ export default function InventoryPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Almacén
-              </label>
+              <label className="mb-2 block text-sm font-medium">Almacén</label>
               <Select value={pAlmacen} onValueChange={setPAlmacen}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
@@ -514,10 +501,7 @@ export default function InventoryPage() {
               <label className="mb-2 block text-sm font-medium">
                 Suministrador
               </label>
-              <Select
-                value={pSuministrador}
-                onValueChange={setPSuministrador}
-              >
+              <Select value={pSuministrador} onValueChange={setPSuministrador}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
@@ -545,10 +529,7 @@ export default function InventoryPage() {
               <label className="mb-2 block text-sm font-medium">
                 Segmento de análisis (Estado tienda)
               </label>
-              <Select
-                value={segmentId}
-                onValueChange={setSegmentId}
-              >
+              <Select value={segmentId} onValueChange={setSegmentId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -607,12 +588,8 @@ export default function InventoryPage() {
                   <TableHead className="text-right">
                     EF (Existencia física)
                   </TableHead>
-                  <TableHead className="text-right">
-                    A (Reserva)
-                  </TableHead>
-                  <TableHead className="text-right">
-                    T (Disp. tienda)
-                  </TableHead>
+                  <TableHead className="text-right">A (Reserva)</TableHead>
+                  <TableHead className="text-right">T (Disp. tienda)</TableHead>
                   <TableHead>Clasificación</TableHead>
                   <TableHead>Nota</TableHead>
                 </TableRow>
@@ -624,16 +601,14 @@ export default function InventoryPage() {
                       colSpan={9}
                       className="py-8 text-center text-muted-foreground"
                     >
-                      No hay datos de inventario para los filtros
-                      seleccionados.
+                      No hay datos de inventario para los filtros seleccionados.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredInventory.map((item) => {
                     const snapshotId = item._id;
                     const estado = getEstadoTienda(item);
-                    const variant =
-                      badgeVariantEstadoTienda(estado);
+                    const variant = badgeVariantEstadoTienda(estado);
                     const adj = adjustments[snapshotId] || {};
 
                     const efValue =
@@ -668,7 +643,7 @@ export default function InventoryPage() {
                               updateAdjustment(
                                 snapshotId,
                                 "existencia_fisica",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -682,7 +657,7 @@ export default function InventoryPage() {
                               updateAdjustment(
                                 snapshotId,
                                 "reserva",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -696,7 +671,7 @@ export default function InventoryPage() {
                               updateAdjustment(
                                 snapshotId,
                                 "disponible_tienda",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />
@@ -708,7 +683,7 @@ export default function InventoryPage() {
                               updateAdjustment(
                                 snapshotId,
                                 "reason",
-                                v || NO_REASON
+                                v || NO_REASON,
                               )
                             }
                           >
@@ -720,10 +695,7 @@ export default function InventoryPage() {
                                 (Sin clasificación)
                               </SelectItem>
                               {ADJUSTMENT_REASONS.map((reason) => (
-                                <SelectItem
-                                  key={reason}
-                                  value={reason}
-                                >
+                                <SelectItem key={reason} value={reason}>
                                   {reason}
                                 </SelectItem>
                               ))}
@@ -739,7 +711,7 @@ export default function InventoryPage() {
                               updateAdjustment(
                                 snapshotId,
                                 "note",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                           />

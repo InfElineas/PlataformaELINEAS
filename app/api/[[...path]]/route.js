@@ -187,7 +187,8 @@ async function handleProducts(request, segments, searchParams, context) {
       andFilters.push({ status: { $ne: "active" } });
     }
 
-    const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
+    const query =
+      andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
     const [products, total] = await Promise.all([
       Product.find(query)

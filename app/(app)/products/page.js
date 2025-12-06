@@ -73,8 +73,7 @@ function TruncatedCell({ value, className }) {
   const raw = fmt(value);
   if (raw === "—") return <span className={className}>—</span>;
 
-  const truncated =
-    raw.length > 12 ? `${raw.slice(0, 12)}…` : raw;
+  const truncated = raw.length > 12 ? `${raw.slice(0, 12)}…` : raw;
 
   return (
     <span className={className} title={raw}>
@@ -102,31 +101,19 @@ function getCodProducto(p) {
 
 function getSuministrador(p) {
   return (
-    p.supplier_name ??
-    p.provider_name ??
-    p.provider_id ??
-    p.supplier_id ??
-    ""
+    p.supplier_name ?? p.provider_name ?? p.provider_id ?? p.supplier_id ?? ""
   );
 }
 
 function getEF(p) {
   return toNumber(
-    p.physical_stock ??
-      p.existencia_fisica ??
-      p.exist_fisica ??
-      p.stock ??
-      0,
+    p.physical_stock ?? p.existencia_fisica ?? p.exist_fisica ?? p.stock ?? 0,
   );
 }
 
 function getReserva(p) {
   return toNumber(
-    p.reserve_qty ??
-      p.reserva ??
-      p.reserved ??
-      p.reserved_qty ??
-      0,
+    p.reserve_qty ?? p.reserva ?? p.reserved ?? p.reserved_qty ?? 0,
   );
 }
 
@@ -179,9 +166,7 @@ function getEstadoAnuncio(p) {
   }
 
   if (status === "dead" || status === "muerto") {
-    return EF === 0
-      ? "DESACTIVADO MUERTO EF = 0"
-      : "DESACTIVADO MUERTO EF > 0";
+    return EF === 0 ? "DESACTIVADO MUERTO EF = 0" : "DESACTIVADO MUERTO EF > 0";
   }
 
   return EF === 0 ? "DESACTIVADO EF = 0" : "DESACTIVADO EF > 0";
@@ -326,8 +311,7 @@ export default function ProductsPage() {
 
       if (aExistencia !== ALL) params.set("existencia", aExistencia);
       if (aAlmacen !== ALL) params.set("almacen", aAlmacen);
-      if (aSuministrador !== ALL)
-        params.set("suministrador", aSuministrador);
+      if (aSuministrador !== ALL) params.set("suministrador", aSuministrador);
       if (aCategoria !== ALL) params.set("categoria", aCategoria);
       if (aMarca !== ALL) params.set("marca", aMarca);
       if (aHabilitado !== ALL) params.set("habilitado", aHabilitado);
@@ -372,8 +356,7 @@ export default function ProductsPage() {
       if (m) marcas.add(m);
     });
 
-    const toArr = (s) =>
-      Array.from(s).sort((a, b) => a.localeCompare(b, "es"));
+    const toArr = (s) => Array.from(s).sort((a, b) => a.localeCompare(b, "es"));
 
     return {
       almacenes: toArr(almacenes),
@@ -417,8 +400,7 @@ export default function ProductsPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const firstItem = total === 0 ? 0 : (page - 1) * perPage + 1;
-  const lastItem =
-    total === 0 ? 0 : firstItem + rows.length - 1;
+  const lastItem = total === 0 ? 0 : firstItem + rows.length - 1;
 
   const resultsLabel = loading
     ? "Cargando…"
@@ -474,127 +456,96 @@ export default function ProductsPage() {
                   >
                     <DropdownMenuCheckboxItem
                       checked={cols.categoria}
-                      onCheckedChange={(v) =>
-                        setCol("categoria", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("categoria", !!v)}
                     >
                       Categoría Online
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.idTienda}
-                      onCheckedChange={(v) =>
-                        setCol("idTienda", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("idTienda", !!v)}
                     >
                       Id Tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.codProducto}
-                      onCheckedChange={(v) =>
-                        setCol("codProducto", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("codProducto", !!v)}
                     >
                       Cod. Producto
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.nombre}
-                      onCheckedChange={(v) =>
-                        setCol("nombre", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("nombre", !!v)}
                     >
                       Nombre
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.marca}
-                      onCheckedChange={(v) =>
-                        setCol("marca", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("marca", !!v)}
                     >
                       Marca
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.suministrador}
-                      onCheckedChange={(v) =>
-                        setCol("suministrador", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("suministrador", !!v)}
                     >
                       Suministrador
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.exist}
-                      onCheckedChange={(v) =>
-                        setCol("exist", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("exist", !!v)}
                     >
                       Existencia Física
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.reserva}
-                      onCheckedChange={(v) =>
-                        setCol("reserva", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("reserva", !!v)}
                     >
                       Reserva (A)
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.dispTienda}
-                      onCheckedChange={(v) =>
-                        setCol("dispTienda", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("dispTienda", !!v)}
                     >
                       Disp. Tienda (T)
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.precioCosto}
-                      onCheckedChange={(v) =>
-                        setCol("precioCosto", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("precioCosto", !!v)}
                     >
                       Precio Costo
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.noAlmacen}
-                      onCheckedChange={(v) =>
-                        setCol("noAlmacen", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("noAlmacen", !!v)}
                     >
                       No. Almacén
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoAnuncio}
-                      onCheckedChange={(v) =>
-                        setCol("estadoAnuncio", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("estadoAnuncio", !!v)}
                     >
                       Estado de Anuncio
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoTienda}
-                      onCheckedChange={(v) =>
-                        setCol("estadoTienda", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("estadoTienda", !!v)}
                     >
                       Estado en tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.creado}
-                      onCheckedChange={(v) =>
-                        setCol("creado", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("creado", !!v)}
                     >
                       Creado
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.actualizado}
-                      onCheckedChange={(v) =>
-                        setCol("actualizado", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("actualizado", !!v)}
                     >
                       Actualizado
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
               </div>
             </div>
 
@@ -604,33 +555,21 @@ export default function ProductsPage() {
                 <span className="text-xs text-muted-foreground">
                   Existencia
                 </span>
-                <Select
-                  value={pExistencia}
-                  onValueChange={setPExistencia}
-                >
+                <Select value={pExistencia} onValueChange={setPExistencia}>
                   <SelectTrigger>
                     <SelectValue placeholder="Existencia" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL}>(Todas)</SelectItem>
-                    <SelectItem value="con">
-                      Con existencia (&gt; 0)
-                    </SelectItem>
-                    <SelectItem value="sin">
-                      Sin existencia (= 0)
-                    </SelectItem>
+                    <SelectItem value="con">Con existencia (&gt; 0)</SelectItem>
+                    <SelectItem value="sin">Sin existencia (= 0)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Almacén
-                </span>
-                <Select
-                  value={pAlmacen}
-                  onValueChange={setPAlmacen}
-                >
+                <span className="text-xs text-muted-foreground">Almacén</span>
+                <Select value={pAlmacen} onValueChange={setPAlmacen}>
                   <SelectTrigger>
                     <SelectValue placeholder="Almacén" />
                   </SelectTrigger>
@@ -671,10 +610,7 @@ export default function ProductsPage() {
                 <span className="text-xs text-muted-foreground">
                   Categoría Online
                 </span>
-                <Select
-                  value={pCategoria}
-                  onValueChange={setPCategoria}
-                >
+                <Select value={pCategoria} onValueChange={setPCategoria}>
                   <SelectTrigger>
                     <SelectValue placeholder="Categoría Online" />
                   </SelectTrigger>
@@ -690,13 +626,8 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Marca
-                </span>
-                <Select
-                  value={pMarca}
-                  onValueChange={setPMarca}
-                >
+                <span className="text-xs text-muted-foreground">Marca</span>
+                <Select value={pMarca} onValueChange={setPMarca}>
                   <SelectTrigger>
                     <SelectValue placeholder="Marca" />
                   </SelectTrigger>
@@ -715,10 +646,7 @@ export default function ProductsPage() {
                 <span className="text-xs text-muted-foreground">
                   Habilitado
                 </span>
-                <Select
-                  value={pHabilitado}
-                  onValueChange={setPHabilitado}
-                >
+                <Select value={pHabilitado} onValueChange={setPHabilitado}>
                   <SelectTrigger>
                     <SelectValue placeholder="Habilitado" />
                   </SelectTrigger>
@@ -731,13 +659,8 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Activado
-                </span>
-                <Select
-                  value={pActivado}
-                  onValueChange={setPActivado}
-                >
+                <span className="text-xs text-muted-foreground">Activado</span>
+                <Select value={pActivado} onValueChange={setPActivado}>
                   <SelectTrigger>
                     <SelectValue placeholder="Activado" />
                   </SelectTrigger>
@@ -764,8 +687,8 @@ export default function ProductsPage() {
             </div>
             {/* Resultados */}
             <span className="text-sm text-muted-foreground">
-                  {resultsLabel}
-                </span>
+              {resultsLabel}
+            </span>
 
             {/* Chips filtros aplicados */}
             <div className="flex flex-wrap gap-2">
@@ -783,22 +706,16 @@ export default function ProductsPage() {
                 </Badge>
               )}
               {aCategoria !== ALL && (
-                <Badge variant="secondary">
-                  Categoría: {aCategoria}
-                </Badge>
+                <Badge variant="secondary">Categoría: {aCategoria}</Badge>
               )}
               {aMarca !== ALL && (
                 <Badge variant="secondary">Marca: {aMarca}</Badge>
               )}
               {aHabilitado !== ALL && (
-                <Badge variant="secondary">
-                  Habilitado: {aHabilitado}
-                </Badge>
+                <Badge variant="secondary">Habilitado: {aHabilitado}</Badge>
               )}
               {aActivado !== ALL && (
-                <Badge variant="secondary">
-                  Activado: {aActivado}
-                </Badge>
+                <Badge variant="secondary">Activado: {aActivado}</Badge>
               )}
             </div>
           </div>
@@ -818,33 +735,19 @@ export default function ProductsPage() {
               <Table className="min-w-[1400px]">
                 <TableHeader>
                   <TableRow>
-                    {cols.categoria && (
-                      <TableHead>Categoría Online</TableHead>
-                    )}
+                    {cols.categoria && <TableHead>Categoría Online</TableHead>}
                     {cols.idTienda && <TableHead>Id Tienda</TableHead>}
-                    {cols.codProducto && (
-                      <TableHead>Cod. Producto</TableHead>
-                    )}
+                    {cols.codProducto && <TableHead>Cod. Producto</TableHead>}
                     {cols.nombre && <TableHead>Nombre</TableHead>}
                     {cols.marca && <TableHead>Marca</TableHead>}
-                    {cols.suministrador && (
-                      <TableHead>Suministrador</TableHead>
-                    )}
+                    {cols.suministrador && <TableHead>Suministrador</TableHead>}
                     {cols.exist && (
                       <TableHead>Existencia Física (EF)</TableHead>
                     )}
-                    {cols.reserva && (
-                      <TableHead>Reserva (A)</TableHead>
-                    )}
-                    {cols.dispTienda && (
-                      <TableHead>Disp. Tienda (T)</TableHead>
-                    )}
-                    {cols.precioCosto && (
-                      <TableHead>Precio Costo</TableHead>
-                    )}
-                    {cols.noAlmacen && (
-                      <TableHead>No. Almacén</TableHead>
-                    )}
+                    {cols.reserva && <TableHead>Reserva (A)</TableHead>}
+                    {cols.dispTienda && <TableHead>Disp. Tienda (T)</TableHead>}
+                    {cols.precioCosto && <TableHead>Precio Costo</TableHead>}
+                    {cols.noAlmacen && <TableHead>No. Almacén</TableHead>}
                     {cols.estadoAnuncio && (
                       <TableHead>Estado de Anuncio</TableHead>
                     )}
@@ -852,9 +755,7 @@ export default function ProductsPage() {
                       <TableHead>Estado en tienda</TableHead>
                     )}
                     {cols.creado && <TableHead>Creado</TableHead>}
-                    {cols.actualizado && (
-                      <TableHead>Actualizado</TableHead>
-                    )}
+                    {cols.actualizado && <TableHead>Actualizado</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -871,18 +772,14 @@ export default function ProductsPage() {
                     const marca = getMarca(p);
                     const estadoAnuncio = getEstadoAnuncio(p);
                     const estadoTienda = getEstadoTienda(p);
-                    const anuncioVariant =
-                      badgeVariantAnuncio(estadoAnuncio);
-                    const tiendaVariant =
-                      badgeVariantTienda(estadoTienda);
+                    const anuncioVariant = badgeVariantAnuncio(estadoAnuncio);
+                    const tiendaVariant = badgeVariantTienda(estadoTienda);
 
                     return (
                       <TableRow key={p._id}>
                         {cols.categoria && (
                           <TableCell className="text-sm">
-                            <TruncatedCell
-                              value={categoriaOnline}
-                            />
+                            <TruncatedCell value={categoriaOnline} />
                           </TableCell>
                         )}
                         {cols.idTienda && (
@@ -982,9 +879,7 @@ export default function ProductsPage() {
                   variant="outline"
                   size="sm"
                   disabled={page >= totalPages || loading}
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
                   Siguiente
                 </Button>

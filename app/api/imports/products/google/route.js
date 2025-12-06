@@ -46,9 +46,7 @@ export async function POST(request) {
     // 2) Body
     const body = await request.json().catch(() => ({}));
 
-    const fileId = extractGoogleFileId(
-      body.fileId || body.spreadsheetId || "",
-    );
+    const fileId = extractGoogleFileId(body.fileId || body.spreadsheetId || "");
 
     if (!fileId) {
       return NextResponse.json(
@@ -143,7 +141,8 @@ export async function POST(request) {
       {
         ok: false,
         error:
-          error?.message || "Error inesperado al importar productos desde Google",
+          error?.message ||
+          "Error inesperado al importar productos desde Google",
       },
       { status: 500 },
     );
