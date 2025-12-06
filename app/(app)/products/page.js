@@ -272,9 +272,9 @@ export default function ProductsPage() {
     dispTienda: true,
     precioCosto: true,
     noAlmacen: true,
-    estadoAnuncio: true,
+    estadoAnuncio: false,
     estadoTienda: true,
-    creado: true,
+    creado: false,
     actualizado: true,
     marca: false,
   });
