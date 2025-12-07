@@ -67,9 +67,47 @@ function fmtMoney(val) {
   });
 }
 
+function parseStockValue(raw) {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+
+  let cleaned = String(raw).trim();
+  if (!cleaned) return null;
+
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+function getFirstNumber(obj, keys, fallback = 0) {
+  for (const key of keys) {
+    const value = parseStockValue(obj?.[key]);
+    if (value !== null) return value;
+
+    const metaValue = parseStockValue(obj?.metadata?.[key]);
+    if (metaValue !== null) return metaValue;
+  }
+  return fallback;
+}
+
 function toNumber(raw, fallback = 0) {
-  const n = Number(raw);
-  return Number.isNaN(n) ? fallback : n;
+  const value = parseStockValue(raw);
+  return value === null ? fallback : value;
 }
 
 // Truncar a 12 caracteres con tooltip
@@ -115,34 +153,35 @@ function getSuministrador(p) {
 }
 
 function getEF(p) {
-  return toNumber(
-    p.physical_stock ??
-      p.existencia_fisica ??
-      p.exist_fisica ??
-      p.stock ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "ef",
+  ]);
 }
 
 function getReserva(p) {
-  return toNumber(
-    p.reserve_qty ??
-      p.reserva ??
-      p.reserved ??
-      p.reserved_qty ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "A",
+    "almacen",
+  ]);
 }
 
 function getDisponibleTienda(p) {
-  return toNumber(
-    p.store_qty ??
-      p.disponible_tienda ??
-      p.disponible ??
-      p.available_store ??
-      p.available ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+  ]);
 }
 
 function getPrecioCosto(p) {

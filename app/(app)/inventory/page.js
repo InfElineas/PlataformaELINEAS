@@ -94,33 +94,60 @@ const ANALYSIS_SEGMENTS = [
 
 // ===== Helpers de inventario =====
 
-function toSafeNumber(value, fallback = 0) {
+function parseInventoryNumber(value, fallback = 0) {
   if (value === null || value === undefined || value === "") return fallback;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+
+  let cleaned = String(value).trim();
+  if (!cleaned) return fallback;
+
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return fallback;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function getEF(item) {
-  return toSafeNumber(
+  return parseInventoryNumber(
     item.existencia_fisica ??
       item.physical_stock ??
       item.exist_fisica ??
-      item.ef
+      item.ef ??
+      item?.metadata?.existencia_fisica,
   );
 }
 
 function getA(item) {
-  return toSafeNumber(
-    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen
+  return parseInventoryNumber(
+    item.reserva ??
+      item.reserve_qty ??
+      item.A ??
+      item.almacen ??
+      item?.metadata?.reserva,
   );
 }
 
 function getT(item) {
-  return toSafeNumber(
+  return parseInventoryNumber(
     item.disponible_tienda ??
       item.store_qty ??
       item.disponible ??
-      item.tienda
+      item.tienda ??
+      item?.metadata?.disponible_tienda,
   );
 }
 
