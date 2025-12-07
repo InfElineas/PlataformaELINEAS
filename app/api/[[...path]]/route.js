@@ -337,6 +337,31 @@ async function handleProducts(request, segments, searchParams, context) {
         doc?.metadata?.no_almacen,
       );
 
+      const noAlmacen = pickText(
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.warehouse_name,
+      );
+
+      const warehouseName = pickText(
+        doc.warehouse_name,
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc?.metadata?.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+      );
+
+      const warehouseCode = pickText(
+        doc.warehouse_code,
+        doc.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.no_almacen,
+      );
+
       return {
         ...doc,
         physical_stock: physical,
