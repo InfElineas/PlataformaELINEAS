@@ -232,6 +232,15 @@ async function handleProducts(request, segments, searchParams, context) {
       Product.countDocuments(query),
     ]);
 
+    const pickText = (...candidates) => {
+      for (const value of candidates) {
+        if (value === null || value === undefined) continue;
+        const text = value.toString().trim();
+        if (text) return text;
+      }
+      return "";
+    };
+
     const parseStock = (raw) => {
       if (raw === null || raw === undefined) return null;
       if (typeof raw === "number" && Number.isFinite(raw)) return raw;
@@ -283,6 +292,31 @@ async function handleProducts(request, segments, searchParams, context) {
         parseStock(doc?.metadata?.disponible_tienda) ??
         0;
 
+      const noAlmacen = pickText(
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.warehouse_name,
+      );
+
+      const warehouseName = pickText(
+        doc.warehouse_name,
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc?.metadata?.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+      );
+
+      const warehouseCode = pickText(
+        doc.warehouse_code,
+        doc.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.no_almacen,
+      );
+
       return {
         ...doc,
         physical_stock: physical,
@@ -291,6 +325,9 @@ async function handleProducts(request, segments, searchParams, context) {
         reserva: reserve,
         store_qty: store,
         disponible_tienda: store,
+        no_almacen: noAlmacen,
+        warehouse_code: warehouseCode,
+        warehouse_name: warehouseName,
       };
     });
 

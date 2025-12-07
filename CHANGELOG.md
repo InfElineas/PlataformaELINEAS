@@ -1,5 +1,11 @@
 # Changelog
 
+## Normalización de inventario y estado global persistente (actual)
+- `hooks/useProductFilters.js`: el estado global de filtros ahora guarda también el orden seleccionado (`sortBy/sortDir`) en localStorage para mantener el mismo ordenamiento al navegar o recargar.
+- `app/(app)/products/page.js`: se reutiliza el orden global persistido, se leen campos de almacén y proveedores desde metadata cuando faltan en el documento principal y se priorizan cadenas/números reales antes de mostrar "—".
+- `app/api/[[...path]]/route.js`: la respuesta de productos normaliza `no_almacen`, `warehouse_code` y `warehouse_name` combinando datos principales y metadata para no perder el número de almacén al calcular existencias, reservas y disponibles.
+- `app/(app)/inventory/page.js`: la vista de inventario recupera el número/nombre de almacén desde metadata cuando es el único lugar donde existe.
+
 ## Correcciones de filtros y ordenamiento global
 - `app/(app)/products/page.js`: se corrigieron referencias de filtros aplicados, se agregaron cabeceras ordenables que actualizan la consulta global y se mostraron indicadores de orden por columna.
 - `app/api/[[...path]]/route.js`: el listado de productos acepta `sortBy/sortDir` seguros para ordenar desde cualquier encabezado visible, manteniendo un desempate por fecha de creación.

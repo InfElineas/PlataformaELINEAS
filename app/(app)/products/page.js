@@ -111,6 +111,23 @@ function toNumber(raw, fallback = 0) {
   return value === null ? fallback : value;
 }
 
+function getFirstString(obj, keys, fallback = "") {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null) {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+
+    const metaVal = obj?.metadata?.[key];
+    if (metaVal !== undefined && metaVal !== null) {
+      const text = String(metaVal).trim();
+      if (text) return text;
+    }
+  }
+  return fallback;
+}
+
 // Truncar a 12 caracteres con tooltip
 function TruncatedCell({ value, className }) {
   const raw = fmt(value);
@@ -147,20 +164,18 @@ function getCategoriaOnline(p) {
 }
 
 function getIdTienda(p) {
-  return p.idTienda ?? p.store_external_id ?? "";
+  return getFirstString(p, ["idTienda", "store_external_id"], "");
 }
 
 function getCodProducto(p) {
-  return p.tkc_code ?? p.product_code ?? p.barcode ?? "";
+  return getFirstString(p, ["tkc_code", "product_code", "barcode"], "");
 }
 
 function getSuministrador(p) {
-  return (
-    p.supplier_name ??
-    p.provider_name ??
-    p.provider_id ??
-    p.supplier_id ??
-    ""
+  return getFirstString(
+    p,
+    ["supplier_name", "provider_name", "provider_id", "supplier_id"],
+    "",
   );
 }
 
@@ -201,17 +216,15 @@ function getPrecioCosto(p) {
 }
 
 function getNoAlmacen(p) {
-  return (
-    p.no_almacen ??
-    p.warehouse_code ??
-    p.warehouse_name ??
-    p.store_warehouse ??
-    ""
+  return getFirstString(
+    p,
+    ["no_almacen", "warehouse_code", "warehouse_name", "store_warehouse"],
+    "",
   );
 }
 
 function getMarca(p) {
-  return p.brand ?? "";
+  return getFirstString(p, ["brand"], "");
 }
 
 function getActivado(p) {
@@ -310,8 +323,10 @@ export default function ProductsPage() {
     pendingFilters,
     appliedFilters,
     search,
+    sort,
     setSearch,
     setPendingFilter,
+    setSort,
     applyFilters,
     resetFilters,
   } = useProductFilters();
@@ -319,8 +334,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(100);
   const [total, setTotal] = useState(0);
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortDir, setSortDir] = useState("desc");
+  const { sortBy, sortDir } = sort;
 
   // Columnas visibles
   const [cols, setCols] = useState({
@@ -450,13 +464,11 @@ export default function ProductsPage() {
   } = appliedFilters;
 
   function toggleSort(field) {
-    setSortBy((prev) => {
-      if (prev === field) {
-        setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
-        return prev;
+    setSort((prev) => {
+      if (prev.sortBy === field) {
+        return { ...prev, sortDir: prev.sortDir === "asc" ? "desc" : "asc" };
       }
-      setSortDir("asc");
-      return field;
+      return { ...prev, sortBy: field, sortDir: "asc" };
     });
     setPage(1);
   }

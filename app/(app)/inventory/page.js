@@ -162,12 +162,22 @@ function getProductCode(item) {
 }
 
 function getWarehouseLabel(item) {
-  return (
-    item.no_almacen ??
-    item.warehouse_name ??
-    item.warehouse_code ??
-    ""
-  ).toString();
+  const candidates = [
+    item.no_almacen,
+    item.warehouse_name,
+    item.warehouse_code,
+    item?.metadata?.no_almacen,
+    item?.metadata?.warehouse_name,
+    item?.metadata?.warehouse_code,
+  ];
+
+  for (const value of candidates) {
+    if (value === null || value === undefined) continue;
+    const text = value.toString().trim();
+    if (text) return text;
+  }
+
+  return "";
 }
 
 function getSupplierLabel(item) {

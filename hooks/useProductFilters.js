@@ -14,6 +14,11 @@ const DEFAULT_FILTERS = {
   activado: ALL,
 };
 
+const DEFAULT_SORT = {
+  sortBy: "created_at",
+  sortDir: "desc",
+};
+
 const STORAGE_KEY = "products_filters_state";
 
 function withDefaults(candidate) {
@@ -28,6 +33,7 @@ export function useProductFilters() {
     ...DEFAULT_FILTERS,
   }));
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState({ ...DEFAULT_SORT });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -40,6 +46,7 @@ export function useProductFilters() {
       setPendingFilters(withDefaults(parsed?.pendingFilters));
       setAppliedFilters(withDefaults(parsed?.appliedFilters));
       setSearch(parsed?.search ?? "");
+      setSort({ ...DEFAULT_SORT, ...(parsed?.sort || {}) });
     } catch (e) {
       console.error("No se pudo leer el estado global de filtros", e);
     }
@@ -48,9 +55,9 @@ export function useProductFilters() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const payload = JSON.stringify({ pendingFilters, appliedFilters, search });
+    const payload = JSON.stringify({ pendingFilters, appliedFilters, search, sort });
     window.localStorage.setItem(STORAGE_KEY, payload);
-  }, [pendingFilters, appliedFilters, search]);
+  }, [pendingFilters, appliedFilters, search, sort]);
 
   const setPendingFilter = (key, value) => {
     setPendingFilters((prev) => ({ ...prev, [key]: value }));
@@ -64,6 +71,7 @@ export function useProductFilters() {
     setPendingFilters({ ...DEFAULT_FILTERS });
     setAppliedFilters({ ...DEFAULT_FILTERS });
     setSearch("");
+    setSort({ ...DEFAULT_SORT });
   };
 
   return useMemo(
@@ -71,11 +79,13 @@ export function useProductFilters() {
       pendingFilters,
       appliedFilters,
       search,
+      sort,
       setSearch,
       setPendingFilter,
+      setSort,
       applyFilters,
       resetFilters,
     }),
-    [pendingFilters, appliedFilters, search],
+    [pendingFilters, appliedFilters, search, sort],
   );
 }
