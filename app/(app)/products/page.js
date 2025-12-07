@@ -603,7 +603,7 @@ export default function ProductsPage() {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-3 items-end gap-3 lg:grid-cols-7">
+            <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-3 xl:grid-cols-7">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">
                   Existencia

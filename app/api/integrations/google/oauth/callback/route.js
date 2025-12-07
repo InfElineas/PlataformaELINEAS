@@ -1,41 +1,41 @@
-import { NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/auth';
+import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
 import {
   decodeState,
   exchangeCodeForTokens,
   isOAuthConfigured,
   storeUserGoogleTokens,
-} from '@/lib/google/oauth';
-import AuditLog from '@/lib/models/AuditLog';
-import connectDB from '@/lib/mongodb';
+} from "@/lib/google/oauth";
+import AuditLog from "@/lib/models/AuditLog";
+import connectDB from "@/lib/mongodb";
 
 export async function GET(request) {
   if (!isOAuthConfigured()) {
     return NextResponse.json(
-      { ok: false, error: 'Google OAuth no está disponible' },
-      { status: 400 }
+      { ok: false, error: "Google OAuth no está disponible" },
+      { status: 400 },
     );
   }
 
   const session = await requirePermission(request, null, { orgScoped: false });
 
   const currentUrl = new URL(request.url);
-  const errorParam = currentUrl.searchParams.get('error');
-  const code = currentUrl.searchParams.get('code');
-  const state = currentUrl.searchParams.get('state');
+  const errorParam = currentUrl.searchParams.get("error");
+  const code = currentUrl.searchParams.get("code");
+  const state = currentUrl.searchParams.get("state");
 
-  const decodedState = decodeState(state || '');
-  const redirectTarget = decodedState.redirect || '/imports';
+  const decodedState = decodeState(state || "");
+  const redirectTarget = decodedState.redirect || "/imports";
 
   // 1) Intentar usar la URL base del .env si existe
   const baseOriginFromEnv = process.env.NEXT_PUBLIC_BASE_URL;
 
   let baseOrigin;
-  if (baseOriginFromEnv && baseOriginFromEnv.trim() !== '') {
+  if (baseOriginFromEnv && baseOriginFromEnv.trim() !== "") {
     baseOrigin = baseOriginFromEnv;
   } else {
     // 2) Si no, usamos la origin actual pero corrigiendo 0.0.0.0 → localhost
-    baseOrigin = currentUrl.origin.replace('0.0.0.0', 'localhost');
+    baseOrigin = currentUrl.origin.replace("0.0.0.0", "localhost");
   }
 
   const redirectUrl = new URL(redirectTarget, baseOrigin);
@@ -66,12 +66,12 @@ export async function GET(request) {
       meta: { scopes: tokens.scope },
     });
 
-    redirectUrl.searchParams.set('google_oauth', 'success');
+    redirectUrl.searchParams.set("google_oauth", "success");
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
-    console.error('Error en callback de Google OAuth:', error);
-    redirectUrl.searchParams.set('google_oauth', 'error');
-    redirectUrl.searchParams.set('message', 'No se pudo vincular Google');
+    console.error("Error en callback de Google OAuth:", error);
+    redirectUrl.searchParams.set("google_oauth", "error");
+    redirectUrl.searchParams.set("message", "No se pudo vincular Google");
     return NextResponse.redirect(redirectUrl);
   }
 }
