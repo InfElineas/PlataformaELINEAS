@@ -121,34 +121,41 @@ function parseInventoryNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+const INVENTORY_KEYS = {
+  existencia: ["existencia_fisica", "physical_stock", "exist_fisica", "stock", "ef"],
+  reserva: ["reserva", "reserve_qty", "reserved", "reserved_qty", "A", "almacen"],
+  tienda: [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+    "T",
+  ],
+};
+
+function pickInventory(item, keys) {
+  for (const key of keys) {
+    const direct = parseInventoryNumber(item?.[key], null);
+    if (direct !== null) return direct;
+
+    const meta = parseInventoryNumber(item?.metadata?.[key], null);
+    if (meta !== null) return meta;
+  }
+  return 0;
+}
+
 function getEF(item) {
-  return parseInventoryNumber(
-    item.existencia_fisica ??
-      item.physical_stock ??
-      item.exist_fisica ??
-      item.ef ??
-      item?.metadata?.existencia_fisica,
-  );
+  return pickInventory(item, INVENTORY_KEYS.existencia);
 }
 
 function getA(item) {
-  return parseInventoryNumber(
-    item.reserva ??
-      item.reserve_qty ??
-      item.A ??
-      item.almacen ??
-      item?.metadata?.reserva,
-  );
+  return pickInventory(item, INVENTORY_KEYS.reserva);
 }
 
 function getT(item) {
-  return parseInventoryNumber(
-    item.disponible_tienda ??
-      item.store_qty ??
-      item.disponible ??
-      item.tienda ??
-      item?.metadata?.disponible_tienda,
-  );
+  return pickInventory(item, INVENTORY_KEYS.tienda);
 }
 
 function getProductCode(item) {

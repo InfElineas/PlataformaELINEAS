@@ -1,6 +1,7 @@
 # Changelog
 
 ## Normalización de inventario y estado global persistente (actual)
+- API y vistas reutilizan el mismo set de alias de inventario (EF/Reserva/Tienda) para leer valores desde documento o metadata y evitar que se muestren 0 cuando hay datos.
 - `hooks/useProductFilters.js`: el estado global de filtros ahora guarda también el orden seleccionado (`sortBy/sortDir`) en localStorage para mantener el mismo ordenamiento al navegar o recargar.
 - `app/(app)/products/page.js`: se reutiliza el orden global persistido, se leen campos de almacén y proveedores desde metadata cuando faltan en el documento principal y se priorizan cadenas/números reales antes de mostrar "—".
 - `app/api/[[...path]]/route.js`: la respuesta de productos normaliza `no_almacen`, `warehouse_code` y `warehouse_name` combinando datos principales y metadata para no perder el número de almacén al calcular existencias, reservas y disponibles.

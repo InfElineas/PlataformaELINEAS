@@ -57,6 +57,20 @@ const compactHeader = "text-center text-xs font-semibold whitespace-nowrap px-2"
 const sortableHeader =
   "text-left text-xs font-semibold whitespace-nowrap px-2 select-none";
 
+const STOCK_KEYS = {
+  existencia: ["existencia_fisica", "physical_stock", "exist_fisica", "stock", "ef"],
+  reserva: ["reserva", "reserve_qty", "reserved", "reserved_qty", "almacen", "A"],
+  tienda: [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+    "T",
+  ],
+};
+
 function fmtMoney(val) {
   const n = Number(val);
   if (Number.isNaN(n)) return "—";
@@ -180,35 +194,15 @@ function getSuministrador(p) {
 }
 
 function getEF(p) {
-  return getFirstNumber(p, [
-    "existencia_fisica",
-    "physical_stock",
-    "exist_fisica",
-    "stock",
-    "ef",
-  ]);
+  return getFirstNumber(p, STOCK_KEYS.existencia);
 }
 
 function getReserva(p) {
-  return getFirstNumber(p, [
-    "reserva",
-    "reserve_qty",
-    "reserved",
-    "reserved_qty",
-    "A",
-    "almacen",
-  ]);
+  return getFirstNumber(p, STOCK_KEYS.reserva);
 }
 
 function getDisponibleTienda(p) {
-  return getFirstNumber(p, [
-    "disponible_tienda",
-    "store_qty",
-    "disponible",
-    "available_store",
-    "available",
-    "tienda",
-  ]);
+  return getFirstNumber(p, STOCK_KEYS.tienda);
 }
 
 function getPrecioCosto(p) {

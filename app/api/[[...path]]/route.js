@@ -90,6 +90,34 @@ function errorResponse(message, status = 400, request) {
   return NextResponse.json({ error: message }, init);
 }
 
+const STOCK_ALIASES = {
+  existencia: [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "existencia",
+    "ef",
+  ],
+  reserva: [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "almacen",
+    "A",
+  ],
+  tienda: [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+    "T",
+  ],
+};
+
 // CORS
 function corsHeaders(request) {
   const fallbackOrigin = process.env.ALLOWED_ORIGIN || "http://localhost:3000";
@@ -268,29 +296,46 @@ async function handleProducts(request, segments, searchParams, context) {
       return Number.isFinite(value) ? value : null;
     };
 
+    const pickStock = (doc, keys) => {
+      for (const key of keys) {
+        const direct = parseStock(doc?.[key]);
+        if (direct !== null) return direct;
+
+        const metaVal = parseStock(doc?.metadata?.[key]);
+        if (metaVal !== null) return metaVal;
+      }
+      return 0;
+    };
+
     const products = productsRaw.map((doc) => {
-      const physical =
-        parseStock(doc.existencia_fisica) ??
-        parseStock(doc.physical_stock) ??
-        parseStock(doc.stock) ??
-        parseStock(doc?.metadata?.existencia_fisica) ??
-        0;
+      const physical = pickStock(doc, STOCK_ALIASES.existencia);
+      const reserve = pickStock(doc, STOCK_ALIASES.reserva);
+      const store = pickStock(doc, STOCK_ALIASES.tienda);
 
-      const reserve =
-        parseStock(doc.reserva) ??
-        parseStock(doc.reserve_qty) ??
-        parseStock(doc.reserved) ??
-        parseStock(doc.reserved_qty) ??
-        parseStock(doc?.metadata?.reserva) ??
-        0;
+      const noAlmacen = pickText(
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.warehouse_name,
+      );
 
-      const store =
-        parseStock(doc.disponible_tienda) ??
-        parseStock(doc.store_qty) ??
-        parseStock(doc.available_store) ??
-        parseStock(doc.available) ??
-        parseStock(doc?.metadata?.disponible_tienda) ??
-        0;
+      const warehouseName = pickText(
+        doc.warehouse_name,
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc?.metadata?.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+      );
+
+      const warehouseCode = pickText(
+        doc.warehouse_code,
+        doc.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.no_almacen,
+      );
 
       const noAlmacen = pickText(
         doc.no_almacen,
