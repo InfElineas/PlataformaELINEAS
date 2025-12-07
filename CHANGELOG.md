@@ -1,5 +1,15 @@
 # Changelog
 
+## Correcciones de filtros y ordenamiento global
+- `app/(app)/products/page.js`: se corrigieron referencias de filtros aplicados, se agregaron cabeceras ordenables que actualizan la consulta global y se mostraron indicadores de orden por columna.
+- `app/api/[[...path]]/route.js`: el listado de productos acepta `sortBy/sortDir` seguros para ordenar desde cualquier encabezado visible, manteniendo un desempate por fecha de creación.
+
+## Valores de inventario coherentes en vistas y API
+- `lib/models/Product.js`: los campos base de inventario ahora usan `existencia_fisica`, `reserva` y `disponible_tienda` como caminos primarios con alias hacia los nombres previos en inglés.
+- `app/api/[[...path]]/route.js`: el filtrado por existencia acepta documentos antiguos y nuevos, y la normalización numérica maneja miles y decimales mixtos.
+- `app/(app)/products/page.js`: la conversión numérica reconoce comas y puntos en cualquier orden y considera valores guardados en metadata para mostrar EF/A/T reales.
+- `app/(app)/inventory/page.js`: las lecturas de inventario usan el mismo normalizador robusto y contemplan metadata para no descartar cantidades válidas.
+
 ## Inventario importado correctamente
 - `lib/imports/constants.js`: se actualizó la plantilla de encabezados y los alias para reconocer variaciones con acentos, abreviaturas y puntos.
 - `lib/imports/utils.js`: el resolvedor de campos acepta también los nombres canónicos normalizados para mapear encabezados dinámicos.
