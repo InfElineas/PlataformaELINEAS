@@ -189,7 +189,7 @@ async function handleProducts(request, segments, searchParams, context) {
 
     const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
-    const [products, total] = await Promise.all([
+    const [productsRaw, total] = await Promise.all([
       Product.find(query)
         .sort({ created_at: -1 })
         .skip(skip)
@@ -197,6 +197,30 @@ async function handleProducts(request, segments, searchParams, context) {
         .lean({ virtuals: true }),
       Product.countDocuments(query),
     ]);
+
+    const products = productsRaw.map((doc) => {
+      const physical = Number(
+        doc.physical_stock ?? doc.existencia_fisica ?? doc.stock ?? 0,
+      );
+      const reserve = Number(doc.reserve_qty ?? doc.reserva ?? doc.reserved ?? 0);
+      const store = Number(
+        doc.store_qty ??
+          doc.disponible_tienda ??
+          doc.available_store ??
+          doc.available ??
+          0,
+      );
+
+      return {
+        ...doc,
+        physical_stock: Number.isNaN(physical) ? 0 : physical,
+        existencia_fisica: Number.isNaN(physical) ? 0 : physical,
+        reserve_qty: Number.isNaN(reserve) ? 0 : reserve,
+        reserva: Number.isNaN(reserve) ? 0 : reserve,
+        store_qty: Number.isNaN(store) ? 0 : store,
+        disponible_tienda: Number.isNaN(store) ? 0 : store,
+      };
+    });
 
     let meta;
 

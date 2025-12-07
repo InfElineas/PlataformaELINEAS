@@ -52,6 +52,10 @@ function fmtDate(val) {
       });
 }
 
+const compactNumberCell =
+  "text-center text-xs font-semibold tabular-nums whitespace-nowrap px-2";
+const compactHeader = "text-center text-xs font-semibold whitespace-nowrap px-2";
+
 function fmtMoney(val) {
   const n = Number(val);
   if (Number.isNaN(n)) return "—";
@@ -831,19 +835,29 @@ export default function ProductsPage() {
                       <TableHead>Suministrador</TableHead>
                     )}
                     {cols.exist && (
-                      <TableHead>Existencia Física (EF)</TableHead>
+                      <TableHead className={compactHeader}>
+                        Existencia Física (EF)
+                      </TableHead>
                     )}
                     {cols.reserva && (
-                      <TableHead>Reserva (A)</TableHead>
+                      <TableHead className={compactHeader}>
+                        Reserva (A)
+                      </TableHead>
                     )}
                     {cols.dispTienda && (
-                      <TableHead>Disp. Tienda (T)</TableHead>
+                      <TableHead className={compactHeader}>
+                        Disp. Tienda (T)
+                      </TableHead>
                     )}
                     {cols.precioCosto && (
-                      <TableHead>Precio Costo</TableHead>
+                      <TableHead className={compactHeader}>
+                        Precio Costo
+                      </TableHead>
                     )}
                     {cols.noAlmacen && (
-                      <TableHead>No. Almacén</TableHead>
+                      <TableHead className={compactHeader}>
+                        No. Almacén
+                      </TableHead>
                     )}
                     {cols.estadoAnuncio && (
                       <TableHead>Estado de Anuncio</TableHead>
@@ -911,27 +925,27 @@ export default function ProductsPage() {
                           </TableCell>
                         )}
                         {cols.exist && (
-                          <TableCell className="text-right">
+                          <TableCell className={compactNumberCell}>
                             {Number.isNaN(EF) ? "—" : EF}
                           </TableCell>
                         )}
                         {cols.reserva && (
-                          <TableCell className="text-right">
+                          <TableCell className={compactNumberCell}>
                             {Number.isNaN(A) ? "—" : A}
                           </TableCell>
                         )}
                         {cols.dispTienda && (
-                          <TableCell className="text-right">
+                          <TableCell className={compactNumberCell}>
                             {Number.isNaN(T) ? "—" : T}
                           </TableCell>
                         )}
                         {cols.precioCosto && (
-                          <TableCell className="text-right">
+                          <TableCell className={compactNumberCell}>
                             {fmtMoney(precioCosto)}
                           </TableCell>
                         )}
                         {cols.noAlmacen && (
-                          <TableCell className="text-right">
+                          <TableCell className={compactNumberCell}>
                             <TruncatedCell value={noAlmacen} />
                           </TableCell>
                         )}
