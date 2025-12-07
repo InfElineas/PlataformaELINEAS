@@ -94,34 +94,68 @@ const ANALYSIS_SEGMENTS = [
 
 // ===== Helpers de inventario =====
 
-function toSafeNumber(value, fallback = 0) {
+function parseInventoryNumber(value, fallback = 0) {
   if (value === null || value === undefined || value === "") return fallback;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+
+  let cleaned = String(value).trim();
+  if (!cleaned) return fallback;
+
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return fallback;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const INVENTORY_KEYS = {
+  existencia: ["existencia_fisica", "physical_stock", "exist_fisica", "stock", "ef"],
+  reserva: ["reserva", "reserve_qty", "reserved", "reserved_qty", "A", "almacen"],
+  tienda: [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+    "T",
+  ],
+};
+
+function pickInventory(item, keys) {
+  for (const key of keys) {
+    const direct = parseInventoryNumber(item?.[key], null);
+    if (direct !== null) return direct;
+
+    const meta = parseInventoryNumber(item?.metadata?.[key], null);
+    if (meta !== null) return meta;
+  }
+  return 0;
 }
 
 function getEF(item) {
-  return toSafeNumber(
-    item.existencia_fisica ??
-      item.physical_stock ??
-      item.exist_fisica ??
-      item.ef
-  );
+  return pickInventory(item, INVENTORY_KEYS.existencia);
 }
 
 function getA(item) {
-  return toSafeNumber(
-    item.reserva ?? item.reserve_qty ?? item.A ?? item.almacen
-  );
+  return pickInventory(item, INVENTORY_KEYS.reserva);
 }
 
 function getT(item) {
-  return toSafeNumber(
-    item.disponible_tienda ??
-      item.store_qty ??
-      item.disponible ??
-      item.tienda
-  );
+  return pickInventory(item, INVENTORY_KEYS.tienda);
 }
 
 function getProductCode(item) {
@@ -135,12 +169,22 @@ function getProductCode(item) {
 }
 
 function getWarehouseLabel(item) {
-  return (
-    item.no_almacen ??
-    item.warehouse_name ??
-    item.warehouse_code ??
-    ""
-  ).toString();
+  const candidates = [
+    item.no_almacen,
+    item.warehouse_name,
+    item.warehouse_code,
+    item?.metadata?.no_almacen,
+    item?.metadata?.warehouse_name,
+    item?.metadata?.warehouse_code,
+  ];
+
+  for (const value of candidates) {
+    if (value === null || value === undefined) continue;
+    const text = value.toString().trim();
+    if (text) return text;
+  }
+
+  return "";
 }
 
 function getSupplierLabel(item) {
