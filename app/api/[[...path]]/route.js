@@ -117,30 +117,152 @@ async function handleProducts(request, segments, searchParams, context) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
+    const existencia = searchParams.get("existencia");
+    const almacen = searchParams.get("almacen");
+    const suministrador = searchParams.get("suministrador");
+    const marca = searchParams.get("marca");
+    const habilitado = searchParams.get("habilitado");
+    const activado = searchParams.get("activado");
+    const includeFilters = searchParams.get("includeFilters") === "1";
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(
+      searchParams.get("perPage") || searchParams.get("limit") || "50",
+    );
     const skip = (page - 1) * limit;
 
-    const query = { org_id: orgId };
+    const andFilters = [{ org_id: orgId }];
 
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { product_code: { $regex: search, $options: "i" } },
-        { barcode: { $regex: search, $options: "i" } },
-      ];
+      andFilters.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { product_code: { $regex: search, $options: "i" } },
+          { barcode: { $regex: search, $options: "i" } },
+        ],
+      });
     }
-    if (status) query.status = status;
-    if (category) query.category_id = category;
 
-    const [products, total] = await Promise.all([
+    if (status) andFilters.push({ status });
+    if (category) andFilters.push({ category_id: category });
+
+    if (existencia === "con") {
+      andFilters.push({ physical_stock: { $gt: 0 } });
+    } else if (existencia === "sin") {
+      andFilters.push({ physical_stock: { $lte: 0 } });
+    }
+
+    if (almacen) {
+      andFilters.push({
+        $or: [
+          { no_almacen: almacen },
+          { warehouse_code: almacen },
+          { warehouse_name: almacen },
+        ],
+      });
+    }
+
+    if (suministrador) {
+      andFilters.push({
+        $or: [
+          { supplier_name: suministrador },
+          { provider_id: suministrador },
+          { supplier_id: suministrador },
+        ],
+      });
+    }
+
+    if (marca) {
+      andFilters.push({ brand: marca });
+    }
+
+    if (habilitado === "si") {
+      andFilters.push({ mgmt_mode: "managed" });
+    } else if (habilitado === "no") {
+      andFilters.push({ mgmt_mode: { $ne: "managed" } });
+    }
+
+    if (activado === "si") {
+      andFilters.push({ status: "active" });
+    } else if (activado === "no") {
+      andFilters.push({ status: { $ne: "active" } });
+    }
+
+    const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
+
+    const [productsRaw, total] = await Promise.all([
       Product.find(query)
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean({ virtuals: true }),
       Product.countDocuments(query),
     ]);
+
+    const products = productsRaw.map((doc) => {
+      const physical = Number(
+        doc.physical_stock ?? doc.existencia_fisica ?? doc.stock ?? 0,
+      );
+      const reserve = Number(doc.reserve_qty ?? doc.reserva ?? doc.reserved ?? 0);
+      const store = Number(
+        doc.store_qty ??
+          doc.disponible_tienda ??
+          doc.available_store ??
+          doc.available ??
+          0,
+      );
+
+      return {
+        ...doc,
+        physical_stock: Number.isNaN(physical) ? 0 : physical,
+        existencia_fisica: Number.isNaN(physical) ? 0 : physical,
+        reserve_qty: Number.isNaN(reserve) ? 0 : reserve,
+        reserva: Number.isNaN(reserve) ? 0 : reserve,
+        store_qty: Number.isNaN(store) ? 0 : store,
+        disponible_tienda: Number.isNaN(store) ? 0 : store,
+      };
+    });
+
+    let meta;
+
+    if (includeFilters) {
+      const baseMatch = { org_id: orgId };
+
+      const [
+        warehouseCodes,
+        warehouseNames,
+        noAlmacenes,
+        supplierNames,
+        supplierIds,
+        brands,
+      ] = await Promise.all([
+        Product.distinct("warehouse_code", baseMatch),
+        Product.distinct("warehouse_name", baseMatch),
+        Product.distinct("no_almacen", baseMatch),
+        Product.distinct("supplier_name", baseMatch),
+        Product.distinct("provider_id", baseMatch),
+        Product.distinct("brand", baseMatch),
+      ]);
+
+      const normalize = (value) => {
+        if (value === null || value === undefined) return "";
+        return String(value).trim();
+      };
+
+      const mergeDistinct = (...arrays) => {
+        const set = new Set();
+        arrays.flat().forEach((item) => {
+          const val = normalize(item);
+          if (val) set.add(val);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+      };
+
+      meta = {
+        warehouses: mergeDistinct(warehouseCodes, warehouseNames, noAlmacenes),
+        suppliers: mergeDistinct(supplierNames, supplierIds),
+        brands: mergeDistinct(brands),
+      };
+    }
 
     return NextResponse.json(
       {
@@ -149,6 +271,7 @@ async function handleProducts(request, segments, searchParams, context) {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        meta,
       },
       { headers: corsHeaders(request) },
     );
