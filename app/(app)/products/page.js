@@ -54,6 +54,8 @@ function fmtDate(val) {
 const compactNumberCell =
   "text-center text-xs font-semibold tabular-nums whitespace-nowrap px-2";
 const compactHeader = "text-center text-xs font-semibold whitespace-nowrap px-2";
+const sortableHeader =
+  "text-left text-xs font-semibold whitespace-nowrap px-2 select-none";
 
 function fmtMoney(val) {
   const n = Number(val);
@@ -120,6 +122,17 @@ function TruncatedCell({ value, className }) {
   return (
     <span className={className} title={raw}>
       {truncated}
+    </span>
+  );
+}
+
+function SortIndicator({ active, direction }) {
+  if (!active) {
+    return <span className="text-muted-foreground">↕</span>;
+  }
+  return (
+    <span className="font-semibold text-muted-foreground">
+      {direction === "asc" ? "↑" : "↓"}
     </span>
   );
 }
@@ -306,6 +319,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(100);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortDir, setSortDir] = useState("desc");
 
   // Columnas visibles
   const [cols, setCols] = useState({
@@ -345,6 +360,8 @@ export default function ProductsPage() {
     appliedFilters.marca,
     appliedFilters.habilitado,
     appliedFilters.activado,
+    sortBy,
+    sortDir,
   ]);
 
   async function loadProducts() {
@@ -369,6 +386,8 @@ export default function ProductsPage() {
         params.set("habilitado", appliedFilters.habilitado);
       if (appliedFilters.activado !== ALL)
         params.set("activado", appliedFilters.activado);
+      params.set("sortBy", sortBy);
+      params.set("sortDir", sortDir);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -419,6 +438,41 @@ export default function ProductsPage() {
       marcas: toArr(marcas),
     };
   }, [rows]);
+
+  const {
+    existencia: aExistencia,
+    almacen: aAlmacen,
+    suministrador: aSuministrador,
+    categoria: aCategoria,
+    marca: aMarca,
+    habilitado: aHabilitado,
+    activado: aActivado,
+  } = appliedFilters;
+
+  function toggleSort(field) {
+    setSortBy((prev) => {
+      if (prev === field) {
+        setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir("asc");
+      return field;
+    });
+    setPage(1);
+  }
+
+  const SortableHead = ({ field, label, className = sortableHeader }) => (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => toggleSort(field)}
+        className="flex items-center gap-1 w-full"
+      >
+        <span className="text-left flex-1">{label}</span>
+        <SortIndicator active={sortBy === field} direction={sortDir} />
+      </button>
+    </TableHead>
+  );
 
   // Aplicar filtros → mueve pendientes a aplicados y resetea página
   function aplicarFiltros() {
@@ -779,9 +833,7 @@ export default function ProductsPage() {
               </span>
             </div>
             {/* Resultados */}
-            <span className="text-sm text-muted-foreground">
-                  {resultsLabel}
-                </span>
+            <span className="text-sm text-muted-foreground">{resultsLabel}</span>
 
             {/* Chips filtros aplicados */}
             <div className="flex flex-wrap gap-2">
@@ -861,51 +913,81 @@ export default function ProductsPage() {
                 <TableHeader>
                   <TableRow>
                     {cols.categoria && (
-                      <TableHead>Categoría Online</TableHead>
+                      <SortableHead
+                        field="category_name"
+                        label="Categoría Online"
+                        className={sortableHeader}
+                      />
                     )}
-                    {cols.idTienda && <TableHead>Id Tienda</TableHead>}
+                    {cols.idTienda && (
+                      <SortableHead
+                        field="store_external_id"
+                        label="Id Tienda"
+                      />
+                    )}
                     {cols.codProducto && (
-                      <TableHead>Cod. Producto</TableHead>
+                      <SortableHead field="product_code" label="Cod. Producto" />
                     )}
-                    {cols.nombre && <TableHead>Nombre</TableHead>}
-                    {cols.marca && <TableHead>Marca</TableHead>}
+                    {cols.nombre && <SortableHead field="name" label="Nombre" />}
+                    {cols.marca && <SortableHead field="brand" label="Marca" />}
                     {cols.suministrador && (
-                      <TableHead>Suministrador</TableHead>
+                      <SortableHead
+                        field="supplier_name"
+                        label="Suministrador"
+                      />
                     )}
                     {cols.exist && (
-                      <TableHead className={compactHeader}>
-                        Existencia Física (EF)
-                      </TableHead>
+                      <SortableHead
+                        field="existencia_fisica"
+                        label="Existencia Física (EF)"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.reserva && (
-                      <TableHead className={compactHeader}>
-                        Reserva (A)
-                      </TableHead>
+                      <SortableHead
+                        field="reserva"
+                        label="Reserva (A)"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.dispTienda && (
-                      <TableHead className={compactHeader}>
-                        Disp. Tienda (T)
-                      </TableHead>
+                      <SortableHead
+                        field="disponible_tienda"
+                        label="Disp. Tienda (T)"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.precioCosto && (
-                      <TableHead className={compactHeader}>
-                        Precio Costo
-                      </TableHead>
+                      <SortableHead
+                        field="precio_costo"
+                        label="Precio Costo"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.noAlmacen && (
-                      <TableHead className={compactHeader}>
-                        No. Almacén
-                      </TableHead>
+                      <SortableHead
+                        field="no_almacen"
+                        label="No. Almacén"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.estadoAnuncio && (
-                      <TableHead>Estado de Anuncio</TableHead>
+                      <SortableHead
+                        field="status"
+                        label="Estado de Anuncio"
+                      />
                     )}
                     {cols.estadoTienda && (
-                      <TableHead>Estado en tienda</TableHead>
+                      <SortableHead
+                        field="store_status"
+                        label="Estado en tienda"
+                      />
                     )}
-                    {cols.creado && <TableHead>Creado</TableHead>}
+                    {cols.creado && (
+                      <SortableHead field="created_at" label="Creado" />
+                    )}
                     {cols.actualizado && (
-                      <TableHead>Actualizado</TableHead>
+                      <SortableHead field="updated_at" label="Actualizado" />
                     )}
                   </TableRow>
                 </TableHeader>

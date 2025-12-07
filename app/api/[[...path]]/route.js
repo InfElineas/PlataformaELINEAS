@@ -129,6 +129,26 @@ async function handleProducts(request, segments, searchParams, context) {
       searchParams.get("perPage") || searchParams.get("limit") || "50",
     );
     const skip = (page - 1) * limit;
+    const sortBy = searchParams.get("sortBy") || "created_at";
+    const sortDir = searchParams.get("sortDir") === "asc" ? 1 : -1;
+
+    const SORT_MAP = {
+      name: "name",
+      category_name: "category_name",
+      store_external_id: "store_external_id",
+      product_code: "product_code",
+      brand: "brand",
+      supplier_name: "supplier_name",
+      existencia_fisica: "existencia_fisica",
+      reserva: "reserva",
+      disponible_tienda: "disponible_tienda",
+      precio_costo: "precio_costo",
+      no_almacen: "no_almacen",
+      status: "status",
+      store_status: "store_status",
+      created_at: "created_at",
+      updated_at: "updated_at",
+    };
 
     const andFilters = [{ org_id: orgId }];
 
@@ -199,9 +219,13 @@ async function handleProducts(request, segments, searchParams, context) {
 
     const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
+    const sortField = SORT_MAP[sortBy] || "created_at";
+    const sort = { [sortField]: sortDir };
+    if (sortField !== "created_at") sort.created_at = -1;
+
     const [productsRaw, total] = await Promise.all([
       Product.find(query)
-        .sort({ created_at: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean({ virtuals: true }),
