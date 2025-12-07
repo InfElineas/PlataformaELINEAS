@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Settings2 } from "lucide-react";
+import { useProductFilters, ALL } from "@/hooks/useProductFilters";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,6 @@ import {
 
 /* ================= Helpers ================= */
 
-const ALL = "__ALL__";
-
 function fmt(val) {
   if (val === null || val === undefined || val === "") return "—";
   return String(val);
@@ -55,6 +54,8 @@ function fmtDate(val) {
 const compactNumberCell =
   "text-center text-xs font-semibold tabular-nums whitespace-nowrap px-2";
 const compactHeader = "text-center text-xs font-semibold whitespace-nowrap px-2";
+const sortableHeader =
+  "text-left text-xs font-semibold whitespace-nowrap px-2 select-none";
 
 function fmtMoney(val) {
   const n = Number(val);
@@ -67,9 +68,64 @@ function fmtMoney(val) {
   });
 }
 
+function parseStockValue(raw) {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+
+  let cleaned = String(raw).trim();
+  if (!cleaned) return null;
+
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+function getFirstNumber(obj, keys, fallback = 0) {
+  for (const key of keys) {
+    const value = parseStockValue(obj?.[key]);
+    if (value !== null) return value;
+
+    const metaValue = parseStockValue(obj?.metadata?.[key]);
+    if (metaValue !== null) return metaValue;
+  }
+  return fallback;
+}
+
 function toNumber(raw, fallback = 0) {
-  const n = Number(raw);
-  return Number.isNaN(n) ? fallback : n;
+  const value = parseStockValue(raw);
+  return value === null ? fallback : value;
+}
+
+function getFirstString(obj, keys, fallback = "") {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null) {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+
+    const metaVal = obj?.metadata?.[key];
+    if (metaVal !== undefined && metaVal !== null) {
+      const text = String(metaVal).trim();
+      if (text) return text;
+    }
+  }
+  return fallback;
 }
 
 // Truncar a 12 caracteres con tooltip
@@ -87,6 +143,17 @@ function TruncatedCell({ value, className }) {
   );
 }
 
+function SortIndicator({ active, direction }) {
+  if (!active) {
+    return <span className="text-muted-foreground">↕</span>;
+  }
+  return (
+    <span className="font-semibold text-muted-foreground">
+      {direction === "asc" ? "↑" : "↓"}
+    </span>
+  );
+}
+
 /* ===== Map de campos según tu modelo ===== */
 
 function getCategoriaOnline(p) {
@@ -97,52 +164,51 @@ function getCategoriaOnline(p) {
 }
 
 function getIdTienda(p) {
-  return p.idTienda ?? p.store_external_id ?? "";
+  return getFirstString(p, ["idTienda", "store_external_id"], "");
 }
 
 function getCodProducto(p) {
-  return p.tkc_code ?? p.product_code ?? p.barcode ?? "";
+  return getFirstString(p, ["tkc_code", "product_code", "barcode"], "");
 }
 
 function getSuministrador(p) {
-  return (
-    p.supplier_name ??
-    p.provider_name ??
-    p.provider_id ??
-    p.supplier_id ??
-    ""
+  return getFirstString(
+    p,
+    ["supplier_name", "provider_name", "provider_id", "supplier_id"],
+    "",
   );
 }
 
 function getEF(p) {
-  return toNumber(
-    p.physical_stock ??
-      p.existencia_fisica ??
-      p.exist_fisica ??
-      p.stock ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "ef",
+  ]);
 }
 
 function getReserva(p) {
-  return toNumber(
-    p.reserve_qty ??
-      p.reserva ??
-      p.reserved ??
-      p.reserved_qty ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "A",
+    "almacen",
+  ]);
 }
 
 function getDisponibleTienda(p) {
-  return toNumber(
-    p.store_qty ??
-      p.disponible_tienda ??
-      p.disponible ??
-      p.available_store ??
-      p.available ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+  ]);
 }
 
 function getPrecioCosto(p) {
@@ -150,17 +216,15 @@ function getPrecioCosto(p) {
 }
 
 function getNoAlmacen(p) {
-  return (
-    p.no_almacen ??
-    p.warehouse_code ??
-    p.warehouse_name ??
-    p.store_warehouse ??
-    ""
+  return getFirstString(
+    p,
+    ["no_almacen", "warehouse_code", "warehouse_name", "store_warehouse"],
+    "",
   );
 }
 
 function getMarca(p) {
-  return p.brand ?? "";
+  return getFirstString(p, ["brand"], "");
 }
 
 function getActivado(p) {
@@ -255,29 +319,22 @@ export default function ProductsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const {
+    pendingFilters,
+    appliedFilters,
+    search,
+    sort,
+    setSearch,
+    setPendingFilter,
+    setSort,
+    applyFilters,
+    resetFilters,
+  } = useProductFilters();
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(100);
   const [total, setTotal] = useState(0);
-
-  // Filtros PENDIENTES (UI)
-  const [pExistencia, setPExistencia] = useState(ALL);
-  const [pAlmacen, setPAlmacen] = useState(ALL);
-  const [pSuministrador, setPSuministrador] = useState(ALL);
-  const [pCategoria, setPCategoria] = useState(ALL);
-  const [pMarca, setPMarca] = useState(ALL);
-  const [pHabilitado, setPHabilitado] = useState(ALL);
-  const [pActivado, setPActivado] = useState(ALL);
-
-  // Filtros APLICADOS (los que viajan al servidor)
-  const [aExistencia, setAExistencia] = useState(ALL);
-  const [aAlmacen, setAAlmacen] = useState(ALL);
-  const [aSuministrador, setASuministrador] = useState(ALL);
-  const [aCategoria, setACategoria] = useState(ALL);
-  const [aMarca, setAMarca] = useState(ALL);
-  const [aHabilitado, setAHabilitado] = useState(ALL);
-  const [aActivado, setAActivado] = useState(ALL);
+  const { sortBy, sortDir } = sort;
 
   // Columnas visibles
   const [cols, setCols] = useState({
@@ -310,13 +367,15 @@ export default function ProductsPage() {
   }, [
     page,
     search,
-    aExistencia,
-    aAlmacen,
-    aSuministrador,
-    aCategoria,
-    aMarca,
-    aHabilitado,
-    aActivado,
+    appliedFilters.existencia,
+    appliedFilters.almacen,
+    appliedFilters.suministrador,
+    appliedFilters.categoria,
+    appliedFilters.marca,
+    appliedFilters.habilitado,
+    appliedFilters.activado,
+    sortBy,
+    sortDir,
   ]);
 
   async function loadProducts() {
@@ -328,14 +387,21 @@ export default function ProductsPage() {
 
       if (search.trim()) params.set("search", search.trim());
 
-      if (aExistencia !== ALL) params.set("existencia", aExistencia);
-      if (aAlmacen !== ALL) params.set("almacen", aAlmacen);
-      if (aSuministrador !== ALL)
-        params.set("suministrador", aSuministrador);
-      if (aCategoria !== ALL) params.set("categoria", aCategoria);
-      if (aMarca !== ALL) params.set("marca", aMarca);
-      if (aHabilitado !== ALL) params.set("habilitado", aHabilitado);
-      if (aActivado !== ALL) params.set("activado", aActivado);
+      if (appliedFilters.existencia !== ALL)
+        params.set("existencia", appliedFilters.existencia);
+      if (appliedFilters.almacen !== ALL)
+        params.set("almacen", appliedFilters.almacen);
+      if (appliedFilters.suministrador !== ALL)
+        params.set("suministrador", appliedFilters.suministrador);
+      if (appliedFilters.categoria !== ALL)
+        params.set("categoria", appliedFilters.categoria);
+      if (appliedFilters.marca !== ALL) params.set("marca", appliedFilters.marca);
+      if (appliedFilters.habilitado !== ALL)
+        params.set("habilitado", appliedFilters.habilitado);
+      if (appliedFilters.activado !== ALL)
+        params.set("activado", appliedFilters.activado);
+      params.set("sortBy", sortBy);
+      params.set("sortDir", sortDir);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -387,35 +453,47 @@ export default function ProductsPage() {
     };
   }, [rows]);
 
+  const {
+    existencia: aExistencia,
+    almacen: aAlmacen,
+    suministrador: aSuministrador,
+    categoria: aCategoria,
+    marca: aMarca,
+    habilitado: aHabilitado,
+    activado: aActivado,
+  } = appliedFilters;
+
+  function toggleSort(field) {
+    setSort((prev) => {
+      if (prev.sortBy === field) {
+        return { ...prev, sortDir: prev.sortDir === "asc" ? "desc" : "asc" };
+      }
+      return { ...prev, sortBy: field, sortDir: "asc" };
+    });
+    setPage(1);
+  }
+
+  const SortableHead = ({ field, label, className = sortableHeader }) => (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => toggleSort(field)}
+        className="flex items-center gap-1 w-full"
+      >
+        <span className="text-left flex-1">{label}</span>
+        <SortIndicator active={sortBy === field} direction={sortDir} />
+      </button>
+    </TableHead>
+  );
+
   // Aplicar filtros → mueve pendientes a aplicados y resetea página
   function aplicarFiltros() {
-    setAExistencia(pExistencia);
-    setAAlmacen(pAlmacen);
-    setASuministrador(pSuministrador);
-    setACategoria(pCategoria);
-    setAMarca(pMarca);
-    setAHabilitado(pHabilitado);
-    setAActivado(pActivado);
+    applyFilters();
     setPage(1);
   }
 
   function resetFiltros() {
-    setPExistencia(ALL);
-    setPAlmacen(ALL);
-    setPSuministrador(ALL);
-    setPCategoria(ALL);
-    setPMarca(ALL);
-    setPHabilitado(ALL);
-    setPActivado(ALL);
-
-    setAExistencia(ALL);
-    setAAlmacen(ALL);
-    setASuministrador(ALL);
-    setACategoria(ALL);
-    setAMarca(ALL);
-    setAHabilitado(ALL);
-    setAActivado(ALL);
-
+    resetFilters();
     setPage(1);
   }
 
@@ -609,8 +687,8 @@ export default function ProductsPage() {
                   Existencia
                 </span>
                 <Select
-                  value={pExistencia}
-                  onValueChange={setPExistencia}
+                  value={pendingFilters.existencia}
+                  onValueChange={(v) => setPendingFilter("existencia", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Existencia" />
@@ -632,8 +710,8 @@ export default function ProductsPage() {
                   Almacén
                 </span>
                 <Select
-                  value={pAlmacen}
-                  onValueChange={setPAlmacen}
+                  value={pendingFilters.almacen}
+                  onValueChange={(v) => setPendingFilter("almacen", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Almacén" />
@@ -654,8 +732,8 @@ export default function ProductsPage() {
                   Suministrador
                 </span>
                 <Select
-                  value={pSuministrador}
-                  onValueChange={setPSuministrador}
+                  value={pendingFilters.suministrador}
+                  onValueChange={(v) => setPendingFilter("suministrador", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Suministrador" />
@@ -676,8 +754,8 @@ export default function ProductsPage() {
                   Categoría Online
                 </span>
                 <Select
-                  value={pCategoria}
-                  onValueChange={setPCategoria}
+                  value={pendingFilters.categoria}
+                  onValueChange={(v) => setPendingFilter("categoria", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Categoría Online" />
@@ -698,8 +776,8 @@ export default function ProductsPage() {
                   Marca
                 </span>
                 <Select
-                  value={pMarca}
-                  onValueChange={setPMarca}
+                  value={pendingFilters.marca}
+                  onValueChange={(v) => setPendingFilter("marca", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Marca" />
@@ -720,8 +798,8 @@ export default function ProductsPage() {
                   Habilitado
                 </span>
                 <Select
-                  value={pHabilitado}
-                  onValueChange={setPHabilitado}
+                  value={pendingFilters.habilitado}
+                  onValueChange={(v) => setPendingFilter("habilitado", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Habilitado" />
@@ -739,8 +817,8 @@ export default function ProductsPage() {
                   Activado
                 </span>
                 <Select
-                  value={pActivado}
-                  onValueChange={setPActivado}
+                  value={pendingFilters.activado}
+                  onValueChange={(v) => setPendingFilter("activado", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Activado" />
@@ -767,9 +845,7 @@ export default function ProductsPage() {
               </span>
             </div>
             {/* Resultados */}
-            <span className="text-sm text-muted-foreground">
-                  {resultsLabel}
-                </span>
+            <span className="text-sm text-muted-foreground">{resultsLabel}</span>
 
             {/* Chips filtros aplicados */}
             <div className="flex flex-wrap gap-2">
@@ -823,51 +899,81 @@ export default function ProductsPage() {
                 <TableHeader>
                   <TableRow>
                     {cols.categoria && (
-                      <TableHead>Categoría Online</TableHead>
+                      <SortableHead
+                        field="category_name"
+                        label="Categoría Online"
+                        className={sortableHeader}
+                      />
                     )}
-                    {cols.idTienda && <TableHead>Id Tienda</TableHead>}
+                    {cols.idTienda && (
+                      <SortableHead
+                        field="store_external_id"
+                        label="Id Tienda"
+                      />
+                    )}
                     {cols.codProducto && (
-                      <TableHead>Cod. Producto</TableHead>
+                      <SortableHead field="product_code" label="Cod. Producto" />
                     )}
-                    {cols.nombre && <TableHead>Nombre</TableHead>}
-                    {cols.marca && <TableHead>Marca</TableHead>}
+                    {cols.nombre && <SortableHead field="name" label="Nombre" />}
+                    {cols.marca && <SortableHead field="brand" label="Marca" />}
                     {cols.suministrador && (
-                      <TableHead>Suministrador</TableHead>
+                      <SortableHead
+                        field="supplier_name"
+                        label="Suministrador"
+                      />
                     )}
                     {cols.exist && (
-                      <TableHead className={compactHeader}>
-                        Existencia Física (EF)
-                      </TableHead>
+                      <SortableHead
+                        field="existencia_fisica"
+                        label="Existencia Física (EF)"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.reserva && (
-                      <TableHead className={compactHeader}>
-                        Reserva (A)
-                      </TableHead>
+                      <SortableHead
+                        field="reserva"
+                        label="Reserva (A)"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.dispTienda && (
-                      <TableHead className={compactHeader}>
-                        Disp. Tienda (T)
-                      </TableHead>
+                      <SortableHead
+                        field="disponible_tienda"
+                        label="Disp. Tienda (T)"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.precioCosto && (
-                      <TableHead className={compactHeader}>
-                        Precio Costo
-                      </TableHead>
+                      <SortableHead
+                        field="precio_costo"
+                        label="Precio Costo"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.noAlmacen && (
-                      <TableHead className={compactHeader}>
-                        No. Almacén
-                      </TableHead>
+                      <SortableHead
+                        field="no_almacen"
+                        label="No. Almacén"
+                        className={compactHeader}
+                      />
                     )}
                     {cols.estadoAnuncio && (
-                      <TableHead>Estado de Anuncio</TableHead>
+                      <SortableHead
+                        field="status"
+                        label="Estado de Anuncio"
+                      />
                     )}
                     {cols.estadoTienda && (
-                      <TableHead>Estado en tienda</TableHead>
+                      <SortableHead
+                        field="store_status"
+                        label="Estado en tienda"
+                      />
                     )}
-                    {cols.creado && <TableHead>Creado</TableHead>}
+                    {cols.creado && (
+                      <SortableHead field="created_at" label="Creado" />
+                    )}
                     {cols.actualizado && (
-                      <TableHead>Actualizado</TableHead>
+                      <SortableHead field="updated_at" label="Actualizado" />
                     )}
                   </TableRow>
                 </TableHeader>
