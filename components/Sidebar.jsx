@@ -96,11 +96,7 @@ export default function SidebarHandler({ children }) {
                 </>
               )}
             </h1>
-            {collapsed ? (
-              <PanelLeftOpen className="h-6 w-6" />
-            ) : (
-              <PanelLeftClose className="h-6 w-6" />
-            )}
+            
           </button>
         </div>
 
