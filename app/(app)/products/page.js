@@ -71,12 +71,26 @@ function parseStockValue(raw) {
   if (raw === null || raw === undefined || raw === "") return null;
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
 
-  const normalized = String(raw)
-    .replace(/,/g, ".")
-    .replace(/[^0-9.-]/g, "")
-    .trim();
+  let cleaned = String(raw).trim();
+  if (!cleaned) return null;
 
-  const value = Number(normalized);
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const value = Number(cleaned);
   return Number.isFinite(value) ? value : null;
 }
 
@@ -84,6 +98,9 @@ function getFirstNumber(obj, keys, fallback = 0) {
   for (const key of keys) {
     const value = parseStockValue(obj?.[key]);
     if (value !== null) return value;
+
+    const metaValue = parseStockValue(obj?.metadata?.[key]);
+    if (metaValue !== null) return metaValue;
   }
   return fallback;
 }
