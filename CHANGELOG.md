@@ -37,3 +37,7 @@
 ## Inventario visible en productos
 - `app/api/[[...path]]/route.js`: se normalizan los valores de inventario desde cualquier alias (incluyendo metadata) sin forzarlos a cero, preservando existencias, reservas y disponibles reales en las respuestas de productos.
 - `app/(app)/products/page.js`: la paginación respeta el `perPage` devuelto por la API para evitar recálculos que oculten datos al navegar.
+
+## Corrección de duplicados y almacenes
+- `app/api/[[...path]]/route.js`: se refactorizó la derivación de almacenes para evitar sombras de variables al compilar y mantener `no_almacen`, `warehouse_code` y `warehouse_name` alineados.
+- `app/(app)/products/page.js`: las búsquedas de almacén ahora resuelven rutas anidadas (metadata.*) para mostrar el número/nombre correcto en la tabla junto con existencias reales.

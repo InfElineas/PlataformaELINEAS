@@ -110,12 +110,15 @@ function parseStockValue(raw) {
 }
 
 function getFirstNumber(obj, keys, fallback = 0) {
-  for (const key of keys) {
-    const value = parseStockValue(obj?.[key]);
-    if (value !== null) return value;
+  const resolve = (target, path) => {
+    if (!target || !path) return undefined;
+    if (!path.includes(".")) return target?.[path];
+    return path.split(".").reduce((acc, part) => acc?.[part], target);
+  };
 
-    const metaValue = parseStockValue(obj?.metadata?.[key]);
-    if (metaValue !== null) return metaValue;
+  for (const key of keys) {
+    const value = parseStockValue(resolve(obj, key));
+    if (value !== null) return value;
   }
   return fallback;
 }
@@ -126,8 +129,14 @@ function toNumber(raw, fallback = 0) {
 }
 
 function getFirstString(obj, keys, fallback = "") {
+  const resolve = (target, path) => {
+    if (!target || !path) return undefined;
+    if (!path.includes(".")) return target?.[path];
+    return path.split(".").reduce((acc, part) => acc?.[part], target);
+  };
+
   for (const key of keys) {
-    const value = obj?.[key];
+    const value = resolve(obj, key);
     if (value !== undefined && value !== null) {
       const text = String(value).trim();
       if (text) return text;
@@ -212,7 +221,15 @@ function getPrecioCosto(p) {
 function getNoAlmacen(p) {
   return getFirstString(
     p,
-    ["no_almacen", "warehouse_code", "warehouse_name", "store_warehouse"],
+    [
+      "no_almacen",
+      "warehouse_code",
+      "warehouse_name",
+      "store_warehouse",
+      "metadata.no_almacen",
+      "metadata.warehouse_code",
+      "metadata.warehouse_name",
+    ],
     "",
   );
 }
