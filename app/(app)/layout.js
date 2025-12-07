@@ -12,12 +12,7 @@ export default async function AppLayout({ children }) {
 
   return (
     <AuthSessionProvider initialSession={session}>
-      <div className="overflow-hidden">
-        <SidebarHandler />
-        <main className="flex-1 overflow-y-auto bg-background mt-16">
-          {children}
-        </main>
-      </div>
+      <SidebarHandler>{children}</SidebarHandler>
     </AuthSessionProvider>
   );
 }

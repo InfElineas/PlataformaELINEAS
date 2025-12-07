@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Settings2 } from "lucide-react";
+import { useProductFilters, ALL } from "@/hooks/useProductFilters";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /* ================= Helpers ================= */
-
-const ALL = "__ALL__";
 
 function fmt(val) {
   if (val === null || val === undefined || val === "") return "—";
@@ -67,9 +66,47 @@ function fmtMoney(val) {
   });
 }
 
+function parseStockValue(raw) {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+
+  let cleaned = String(raw).trim();
+  if (!cleaned) return null;
+
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+function getFirstNumber(obj, keys, fallback = 0) {
+  for (const key of keys) {
+    const value = parseStockValue(obj?.[key]);
+    if (value !== null) return value;
+
+    const metaValue = parseStockValue(obj?.metadata?.[key]);
+    if (metaValue !== null) return metaValue;
+  }
+  return fallback;
+}
+
 function toNumber(raw, fallback = 0) {
-  const n = Number(raw);
-  return Number.isNaN(n) ? fallback : n;
+  const value = parseStockValue(raw);
+  return value === null ? fallback : value;
 }
 
 // Truncar a 12 caracteres con tooltip
@@ -115,34 +152,35 @@ function getSuministrador(p) {
 }
 
 function getEF(p) {
-  return toNumber(
-    p.physical_stock ??
-      p.existencia_fisica ??
-      p.exist_fisica ??
-      p.stock ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "ef",
+  ]);
 }
 
 function getReserva(p) {
-  return toNumber(
-    p.reserve_qty ??
-      p.reserva ??
-      p.reserved ??
-      p.reserved_qty ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "A",
+    "almacen",
+  ]);
 }
 
 function getDisponibleTienda(p) {
-  return toNumber(
-    p.store_qty ??
-      p.disponible_tienda ??
-      p.disponible ??
-      p.available_store ??
-      p.available ??
-      0,
-  );
+  return getFirstNumber(p, [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+  ]);
 }
 
 function getPrecioCosto(p) {
@@ -255,29 +293,19 @@ export default function ProductsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const {
+    pendingFilters,
+    appliedFilters,
+    search,
+    setSearch,
+    setPendingFilter,
+    applyFilters,
+    resetFilters,
+  } = useProductFilters();
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(100);
   const [total, setTotal] = useState(0);
-
-  // Filtros PENDIENTES (UI)
-  const [pExistencia, setPExistencia] = useState(ALL);
-  const [pAlmacen, setPAlmacen] = useState(ALL);
-  const [pSuministrador, setPSuministrador] = useState(ALL);
-  const [pCategoria, setPCategoria] = useState(ALL);
-  const [pMarca, setPMarca] = useState(ALL);
-  const [pHabilitado, setPHabilitado] = useState(ALL);
-  const [pActivado, setPActivado] = useState(ALL);
-
-  // Filtros APLICADOS (los que viajan al servidor)
-  const [aExistencia, setAExistencia] = useState(ALL);
-  const [aAlmacen, setAAlmacen] = useState(ALL);
-  const [aSuministrador, setASuministrador] = useState(ALL);
-  const [aCategoria, setACategoria] = useState(ALL);
-  const [aMarca, setAMarca] = useState(ALL);
-  const [aHabilitado, setAHabilitado] = useState(ALL);
-  const [aActivado, setAActivado] = useState(ALL);
 
   // Columnas visibles
   const [cols, setCols] = useState({
@@ -310,13 +338,13 @@ export default function ProductsPage() {
   }, [
     page,
     search,
-    aExistencia,
-    aAlmacen,
-    aSuministrador,
-    aCategoria,
-    aMarca,
-    aHabilitado,
-    aActivado,
+    appliedFilters.existencia,
+    appliedFilters.almacen,
+    appliedFilters.suministrador,
+    appliedFilters.categoria,
+    appliedFilters.marca,
+    appliedFilters.habilitado,
+    appliedFilters.activado,
   ]);
 
   async function loadProducts() {
@@ -328,14 +356,19 @@ export default function ProductsPage() {
 
       if (search.trim()) params.set("search", search.trim());
 
-      if (aExistencia !== ALL) params.set("existencia", aExistencia);
-      if (aAlmacen !== ALL) params.set("almacen", aAlmacen);
-      if (aSuministrador !== ALL)
-        params.set("suministrador", aSuministrador);
-      if (aCategoria !== ALL) params.set("categoria", aCategoria);
-      if (aMarca !== ALL) params.set("marca", aMarca);
-      if (aHabilitado !== ALL) params.set("habilitado", aHabilitado);
-      if (aActivado !== ALL) params.set("activado", aActivado);
+      if (appliedFilters.existencia !== ALL)
+        params.set("existencia", appliedFilters.existencia);
+      if (appliedFilters.almacen !== ALL)
+        params.set("almacen", appliedFilters.almacen);
+      if (appliedFilters.suministrador !== ALL)
+        params.set("suministrador", appliedFilters.suministrador);
+      if (appliedFilters.categoria !== ALL)
+        params.set("categoria", appliedFilters.categoria);
+      if (appliedFilters.marca !== ALL) params.set("marca", appliedFilters.marca);
+      if (appliedFilters.habilitado !== ALL)
+        params.set("habilitado", appliedFilters.habilitado);
+      if (appliedFilters.activado !== ALL)
+        params.set("activado", appliedFilters.activado);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -389,33 +422,12 @@ export default function ProductsPage() {
 
   // Aplicar filtros → mueve pendientes a aplicados y resetea página
   function aplicarFiltros() {
-    setAExistencia(pExistencia);
-    setAAlmacen(pAlmacen);
-    setASuministrador(pSuministrador);
-    setACategoria(pCategoria);
-    setAMarca(pMarca);
-    setAHabilitado(pHabilitado);
-    setAActivado(pActivado);
+    applyFilters();
     setPage(1);
   }
 
   function resetFiltros() {
-    setPExistencia(ALL);
-    setPAlmacen(ALL);
-    setPSuministrador(ALL);
-    setPCategoria(ALL);
-    setPMarca(ALL);
-    setPHabilitado(ALL);
-    setPActivado(ALL);
-
-    setAExistencia(ALL);
-    setAAlmacen(ALL);
-    setASuministrador(ALL);
-    setACategoria(ALL);
-    setAMarca(ALL);
-    setAHabilitado(ALL);
-    setAActivado(ALL);
-
+    resetFilters();
     setPage(1);
   }
 
@@ -609,8 +621,8 @@ export default function ProductsPage() {
                   Existencia
                 </span>
                 <Select
-                  value={pExistencia}
-                  onValueChange={setPExistencia}
+                  value={pendingFilters.existencia}
+                  onValueChange={(v) => setPendingFilter("existencia", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Existencia" />
@@ -632,8 +644,8 @@ export default function ProductsPage() {
                   Almacén
                 </span>
                 <Select
-                  value={pAlmacen}
-                  onValueChange={setPAlmacen}
+                  value={pendingFilters.almacen}
+                  onValueChange={(v) => setPendingFilter("almacen", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Almacén" />
@@ -654,8 +666,8 @@ export default function ProductsPage() {
                   Suministrador
                 </span>
                 <Select
-                  value={pSuministrador}
-                  onValueChange={setPSuministrador}
+                  value={pendingFilters.suministrador}
+                  onValueChange={(v) => setPendingFilter("suministrador", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Suministrador" />
@@ -676,8 +688,8 @@ export default function ProductsPage() {
                   Categoría Online
                 </span>
                 <Select
-                  value={pCategoria}
-                  onValueChange={setPCategoria}
+                  value={pendingFilters.categoria}
+                  onValueChange={(v) => setPendingFilter("categoria", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Categoría Online" />
@@ -698,8 +710,8 @@ export default function ProductsPage() {
                   Marca
                 </span>
                 <Select
-                  value={pMarca}
-                  onValueChange={setPMarca}
+                  value={pendingFilters.marca}
+                  onValueChange={(v) => setPendingFilter("marca", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Marca" />
@@ -720,8 +732,8 @@ export default function ProductsPage() {
                   Habilitado
                 </span>
                 <Select
-                  value={pHabilitado}
-                  onValueChange={setPHabilitado}
+                  value={pendingFilters.habilitado}
+                  onValueChange={(v) => setPendingFilter("habilitado", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Habilitado" />
@@ -739,8 +751,8 @@ export default function ProductsPage() {
                   Activado
                 </span>
                 <Select
-                  value={pActivado}
-                  onValueChange={setPActivado}
+                  value={pendingFilters.activado}
+                  onValueChange={(v) => setPendingFilter("activado", v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Activado" />

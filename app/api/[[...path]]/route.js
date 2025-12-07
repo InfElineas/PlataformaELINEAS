@@ -146,9 +146,19 @@ async function handleProducts(request, segments, searchParams, context) {
     if (category) andFilters.push({ category_id: category });
 
     if (existencia === "con") {
-      andFilters.push({ physical_stock: { $gt: 0 } });
+      andFilters.push({
+        $or: [
+          { existencia_fisica: { $gt: 0 } },
+          { physical_stock: { $gt: 0 } },
+        ],
+      });
     } else if (existencia === "sin") {
-      andFilters.push({ physical_stock: { $lte: 0 } });
+      andFilters.push({
+        $or: [
+          { existencia_fisica: { $lte: 0 } },
+          { physical_stock: { $lte: 0 } },
+        ],
+      });
     }
 
     if (almacen) {
@@ -202,12 +212,26 @@ async function handleProducts(request, segments, searchParams, context) {
       if (raw === null || raw === undefined) return null;
       if (typeof raw === "number" && Number.isFinite(raw)) return raw;
 
-      const normalized = String(raw)
-        .replace(/,/g, ".")
-        .replace(/[^0-9.-]/g, "")
-        .trim();
+      let cleaned = String(raw).trim();
+      if (!cleaned) return null;
 
-      const value = Number(normalized);
+      cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+      if (!cleaned) return null;
+
+      const hasComma = cleaned.includes(",");
+      const hasDot = cleaned.includes(".");
+
+      if (hasComma && hasDot) {
+        if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+          cleaned = cleaned.replace(/,/g, "");
+        } else {
+          cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+        }
+      } else if (hasComma && !hasDot) {
+        cleaned = cleaned.replace(/,/g, ".");
+      }
+
+      const value = Number(cleaned);
       return Number.isFinite(value) ? value : null;
     };
 
