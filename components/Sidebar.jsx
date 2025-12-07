@@ -54,13 +54,21 @@ export default function SidebarHandler({ children }) {
     <div className="flex min-h-screen bg-background">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r bg-card transition-all duration-200 ease-linear",
+          "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out",
           collapsed ? "w-[72px]" : "w-64",
         )}
       >
-        <div className="flex h-16 items-center justify-between px-4 border-b">
+        <div
+          className={cn(
+            "flex h-16 items-center border-b px-4 transition-all duration-300 ease-in-out",
+            collapsed ? "justify-center" : "justify-between",
+          )}
+        >
           <button
-            className="flex items-center gap-2 text-blue-800"
+            className={cn(
+              "flex items-center gap-2 text-blue-800 transition-all duration-300 ease-in-out",
+              collapsed && "justify-center",
+            )}
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
           >
@@ -95,8 +103,10 @@ export default function SidebarHandler({ children }) {
                 key={item.name}
                 variant={isActive ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
-                  collapsed ? "px-2" : "px-4",
+                  "w-full items-center transition-all duration-300 ease-in-out",
+                  collapsed
+                    ? "justify-center px-0"
+                    : "justify-start gap-3 px-4",
                   isActive && "bg-secondary",
                 )}
                 onClick={() => router.push(item.href)}
@@ -124,8 +134,8 @@ export default function SidebarHandler({ children }) {
             onClick={handleSignOut}
             variant="outline"
             className={cn(
-              "w-full justify-start gap-2",
-              collapsed ? "px-2 justify-center" : "px-4",
+              "w-full items-center transition-all duration-300 ease-in-out",
+              collapsed ? "justify-center px-0" : "justify-start gap-2 px-4",
             )}
             title="Cerrar sesión"
           >
@@ -144,7 +154,7 @@ export default function SidebarHandler({ children }) {
       </aside>
 
       <div
-        className="flex min-h-screen flex-1 flex-col transition-all duration-200 ease-linear"
+        className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out"
         style={contentPadding}
       >
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-6">
