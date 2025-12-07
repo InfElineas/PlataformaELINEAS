@@ -345,7 +345,7 @@ export default function ProductsPage() {
 
       setRows(Array.isArray(data.data) ? data.data : []);
       setTotal(Number(data.total || 0));
-      setPerPage(Number(data.perPage || perPage));
+      setPerPage(Number(data.perPage || data.limit || perPage));
     } catch (e) {
       console.error("Load products failed", e);
       setRows([]);

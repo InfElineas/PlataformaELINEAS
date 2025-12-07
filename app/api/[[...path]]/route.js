@@ -198,27 +198,51 @@ async function handleProducts(request, segments, searchParams, context) {
       Product.countDocuments(query),
     ]);
 
+    const parseStock = (raw) => {
+      if (raw === null || raw === undefined) return null;
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+
+      const normalized = String(raw)
+        .replace(/,/g, ".")
+        .replace(/[^0-9.-]/g, "")
+        .trim();
+
+      const value = Number(normalized);
+      return Number.isFinite(value) ? value : null;
+    };
+
     const products = productsRaw.map((doc) => {
-      const physical = Number(
-        doc.physical_stock ?? doc.existencia_fisica ?? doc.stock ?? 0,
-      );
-      const reserve = Number(doc.reserve_qty ?? doc.reserva ?? doc.reserved ?? 0);
-      const store = Number(
-        doc.store_qty ??
-          doc.disponible_tienda ??
-          doc.available_store ??
-          doc.available ??
-          0,
-      );
+      const physical =
+        parseStock(doc.existencia_fisica) ??
+        parseStock(doc.physical_stock) ??
+        parseStock(doc.stock) ??
+        parseStock(doc?.metadata?.existencia_fisica) ??
+        0;
+
+      const reserve =
+        parseStock(doc.reserva) ??
+        parseStock(doc.reserve_qty) ??
+        parseStock(doc.reserved) ??
+        parseStock(doc.reserved_qty) ??
+        parseStock(doc?.metadata?.reserva) ??
+        0;
+
+      const store =
+        parseStock(doc.disponible_tienda) ??
+        parseStock(doc.store_qty) ??
+        parseStock(doc.available_store) ??
+        parseStock(doc.available) ??
+        parseStock(doc?.metadata?.disponible_tienda) ??
+        0;
 
       return {
         ...doc,
-        physical_stock: Number.isNaN(physical) ? 0 : physical,
-        existencia_fisica: Number.isNaN(physical) ? 0 : physical,
-        reserve_qty: Number.isNaN(reserve) ? 0 : reserve,
-        reserva: Number.isNaN(reserve) ? 0 : reserve,
-        store_qty: Number.isNaN(store) ? 0 : store,
-        disponible_tienda: Number.isNaN(store) ? 0 : store,
+        physical_stock: physical,
+        existencia_fisica: physical,
+        reserve_qty: reserve,
+        reserva: reserve,
+        store_qty: store,
+        disponible_tienda: store,
       };
     });
 
@@ -268,6 +292,7 @@ async function handleProducts(request, segments, searchParams, context) {
       {
         data: products,
         total,
+        perPage: limit,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
