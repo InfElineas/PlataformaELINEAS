@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   PanelLeftOpen,
   PanelLeftClose,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,9 +62,18 @@ export default function SidebarHandler({ children }) {
           <button
             className="flex items-center gap-2 text-blue-800"
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
           >
-            <h1 className="text-xl font-bold">
-              <span className="text-red-800">E</span>líneas
+            <h1 className="text-xl font-bold leading-none">
+              {collapsed ? (
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-lg text-blue-800 ring-1 ring-inset ring-blue-100">
+                  E
+                </span>
+              ) : (
+                <>
+                  <span className="text-red-800">E</span>líneas
+                </>
+              )}
             </h1>
             {collapsed ? (
               <PanelLeftOpen className="h-6 w-6" />
@@ -113,13 +123,23 @@ export default function SidebarHandler({ children }) {
           <Button
             onClick={handleSignOut}
             variant="outline"
-            className={cn("w-full", collapsed && "justify-center")}
+            className={cn(
+              "w-full justify-start gap-2",
+              collapsed ? "px-2 justify-center" : "px-4",
+            )}
+            title="Cerrar sesión"
           >
-            Cerrar sesión
+            <LogOut className="h-4 w-4" />
+            <span className={collapsed ? "sr-only" : "inline"}>Cerrar sesión</span>
           </Button>
-          {!collapsed && (
-            <p className="text-xs text-muted-foreground">v1.0 • Elíneas</p>
-          )}
+          <p
+            className={cn(
+              "text-xs text-muted-foreground transition-opacity", 
+              collapsed ? "text-center" : "text-left",
+            )}
+          >
+            {collapsed ? "v1.0" : "v1.0 • Elíneas"}
+          </p>
         </div>
       </aside>
 
