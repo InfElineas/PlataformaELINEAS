@@ -145,3 +145,244 @@ code {
 .sidebar {
   z-index: 5 !important;
 }
+
+.bg-black {
+  background-color: #000000;
+}
+.bg-dark-gray-4 {
+  background-color: #434343;
+}
+.bg-dark-gray-3 {
+  background-color: #666666;
+}
+.bg-dark-gray-2 {
+  background-color: #999999;
+}
+.bg-dark-gray-1 {
+  background-color: #b7b7b7;
+}
+.bg-gray {
+  background-color: #cccccc;
+}
+.bg-light-gray-1 {
+  background-color: #d9d9d9;
+}
+.bg-light-gray-2 {
+  background-color: #efefef;
+}
+.bg-light-gray-3 {
+  background-color: #f3f3f3;
+}
+.bg-white {
+  background-color: #ffffff;
+}
+.bg-red-berry {
+  background-color: #980000;
+}
+.bg-red {
+  background-color: #ff0000;
+}
+.bg-orange {
+  background-color: #ff9900;
+}
+.bg-yellow {
+  background-color: #ffff00;
+}
+.bg-green {
+  background-color: #00ff00;
+}
+.bg-cyan {
+  background-color: #00ffff;
+}
+.bg-cornflower-blue {
+  background-color: #4a86e8;
+}
+.bg-blue {
+  background-color: #0000ff;
+}
+.bg-purple {
+  background-color: #9900ff;
+}
+.bg-magenta {
+  background-color: #ff00ff;
+}
+.bg-light-red-berry-3 {
+  background-color: #e6b8af;
+}
+.bg-light-red-3 {
+  background-color: #f4cccc;
+}
+.bg-light-orange-3 {
+  background-color: #fce5cd;
+}
+.bg-light-yellow-3 {
+  background-color: #fff2cc;
+}
+.bg-light-green-3 {
+  background-color: #d9ead3;
+}
+.bg-light-cyan-3 {
+  background-color: #d0e0e3;
+}
+.bg-light-cornflower-blue-3 {
+  background-color: #c9daf8;
+}
+.bg-light-blue-3 {
+  background-color: #cfe2f3;
+}
+.bg-light-purple-3 {
+  background-color: #d9d2e9;
+}
+.bg-light-magenta-3 {
+  background-color: #ead1dc;
+}
+.bg-light-red-berry-2 {
+  background-color: #dd7e6b;
+}
+.bg-light-red-2 {
+  background-color: #ea9999;
+}
+.bg-light-orange-2 {
+  background-color: #f9cb9c;
+}
+.bg-light-yellow-2 {
+  background-color: #ffe599;
+}
+.bg-light-green-2 {
+  background-color: #b6d7a8;
+}
+.bg-light-cyan-2 {
+  background-color: #a2c4c9;
+}
+.bg-light-cornflower-blue-2 {
+  background-color: #a4c2f4;
+}
+.bg-light-blue-2 {
+  background-color: #9fc5e8;
+}
+.bg-light-purple-2 {
+  background-color: #b4a7d6;
+}
+.bg-light-magenta-2 {
+  background-color: #d5a6bd;
+}
+.bg-light-red-berry-1 {
+  background-color: #cc4125;
+}
+.bg-light-red-1 {
+  background-color: #e06666;
+}
+.bg-light-orange-1 {
+  background-color: #f6b26b;
+}
+.bg-light-yellow-1 {
+  background-color: #ffd966;
+}
+.bg-light-green-1 {
+  background-color: #93c47d;
+}
+.bg-light-cyan-1 {
+  background-color: #76a5af;
+}
+.bg-light-cornflower-blue-1 {
+  background-color: #6d9eeb;
+}
+.bg-light-blue-1 {
+  background-color: #6fa8dc;
+}
+.bg-light-purple-1 {
+  background-color: #8e7cc3;
+}
+.bg-light-magenta-1 {
+  background-color: #c27ba0;
+}
+.bg-dark-red-berry-1 {
+  background-color: #a61c00;
+}
+.bg-dark-red-1 {
+  background-color: #cc0000;
+}
+.bg-dark-orange-1 {
+  background-color: #e69138;
+}
+.bg-dark-yellow-1 {
+  background-color: #f1c232;
+}
+.bg-dark-green-1 {
+  background-color: #6aa84f;
+}
+.bg-dark-cyan-1 {
+  background-color: #45818e;
+}
+.bg-dark-cornflower-blue-1 {
+  background-color: #3c78d8;
+}
+.bg-dark-blue-1 {
+  background-color: #3d85c6;
+}
+.bg-dark-purple-1 {
+  background-color: #674ea7;
+}
+.bg-dark-magenta-1 {
+  background-color: #a64d79;
+}
+.bg-dark-red-berry-2 {
+  background-color: #85200c;
+}
+.bg-dark-red-2 {
+  background-color: #990000;
+}
+.bg-dark-orange-2 {
+  background-color: #b45f06;
+}
+.bg-dark-yellow-2 {
+  background-color: #bf9000;
+}
+.bg-dark-green-2 {
+  background-color: #38761d;
+}
+.bg-dark-cyan-2 {
+  background-color: #134f5c;
+}
+.bg-dark-cornflower-blue-2 {
+  background-color: #1155cc;
+}
+.bg-dark-blue-2 {
+  background-color: #0b5394;
+}
+.bg-dark-purple-2 {
+  background-color: #351c75;
+}
+.bg-dark-magenta-2 {
+  background-color: #741b47;
+}
+.bg-dark-red-berry-3 {
+  background-color: #5b0f00;
+}
+.bg-dark-red-3 {
+  background-color: #660000;
+}
+.bg-dark-orange-3 {
+  background-color: #783f04;
+}
+.bg-dark-yellow-3 {
+  background-color: #7f6000;
+}
+.bg-dark-green-3 {
+  background-color: #274e13;
+}
+.bg-dark-cyan-3 {
+  background-color: #0c343d;
+}
+.bg-dark-cornflower-blue-3 {
+  background-color: #1c4587;
+}
+.bg-dark-blue-3 {
+  background-color: #073763;
+}
+.bg-dark-purple-3 {
+  background-color: #20124d;
+}
+.bg-dark-magenta-3 {
+  background-color: #4c1130;
+}

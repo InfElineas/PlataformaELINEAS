@@ -216,6 +216,24 @@ function getEstadoTienda(p) {
 }
 
 function badgeVariantAnuncio(label) {
+  // switch (label) {
+  //   case "SIN ID EF = 0":
+  //     return "bg-light-gray-2";
+  //   case "SIN ID EF > 0":
+  //     return "bg-gray";
+  //   case "ACTIVADO":
+  //     return "bg-dark-gray-2";
+  //   case "DESACTIVADO MUERTO EF = 0":
+  //     return "bg-yellow";
+  //   case "DESACTIVADO MUERTO EF > 0":
+  //     return "bg-dark-red-1";
+  //   case "DESACTIVADO EF = 0":
+  //     return "bg-red";
+  //   case "DESACTIVADO EF > 0":
+  //     return "bg-dark-purple-1";
+  //   default:
+  //     return "";
+  // }
   if (label.startsWith("ACTIVADO")) return "default";
   if (label.startsWith("SIN ID")) return "secondary";
   if (label.startsWith("DESACTIVADO")) return "destructive";
@@ -223,11 +241,37 @@ function badgeVariantAnuncio(label) {
 }
 
 function badgeVariantTienda(label) {
-  if (label.startsWith("DISPONIBLE")) return "default";
-  if (label.startsWith("PROXIMO") || label.startsWith("ULTIMAS PIEZAS")) {
-    return "secondary";
+  switch (label) {
+    case 'SIN ID (ID = "" y EF = 0)':
+      return "bg-light-gray-2";
+    case 'SIN ID (ID = "" y EF > 0)':
+      return "bg-gray";
+    case 'AGOTADO (ID ≠ "" y EF = 0)':
+      return "bg-dark-gray-2";
+    case "SIN RESERVA (A = 0 y T > 6)":
+      return "bg-yellow";
+    case "NO TIENDA (T = 0 y EF > 10)":
+      return "bg-dark-red-1";
+    case "NO TIENDA (T = 0 y EF ≤ 10)":
+      return "bg-red";
+    case "ULTIMAS PIEZAS (1 < T < A ≤ 10)":
+      return "bg-dark-purple-1";
+    case "ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)":
+      return "bg-light-purple-1";
+    case "PROXIMO (T ≤ 10)":
+      return "bg-orange";
+    case "DISPONIBLE (T ≤ A)":
+      return "bg-light-green-2";
+    case "DISPONIBLE (A < T)":
+      return "bg-light-green-1";
+    default:
+      return "";
   }
-  return "destructive";
+  // if (label.startsWith("DISPONIBLE")) return "default";
+  // if (label.startsWith("PROXIMO") || label.startsWith("ULTIMAS PIEZAS")) {
+  //   return "secondary";
+  // }
+  // return "destructive";
 }
 
 /* ================= Página ================= */
@@ -841,7 +885,10 @@ export default function ProductsPage() {
                         )}
                         {cols.estadoTienda && (
                           <TableCell>
-                            <Badge variant={tiendaVariant}>
+                            <Badge
+                              variant={"outline"}
+                              className={tiendaVariant}
+                            >
                               {estadoTienda}
                             </Badge>
                           </TableCell>
