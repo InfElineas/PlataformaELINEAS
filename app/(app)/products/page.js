@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Settings2 } from "lucide-react";
-import { useProductFilters, ALL } from "@/hooks/useProductFilters";
+import { ALL } from "@/hooks/useProductFilters";
+import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -479,7 +480,7 @@ export default function ProductsPage() {
     setSort,
     applyFilters,
     resetFilters,
-  } = useProductFilters();
+  } = useGlobalProductFilters();
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(100);

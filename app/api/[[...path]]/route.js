@@ -98,6 +98,12 @@ const STOCK_ALIASES = {
     "stock",
     "existencia",
     "ef",
+    "metadata.existencia_fisica",
+    "metadata.physical_stock",
+    "metadata.exist_fisica",
+    "metadata.stock",
+    "metadata.existencia",
+    "metadata.ef",
   ],
   reserva: [
     "reserva",
@@ -106,6 +112,12 @@ const STOCK_ALIASES = {
     "reserved_qty",
     "almacen",
     "A",
+    "metadata.reserva",
+    "metadata.reserve_qty",
+    "metadata.reserved",
+    "metadata.reserved_qty",
+    "metadata.almacen",
+    "metadata.A",
   ],
   tienda: [
     "disponible_tienda",
@@ -115,6 +127,13 @@ const STOCK_ALIASES = {
     "available",
     "tienda",
     "T",
+    "metadata.disponible_tienda",
+    "metadata.store_qty",
+    "metadata.disponible",
+    "metadata.available_store",
+    "metadata.available",
+    "metadata.tienda",
+    "metadata.T",
   ],
 };
 
@@ -297,11 +316,16 @@ async function handleProducts(request, segments, searchParams, context) {
     };
 
     const pickStock = (doc, keys) => {
+      const resolve = (target, path) => {
+        if (!target || !path) return undefined;
+        return path.split(".").reduce((acc, part) => acc?.[part], target);
+      };
+
       for (const key of keys) {
-        const direct = parseStock(doc?.[key]);
+        const direct = parseStock(resolve(doc, key));
         if (direct !== null) return direct;
 
-        const metaVal = parseStock(doc?.metadata?.[key]);
+        const metaVal = parseStock(resolve(doc?.metadata, key));
         if (metaVal !== null) return metaVal;
       }
       return 0;

@@ -45,3 +45,9 @@
 ## Corrección de duplicados y almacenes
 - `app/api/[[...path]]/route.js`: se refactorizó la derivación de almacenes para evitar sombras de variables al compilar y mantener `no_almacen`, `warehouse_code` y `warehouse_name` alineados.
 - `app/(app)/products/page.js`: las búsquedas de almacén ahora resuelven rutas anidadas (metadata.*) para mostrar el número/nombre correcto en la tabla junto con existencias reales.
+
+## Restablecimiento de filtros globales y existencias reales
+- `components/providers/ProductFiltersProvider.jsx`: nuevo proveedor global para compartir filtros, búsqueda y ordenamiento entre páginas sin duplicar lógica.
+- `app/(app)/layout.js`: el layout principal envuelve el panel en el proveedor de filtros para reutilizar el mismo estado en toda la plataforma.
+- `app/(app)/products/page.js`: la página de productos consume el contexto global de filtros y conserva la lógica de existencias, reserva y disponible leyendo alias y metadata.
+- `app/api/[[...path]]/route.js`: los alias de inventario incluyen rutas con metadata y el resolvedor soporta claves anidadas para no devolver 0 cuando los datos viven en metadata.
