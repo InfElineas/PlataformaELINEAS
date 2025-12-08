@@ -1,5 +1,8 @@
 # Changelog
 
+## Ajustes visuales de inventario (actual)
+- `app/(app)/inventory/page.js`: las columnas de existencia física, reserva y disponible en tienda ahora se muestran en solo lectura con formato numérico consistente (igual a la vista de productos) y sin inputs redundantes.
+
 ## Ajustes responsivos y densidad tipográfica
 - `app/globals.css`: se redujo ligeramente el tamaño base de fuente y se evitó el scroll horizontal global para mejorar la lectura en pantallas pequeñas.
 - `components/Sidebar.jsx`: el panel lateral se colapsa automáticamente en pantallas estrechas, conserva la transición suave y aplica un contenedor centralizado para el contenido.

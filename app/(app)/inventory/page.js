@@ -189,6 +189,18 @@ function pickInventory(item, keys) {
   return 0;
 }
 
+function toSafeNumber(value, fallback = 0) {
+  const parsed = parseInventoryNumber(value, fallback);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function formatQty(value) {
+  const num = toSafeNumber(value, 0);
+  return new Intl.NumberFormat("es-ES", {
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
 function getEF(item) {
   return pickInventory(item, INVENTORY_KEYS.existencia);
 }
@@ -343,7 +355,7 @@ export default function InventoryPage() {
   const [segmentId, setSegmentId] = useState("sin_reserva");
   const [maxRows, setMaxRows] = useState(20);
 
-  // ajustes en edición: { [snapshotId]: { existencia_fisica, reserva, disponible_tienda, reason, note } }
+  // ajustes en edición: { [snapshotId]: { real_qty, upload_qty, download_qty, reason, note } }
   const [adjustments, setAdjustments] = useState({});
 
   // ================= Efectos =================
@@ -512,9 +524,6 @@ export default function InventoryPage() {
       if (!adj) continue;
 
       const hasData =
-        adj.existencia_fisica !== undefined ||
-        adj.reserva !== undefined ||
-        adj.disponible_tienda !== undefined ||
         adj.real_qty !== undefined ||
         adj.upload_qty !== undefined ||
         adj.download_qty !== undefined ||
@@ -523,21 +532,12 @@ export default function InventoryPage() {
 
       if (!hasData) continue;
 
-      const existencia_fisica =
-        adj.existencia_fisica !== undefined && adj.existencia_fisica !== ""
-          ? toSafeNumber(adj.existencia_fisica, getEF(item))
-          : getEF(item);
+      const existencia_fisica = getEF(item);
+      const reserva = getA(item);
+      const disponible_tienda = getT(item);
 
-      const reserva =
-        adj.reserva !== undefined && adj.reserva !== ""
-          ? toSafeNumber(adj.reserva, getA(item))
-          : getA(item);
-
-      const disponible_tienda =
-        adj.disponible_tienda !== undefined &&
-        adj.disponible_tienda !== ""
-          ? toSafeNumber(adj.disponible_tienda, getT(item))
-          : getT(item);
+      const real_qty = resolveRealQty(item, adj);
+      const { state, difference } = resolveAdjustmentState(item, adj);
 
       const real_qty = resolveRealQty(item, adj);
       const { state, difference } = resolveAdjustmentState(item, adj);
@@ -864,15 +864,6 @@ export default function InventoryPage() {
                         adj,
                       );
 
-                      const efValue =
-                        adj.existencia_fisica ??
-                        (getEF(item) !== 0 ? getEF(item) : "");
-                      const aValue =
-                        adj.reserva ?? (getA(item) !== 0 ? getA(item) : "");
-                      const tValue =
-                        adj.disponible_tienda ??
-                        (getT(item) !== 0 ? getT(item) : "");
-
                       return (
                         <TableRow key={snapshotId}>
                           <TableCell>
@@ -887,19 +878,8 @@ export default function InventoryPage() {
                           <TableCell className="text-sm">
                             {getSupplierLabel(item) || "—"}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              className="h-8 w-24 text-right"
-                              value={efValue}
-                              onChange={(e) =>
-                                updateAdjustment(
-                                  snapshotId,
-                                  "existencia_fisica",
-                                  e.target.value
-                              )
-                            }
-                          />
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {formatQty(getEF(item))}
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
@@ -911,33 +891,11 @@ export default function InventoryPage() {
                               }
                             />
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              className="h-8 w-24 text-right"
-                              value={aValue}
-                              onChange={(e) =>
-                                updateAdjustment(
-                                  snapshotId,
-                                  "reserva",
-                                  e.target.value
-                              )
-                            }
-                          />
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {formatQty(getA(item))}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              className="h-8 w-24 text-right"
-                              value={tValue}
-                              onChange={(e) =>
-                                updateAdjustment(
-                                  snapshotId,
-                                  "disponible_tienda",
-                                  e.target.value
-                              )
-                            }
-                          />
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {formatQty(getT(item))}
                           </TableCell>
                           <TableCell>
                             <Badge variant={state === "ok" ? "default" : "secondary"}>
@@ -1023,15 +981,6 @@ export default function InventoryPage() {
                   const adj = adjustments[snapshotId] || {};
                   const { state, difference } = resolveAdjustmentState(item, adj);
 
-                  const efValue =
-                    adj.existencia_fisica ??
-                    (getEF(item) !== 0 ? getEF(item) : "");
-                  const aValue =
-                    adj.reserva ?? (getA(item) !== 0 ? getA(item) : "");
-                  const tValue =
-                    adj.disponible_tienda ??
-                    (getT(item) !== 0 ? getT(item) : "");
-
                   return (
                     <div
                       key={snapshotId}
@@ -1055,18 +1004,9 @@ export default function InventoryPage() {
                       <div className="grid grid-cols-4 gap-2 text-xs">
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">EF</p>
-                          <Input
-                            type="number"
-                            className="mt-1 h-8 w-full text-center"
-                            value={efValue}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "existencia_fisica",
-                                e.target.value
-                              )
-                            }
-                          />
+                          <p className="mt-1 font-mono text-sm tabular-nums">
+                            {formatQty(getEF(item))}
+                          </p>
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">Real</p>
@@ -1085,33 +1025,15 @@ export default function InventoryPage() {
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">A</p>
-                          <Input
-                            type="number"
-                            className="mt-1 h-8 w-full text-center"
-                            value={aValue}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "reserva",
-                                e.target.value
-                              )
-                            }
-                          />
+                          <p className="mt-1 font-mono text-sm tabular-nums">
+                            {formatQty(getA(item))}
+                          </p>
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">T</p>
-                          <Input
-                            type="number"
-                            className="mt-1 h-8 w-full text-center"
-                            value={tValue}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "disponible_tienda",
-                                e.target.value
-                              )
-                            }
-                          />
+                          <p className="mt-1 font-mono text-sm tabular-nums">
+                            {formatQty(getT(item))}
+                          </p>
                         </div>
                       </div>
 
