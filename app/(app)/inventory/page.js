@@ -539,6 +539,9 @@ export default function InventoryPage() {
       const real_qty = resolveRealQty(item, adj);
       const { state, difference } = resolveAdjustmentState(item, adj);
 
+      const real_qty = resolveRealQty(item, adj);
+      const { state, difference } = resolveAdjustmentState(item, adj);
+
       payload.push({
         snapshot_id: item._id,
         product_id: item.product_id || item.product_code || item._id,
