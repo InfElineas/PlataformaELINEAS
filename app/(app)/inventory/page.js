@@ -615,9 +615,11 @@ export default function InventoryPage() {
                     const variant = badgeVariantEstadoTienda(estado);
                     const adj = adjustments[snapshotId] || {};
 
-                    const efValue = adj.existencia_fisica ?? getEF(item);
-                    const aValue = adj.reserva ?? getA(item);
-                    const tValue = adj.disponible_tienda ?? getT(item);
+                    const efValue = Number(
+                      adj.existencia_fisica ?? getEF(item),
+                    );
+                    const aValue = Number(adj.reserva ?? getA(item));
+                    const tValue = Number(adj.disponible_tienda ?? getT(item));
 
                     return (
                       <TableRow key={snapshotId}>
@@ -636,7 +638,7 @@ export default function InventoryPage() {
                         <TableCell className="text-right">
                           <Input
                             type="number"
-                            className="h-8 w-24 text-right"
+                            className={`h-8 w-24 text-right${efValue === aValue + tValue ? "" : " " + (efValue > aValue + tValue ? "border-red" : "border-yellow")}`}
                             value={efValue}
                             onChange={(e) =>
                               updateAdjustment(
