@@ -1,6 +1,10 @@
 # Changelog
 
-## Normalización de inventario y estado global persistente (actual)
+## Previsualización de productos e inventario completo (actual)
+- `app/(app)/products/page.js`: tooltip enriquecido en el nombre del producto con imagen, códigos, proveedor, almacén e inventario; alias de inventario ampliados (incluyendo metadata.*) para evitar mostrar 0 cuando existen valores importados.
+- `app/(app)/inventory/page.js`: los alias de EF/Reserva/Tienda también leen rutas metadata.* y rutas anidadas para mantener coherencia con la vista de productos.
+
+## Normalización de inventario y estado global persistente
 - API y vistas reutilizan el mismo set de alias de inventario (EF/Reserva/Tienda) para leer valores desde documento o metadata y evitar que se muestren 0 cuando hay datos.
 - `hooks/useProductFilters.js`: el estado global de filtros ahora guarda también el orden seleccionado (`sortBy/sortDir`) en localStorage para mantener el mismo ordenamiento al navegar o recargar.
 - `app/(app)/products/page.js`: se reutiliza el orden global persistido, se leen campos de almacén y proveedores desde metadata cuando faltan en el documento principal y se priorizan cadenas/números reales antes de mostrar "—".

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -29,6 +30,11 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 /* ================= Helpers ================= */
 
@@ -58,8 +64,34 @@ const sortableHeader =
   "text-left text-xs font-semibold whitespace-nowrap px-2 select-none";
 
 const STOCK_KEYS = {
-  existencia: ["existencia_fisica", "physical_stock", "exist_fisica", "stock", "ef"],
-  reserva: ["reserva", "reserve_qty", "reserved", "reserved_qty", "almacen", "A"],
+  existencia: [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "existencia",
+    "ef",
+    "metadata.existencia_fisica",
+    "metadata.physical_stock",
+    "metadata.exist_fisica",
+    "metadata.stock",
+    "metadata.existencia",
+    "metadata.ef",
+  ],
+  reserva: [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "almacen",
+    "A",
+    "metadata.reserva",
+    "metadata.reserve_qty",
+    "metadata.reserved",
+    "metadata.reserved_qty",
+    "metadata.almacen",
+    "metadata.A",
+  ],
   tienda: [
     "disponible_tienda",
     "store_qty",
@@ -68,6 +100,13 @@ const STOCK_KEYS = {
     "available",
     "tienda",
     "T",
+    "metadata.disponible_tienda",
+    "metadata.store_qty",
+    "metadata.disponible",
+    "metadata.available_store",
+    "metadata.available",
+    "metadata.tienda",
+    "metadata.T",
   ],
 };
 
@@ -117,8 +156,11 @@ function getFirstNumber(obj, keys, fallback = 0) {
   };
 
   for (const key of keys) {
-    const value = parseStockValue(resolve(obj, key));
-    if (value !== null) return value;
+    const direct = parseStockValue(resolve(obj, key));
+    if (direct !== null) return direct;
+
+    const meta = parseStockValue(resolve(obj?.metadata, key));
+    if (meta !== null) return meta;
   }
   return fallback;
 }
@@ -142,7 +184,7 @@ function getFirstString(obj, keys, fallback = "") {
       if (text) return text;
     }
 
-    const metaVal = obj?.metadata?.[key];
+    const metaVal = resolve(obj?.metadata, key);
     if (metaVal !== undefined && metaVal !== null) {
       const text = String(metaVal).trim();
       if (text) return text;
@@ -174,6 +216,103 @@ function SortIndicator({ active, direction }) {
     <span className="font-semibold text-muted-foreground">
       {direction === "asc" ? "↑" : "↓"}
     </span>
+  );
+}
+
+function InfoRow({ label, value }) {
+  const display = fmt(value);
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className="truncate text-xs font-medium" title={display === "—" ? undefined : display}>
+        {display}
+      </span>
+    </div>
+  );
+}
+
+function getProductImage(p) {
+  return (
+    p.image ||
+    p.image_url ||
+    p.thumbnail ||
+    p.thumbnail_url ||
+    p.metadata?.image ||
+    p.metadata?.image_url ||
+    p.metadata?.thumbnail ||
+    p.metadata?.thumbnail_url ||
+    ""
+  );
+}
+
+function ProductHoverCard({
+  product,
+  categoriaOnline,
+  idTienda,
+  codProducto,
+  suministrador,
+  marca,
+  noAlmacen,
+  ef,
+  reserva,
+  tienda,
+  precioCosto,
+  children,
+}) {
+  const description = getFirstString(
+    product,
+    ["description", "metadata.description", "metadata.descripcion"],
+    "",
+  );
+  const image = getProductImage(product);
+
+  return (
+    <HoverCard openDelay={150} closeDelay={100}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent className="w-96 space-y-3">
+        <div className="flex gap-3">
+          <Avatar className="h-16 w-16 rounded-md border">
+            {image ? <AvatarImage src={image} alt={product.name} /> : null}
+            <AvatarFallback className="rounded-md bg-primary/10 font-semibold text-primary">
+              {(product.name || "P").slice(0, 1).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 space-y-1">
+            <p className="truncate text-sm font-semibold leading-tight" title={product.name}>
+              {fmt(product.name)}
+            </p>
+            {marca ? <p className="text-xs text-muted-foreground">{marca}</p> : null}
+            {categoriaOnline ? (
+              <p className="text-xs text-muted-foreground truncate" title={categoriaOnline}>
+                {categoriaOnline}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <InfoRow label="Cód. Producto" value={codProducto} />
+          <InfoRow label="Id Tienda" value={idTienda} />
+          <InfoRow label="Suministrador" value={suministrador} />
+          <InfoRow label="No. Almacén" value={noAlmacen} />
+          <InfoRow label="EF" value={ef} />
+          <InfoRow label="Reserva" value={reserva} />
+          <InfoRow label="Disp. Tienda" value={tienda} />
+          <InfoRow label="Precio costo" value={fmtMoney(precioCosto)} />
+        </div>
+
+        {description ? (
+          <p
+            className="max-h-20 overflow-hidden text-xs leading-snug text-muted-foreground"
+            title={description}
+          >
+            {description}
+          </p>
+        ) : null}
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
@@ -1054,7 +1193,21 @@ export default function ProductsPage() {
                         )}
                         {cols.nombre && (
                           <TableCell className="text-sm font-medium">
-                            <TruncatedCell value={p.name} />
+                            <ProductHoverCard
+                              product={p}
+                              categoriaOnline={categoriaOnline}
+                              idTienda={idTienda}
+                              codProducto={codProducto}
+                              suministrador={suministrador}
+                              marca={marca}
+                              noAlmacen={noAlmacen}
+                              ef={EF}
+                              reserva={A}
+                              tienda={T}
+                              precioCosto={precioCosto}
+                            >
+                              <TruncatedCell value={p.name} />
+                            </ProductHoverCard>
                           </TableCell>
                         )}
                         {cols.marca && (

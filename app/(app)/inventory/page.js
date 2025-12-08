@@ -122,8 +122,34 @@ function parseInventoryNumber(value, fallback = 0) {
 }
 
 const INVENTORY_KEYS = {
-  existencia: ["existencia_fisica", "physical_stock", "exist_fisica", "stock", "ef"],
-  reserva: ["reserva", "reserve_qty", "reserved", "reserved_qty", "A", "almacen"],
+  existencia: [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "existencia",
+    "ef",
+    "metadata.existencia_fisica",
+    "metadata.physical_stock",
+    "metadata.exist_fisica",
+    "metadata.stock",
+    "metadata.existencia",
+    "metadata.ef",
+  ],
+  reserva: [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "A",
+    "almacen",
+    "metadata.reserva",
+    "metadata.reserve_qty",
+    "metadata.reserved",
+    "metadata.reserved_qty",
+    "metadata.A",
+    "metadata.almacen",
+  ],
   tienda: [
     "disponible_tienda",
     "store_qty",
@@ -132,15 +158,28 @@ const INVENTORY_KEYS = {
     "available",
     "tienda",
     "T",
+    "metadata.disponible_tienda",
+    "metadata.store_qty",
+    "metadata.disponible",
+    "metadata.available_store",
+    "metadata.available",
+    "metadata.tienda",
+    "metadata.T",
   ],
 };
 
 function pickInventory(item, keys) {
+  const resolve = (target, path) => {
+    if (!target || !path) return undefined;
+    if (!path.includes(".")) return target?.[path];
+    return path.split(".").reduce((acc, part) => acc?.[part], target);
+  };
+
   for (const key of keys) {
-    const direct = parseInventoryNumber(item?.[key], null);
+    const direct = parseInventoryNumber(resolve(item, key), null);
     if (direct !== null) return direct;
 
-    const meta = parseInventoryNumber(item?.metadata?.[key], null);
+    const meta = parseInventoryNumber(resolve(item?.metadata, key), null);
     if (meta !== null) return meta;
   }
   return 0;
