@@ -660,27 +660,27 @@ export default function ProductsPage() {
   /* ================= Render ================= */
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Productos</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 pb-10">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">Productos</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Vista operativa del inventario por tienda y categoría online.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 sm:pb-6">
           <div className="flex flex-col gap-4">
-            <div className="lg:flex items-center justify-between gap-4">
-              <div className="max-lg:pb-2">
-                <CardTitle>Listado de productos</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            <div className="grid gap-3 lg:flex lg:items-center lg:justify-between">
+              <div className="max-lg:pb-1">
+                <CardTitle className="text-lg sm:text-xl">Listado de productos</CardTitle>
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Busca por nombre, código, código de barras o Id tienda.
                 </p>
               </div>
 
-              <div className="lg:flex items-center grid gap-3">
-                <div className="relative">
+              <div className="grid gap-3 lg:flex lg:items-center">
+                <div className="relative w-full min-w-[240px] lg:w-72">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Buscar productos..."
@@ -696,7 +696,7 @@ export default function ProductsPage() {
                 {/* Columnas visibles */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 whitespace-nowrap">
                       <Settings2 className="h-4 w-4" />
                       Columnas visibles
                     </Button>
@@ -1059,9 +1059,7 @@ export default function ProductsPage() {
               </div>
         </CardHeader>
 
-       
-
-        <CardContent className="overflow-x-auto">
+        <CardContent className="overflow-x-auto rounded-lg border border-border/60 p-0 sm:p-2">
           {loading ? (
             <div className="py-8 text-center text-muted-foreground">
               Cargando productos…
@@ -1072,7 +1070,7 @@ export default function ProductsPage() {
             </div>
           ) : (
             <>
-              <Table className="min-w-[1400px]">
+              <Table className="w-full min-w-[1000px] sm:min-w-[1150px] lg:min-w-[1280px] xl:min-w-[1400px]">
                 <TableHeader>
                   <TableRow>
                     {cols.categoria && (

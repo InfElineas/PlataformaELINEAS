@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -37,6 +37,19 @@ export default function SidebarHandler({ children }) {
   const router = useRouter();
   const { user } = useAuthSession();
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window === "undefined") return;
+      if (window.innerWidth < 1024) {
+        setCollapsed(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const contentPadding = useMemo(
     () => ({
       marginLeft: collapsed ? `${COLLAPSED_WIDTH}px` : `${EXPANDED_WIDTH}px`,
@@ -51,7 +64,7 @@ export default function SidebarHandler({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background text-[15px] sm:text-[16px]">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out",
@@ -157,16 +170,21 @@ export default function SidebarHandler({ children }) {
         className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out"
         style={contentPadding}
       >
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+            >
               {collapsed ? (
                 <PanelLeftOpen className="h-5 w-5" />
               ) : (
                 <PanelLeftClose className="h-5 w-5" />
               )}
             </Button>
-            <div>
+            <div className="leading-tight">
               <p className="text-sm font-semibold text-foreground">Panel</p>
               <p className="text-xs text-muted-foreground">
                 Gestiona catálogos e inventario
@@ -175,7 +193,9 @@ export default function SidebarHandler({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 bg-background">{children}</main>
+        <main className="flex-1 bg-background px-3 py-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-screen-2xl">{children}</div>
+        </main>
       </div>
     </div>
   );

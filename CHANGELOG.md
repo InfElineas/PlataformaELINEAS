@@ -1,5 +1,11 @@
 # Changelog
 
+## Ajustes responsivos y densidad tipográfica
+- `app/globals.css`: se redujo ligeramente el tamaño base de fuente y se evitó el scroll horizontal global para mejorar la lectura en pantallas pequeñas.
+- `components/Sidebar.jsx`: el panel lateral se colapsa automáticamente en pantallas estrechas, conserva la transición suave y aplica un contenedor centralizado para el contenido.
+- `app/(app)/products/page.js` y `app/(app)/inventory/page.js`: se añadieron contenedores fluidos, bordes y anchos mínimos responsivos para las tablas, reduciendo el uso de espacio horizontal sin perder datos clave.
+- `app/(app)/page.js`: titulares y tarjetas ajustan el espaciado y tipografía para adaptarse mejor a vistas móviles y de escritorio.
+
 ## Previsualización de productos e inventario completo (actual)
 - `app/(app)/products/page.js`: tooltip enriquecido en el nombre del producto con imagen, códigos, proveedor, almacén e inventario; alias de inventario ampliados (incluyendo metadata.*) para evitar mostrar 0 cuando existen valores importados.
 - `app/(app)/inventory/page.js`: los alias de EF/Reserva/Tienda también leen rutas metadata.* y rutas anidadas para mantener coherencia con la vista de productos.

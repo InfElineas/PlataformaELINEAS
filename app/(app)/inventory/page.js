@@ -540,18 +540,18 @@ export default function InventoryPage() {
   // ================= Render =================
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Inventario</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 pb-10">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">Inventario</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Ver niveles de inventario con filtros globales de existencias y
           suministradores.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Inventario</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="text-lg sm:text-xl">Inventario</CardTitle>
 
           {/* Filtros globales */}
           <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -659,9 +659,9 @@ export default function InventoryPage() {
           </div>
         </CardHeader>
 
-        <CardContent>
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <span className="text-sm text-muted-foreground">
+        <CardContent className="space-y-4 overflow-x-auto rounded-lg border border-border/60 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground leading-tight">
               {loading
                 ? "Cargando inventario…"
                 : `${filteredInventory.length} producto(s) en la cola actual`}
@@ -680,7 +680,7 @@ export default function InventoryPage() {
               Cargando...
             </div>
           ) : (
-            <Table className="min-w-[1200px]">
+            <Table className="w-full min-w-[960px] sm:min-w-[1100px] lg:min-w-[1250px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Estado tienda</TableHead>
