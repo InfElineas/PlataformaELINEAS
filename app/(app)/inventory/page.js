@@ -615,14 +615,9 @@ export default function InventoryPage() {
                     const variant = badgeVariantEstadoTienda(estado);
                     const adj = adjustments[snapshotId] || {};
 
-                    const efValue =
-                      adj.existencia_fisica ??
-                      (getEF(item) !== 0 ? getEF(item) : "");
-                    const aValue =
-                      adj.reserva ?? (getA(item) !== 0 ? getA(item) : "");
-                    const tValue =
-                      adj.disponible_tienda ??
-                      (getT(item) !== 0 ? getT(item) : "");
+                    const efValue = adj.existencia_fisica ?? getEF(item);
+                    const aValue = adj.reserva ?? getA(item);
+                    const tValue = adj.disponible_tienda ?? getT(item);
 
                     return (
                       <TableRow key={snapshotId}>
