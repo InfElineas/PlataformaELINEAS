@@ -9,6 +9,15 @@ body {
     "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+@media (min-width: 1024px) {
+  body {
+    font-size: 15.5px;
+  }
 }
 
 code {
