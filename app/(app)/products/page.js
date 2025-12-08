@@ -688,6 +688,40 @@ export default function ProductsPage() {
     </TableHead>
   );
 
+  const {
+    existencia: aExistencia,
+    almacen: aAlmacen,
+    suministrador: aSuministrador,
+    categoria: aCategoria,
+    marca: aMarca,
+    habilitado: aHabilitado,
+    activado: aActivado,
+    estado_tienda: aEstadoTienda,
+  } = appliedFilters;
+
+  function toggleSort(field) {
+    setSort((prev) => {
+      if (prev.sortBy === field) {
+        return { ...prev, sortDir: prev.sortDir === "asc" ? "desc" : "asc" };
+      }
+      return { ...prev, sortBy: field, sortDir: "asc" };
+    });
+    setPage(1);
+  }
+
+  const SortableHead = ({ field, label, className = sortableHeader }) => (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => toggleSort(field)}
+        className="flex items-center gap-1 w-full"
+      >
+        <span className="text-left flex-1">{label}</span>
+        <SortIndicator active={sortBy === field} direction={sortDir} />
+      </button>
+    </TableHead>
+  );
+
   // Aplicar filtros → mueve pendientes a aplicados y resetea página
   function aplicarFiltros() {
     applyFilters();
@@ -1111,6 +1145,30 @@ export default function ProductsPage() {
                 )}
               </div>
           </div>
+           {/* Paginación */}
+              <div className="flex items-center justify-end gap-4 pt-4">
+                <span className="text-xs text-muted-foreground">
+                  Página {page} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || loading}
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages, p + 1))
+                  }
+                >
+                  Siguiente
+                </Button>
+              </div>
         </CardHeader>
 
         <CardContent className="rounded-lg border border-border/60 p-0 sm:p-2">
