@@ -12,6 +12,7 @@ const DEFAULT_FILTERS = {
   marca: ALL,
   habilitado: ALL,
   activado: ALL,
+  estado_tienda: ALL,
 };
 
 const DEFAULT_SORT = {

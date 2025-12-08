@@ -170,6 +170,7 @@ async function handleProducts(request, segments, searchParams, context) {
     const marca = searchParams.get("marca");
     const habilitado = searchParams.get("habilitado");
     const activado = searchParams.get("activado");
+    const estadoTienda = searchParams.get("estado_tienda");
     const includeFilters = searchParams.get("includeFilters") === "1";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(
@@ -252,6 +253,15 @@ async function handleProducts(request, segments, searchParams, context) {
       andFilters.push({ brand: marca });
     }
 
+    if (estadoTienda && estadoTienda !== "__ALL__") {
+      andFilters.push({
+        $or: [
+          { store_status: estadoTienda },
+          { "metadata.store_status": estadoTienda },
+        ],
+      });
+    }
+
     if (habilitado === "si") {
       andFilters.push({ mgmt_mode: "managed" });
     } else if (habilitado === "no") {
@@ -286,6 +296,39 @@ async function handleProducts(request, segments, searchParams, context) {
         if (text) return text;
       }
       return "";
+    };
+
+    const deriveStoreStatus = (doc, EF, A, T) => {
+      const ID = pickText(
+        doc.product_code,
+        doc.codigo,
+        doc.cod_prod,
+        doc.barcode,
+      );
+
+      if (!ID) {
+        return EF === 0
+          ? 'SIN ID (ID = "" y EF = 0)'
+          : 'SIN ID (ID = "" y EF > 0)';
+      }
+
+      if (EF === 0) return 'AGOTADO (ID ≠ "" y EF = 0)';
+
+      if (A === 0 && T > 6) return "SIN RESERVA (A = 0 y T > 6)";
+
+      if (T === 0) {
+        return EF > 10
+          ? "NO TIENDA (T = 0 y EF > 10)"
+          : "NO TIENDA (T = 0 y EF ≤ 10)";
+      }
+
+      if (T > 1 && T < A && A <= 10) return "ULTIMAS PIEZAS (1 < T < A ≤ 10)";
+
+      if (A >= 0 && A < T && T <= 10) return "ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)";
+
+      if (T <= 10) return "PROXIMO (T ≤ 10)";
+      if (T <= A) return "DISPONIBLE (T ≤ A)";
+      return "DISPONIBLE (A < T)";
     };
 
     const parseStock = (raw) => {
@@ -335,6 +378,11 @@ async function handleProducts(request, segments, searchParams, context) {
       const physical = pickStock(doc, STOCK_ALIASES.existencia);
       const reserve = pickStock(doc, STOCK_ALIASES.reserva);
       const store = pickStock(doc, STOCK_ALIASES.tienda);
+      const storeStatus = pickText(
+        doc.store_status,
+        doc?.metadata?.store_status,
+        deriveStoreStatus(doc, physical, reserve, store),
+      );
 
       const warehouseNumber = pickText(
         doc.no_almacen,
@@ -369,6 +417,7 @@ async function handleProducts(request, segments, searchParams, context) {
         reserva: reserve,
         store_qty: store,
         disponible_tienda: store,
+        store_status: storeStatus,
         no_almacen: warehouseNumber,
         warehouse_code: warehouseCode,
         warehouse_name: warehouseDisplay,
@@ -387,6 +436,7 @@ async function handleProducts(request, segments, searchParams, context) {
         supplierNames,
         supplierIds,
         brands,
+        storeStatuses,
       ] = await Promise.all([
         Product.distinct("warehouse_code", baseMatch),
         Product.distinct("warehouse_name", baseMatch),
@@ -394,6 +444,7 @@ async function handleProducts(request, segments, searchParams, context) {
         Product.distinct("supplier_name", baseMatch),
         Product.distinct("provider_id", baseMatch),
         Product.distinct("brand", baseMatch),
+        Product.distinct("store_status", baseMatch),
       ]);
 
       const normalize = (value) => {
@@ -414,6 +465,7 @@ async function handleProducts(request, segments, searchParams, context) {
         warehouses: mergeDistinct(warehouseCodes, warehouseNames, noAlmacenes),
         suppliers: mergeDistinct(supplierNames, supplierIds),
         brands: mergeDistinct(brands),
+        storeStatuses: mergeDistinct(storeStatuses),
       };
     }
 

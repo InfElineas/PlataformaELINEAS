@@ -39,6 +39,11 @@
 - `app/api/[[...path]]/route.js`: el handler de productos acepta filtros por existencia, almacén, suministrador, marca y estado de activación, además de respetar el parámetro `perPage`.
 - `app/(app)/inventory/page.js`: la vista de inventario usa filtros globales (existencia, almacén y suministrador) en vez de fecha o snapshot local, consultando directamente los productos de la base de datos.
 
+## Filtros globales con estado de tienda
+- `hooks/useProductFilters.js`: se añadió `estado_tienda` como filtro global compartido.
+- `app/api/[[...path]]/route.js`: la ruta de productos acepta `estado_tienda`, consolida el valor desde documento/metadata y expone opciones distintas en la metadata de filtros.
+- `app/(app)/products/page.js` y `app/(app)/inventory/page.js`: ambos consumen el filtro de estado en tienda desde el proveedor global y muestran las opciones derivadas de los datos cargados.
+
 ## Correcciones de inventario visibles
 - `app/api/[[...path]]/route.js`: la respuesta incluye valores virtuales de inventario y metadatos globales de filtros (almacenes, proveedores y marcas) para no limitar los selectores a los ítems paginados.
 - `app/(app)/inventory/page.js`: los filtros globales se alimentan con las listas completas desde la API, los nombres de producto usan `name` como prioridad y las cantidades EF/A/T priorizan los campos base `physical_stock`, `reserve_qty` y `store_qty`.

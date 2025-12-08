@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
+import { ALL } from "@/hooks/useProductFilters";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,8 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const ALL = "__ALL__";
 
 const NO_REASON = "__NONE__";
 
@@ -262,17 +262,21 @@ function mergeOptions(...lists) {
 function deriveOptionsFromInventory(inventory) {
   const warehouses = new Set();
   const suppliers = new Set();
+  const storeStatuses = new Set();
 
   inventory.forEach((item) => {
     const wh = normalizeOption(getWarehouseLabel(item));
     const sup = normalizeOption(getSupplierLabel(item));
+    const tienda = normalizeOption(getEstadoTienda(item));
     if (wh) warehouses.add(wh);
     if (sup) suppliers.add(sup);
+    if (tienda) storeStatuses.add(tienda);
   });
 
   return {
     warehouses: Array.from(warehouses),
     suppliers: Array.from(suppliers),
+    storeStatuses: Array.from(storeStatuses),
   };
 }
 
@@ -338,13 +342,17 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // filtros globales
-  const [pExistencia, setPExistencia] = useState(ALL);
-  const [pAlmacen, setPAlmacen] = useState(ALL);
-  const [pSuministrador, setPSuministrador] = useState(ALL);
+  // filtros globales compartidos con productos
+  const {
+    appliedFilters,
+    setPendingFilter,
+    applyFilters,
+    resetFilters,
+  } = useGlobalProductFilters();
   const [filterOptions, setFilterOptions] = useState({
     warehouses: [],
     suppliers: [],
+    storeStatuses: [],
   });
 
   // filtros de análisis
@@ -362,7 +370,12 @@ export default function InventoryPage() {
       setAdjustments({});
     }, 200);
     return () => clearTimeout(id);
-  }, [pExistencia, pAlmacen, pSuministrador]);
+  }, [
+    appliedFilters.existencia,
+    appliedFilters.almacen,
+    appliedFilters.suministrador,
+    appliedFilters.estado_tienda,
+  ]);
 
   // ================= Fetch inventory =================
 
@@ -372,10 +385,14 @@ export default function InventoryPage() {
       const params = new URLSearchParams();
       params.set("perPage", "500");
       params.set("includeFilters", "1");
-      if (pExistencia !== ALL) params.set("existencia", pExistencia);
-      if (pAlmacen !== ALL) params.set("almacen", pAlmacen);
-      if (pSuministrador !== ALL)
-        params.set("suministrador", pSuministrador);
+      if (appliedFilters.existencia !== ALL)
+        params.set("existencia", appliedFilters.existencia);
+      if (appliedFilters.almacen !== ALL)
+        params.set("almacen", appliedFilters.almacen);
+      if (appliedFilters.suministrador !== ALL)
+        params.set("suministrador", appliedFilters.suministrador);
+      if (appliedFilters.estado_tienda !== ALL)
+        params.set("estado_tienda", appliedFilters.estado_tienda);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -395,6 +412,10 @@ export default function InventoryPage() {
       setFilterOptions({
         warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
         suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
+        storeStatuses: mergeOptions(
+          data.meta?.storeStatuses || [],
+          derived.storeStatuses,
+        ),
       });
     } catch (err) {
       console.error("loadInventory failed", err);
@@ -403,6 +424,11 @@ export default function InventoryPage() {
       setLoading(false);
     }
   }
+
+  const setFilterAndApply = (key) => (value) => {
+    setPendingFilter(key, value);
+    setTimeout(() => applyFilters(), 0);
+  };
 
   // ================= Opciones de filtros globales =================
 
@@ -413,6 +439,9 @@ export default function InventoryPage() {
         : [],
       suppliers: Array.isArray(filterOptions?.suppliers)
         ? filterOptions.suppliers
+        : [],
+      storeStatuses: Array.isArray(filterOptions?.storeStatuses)
+        ? filterOptions.storeStatuses
         : [],
     }),
     [filterOptions],
@@ -444,11 +473,11 @@ export default function InventoryPage() {
     return base.slice(0, limit);
   }, [inventory, segmentId, maxRows]);
 
-  function resetFilters() {
-    setPExistencia(ALL);
-    setPAlmacen(ALL);
-    setPSuministrador(ALL);
-  }
+    const handleResetFilters = () => {
+      resetFilters();
+      setSegmentId("no_store");
+      setMaxRows(50);
+    };
 
   // ================= Edición de ajustes =================
 
@@ -554,14 +583,14 @@ export default function InventoryPage() {
           <CardTitle className="text-lg sm:text-xl">Inventario</CardTitle>
 
           {/* Filtros globales */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             <div>
               <label className="mb-2 block text-sm font-medium">
                 Existencia Física
               </label>
               <Select
-                value={pExistencia}
-                onValueChange={setPExistencia}
+                value={appliedFilters.existencia}
+                onValueChange={setFilterAndApply("existencia")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="(Todas)" />
@@ -578,7 +607,10 @@ export default function InventoryPage() {
               <label className="mb-2 block text-sm font-medium">
                 Almacén
               </label>
-              <Select value={pAlmacen} onValueChange={setPAlmacen}>
+              <Select
+                value={appliedFilters.almacen}
+                onValueChange={setFilterAndApply("almacen")}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
@@ -598,8 +630,8 @@ export default function InventoryPage() {
                 Suministrador
               </label>
               <Select
-                value={pSuministrador}
-                onValueChange={setPSuministrador}
+                value={appliedFilters.suministrador}
+                onValueChange={setFilterAndApply("suministrador")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
@@ -615,8 +647,30 @@ export default function InventoryPage() {
               </Select>
             </div>
 
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Estado en tienda
+              </label>
+              <Select
+                value={appliedFilters.estado_tienda}
+                onValueChange={setFilterAndApply("estado_tienda")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="(Todos)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 overflow-auto">
+                  <SelectItem value={ALL}>(Todos)</SelectItem>
+                  {globalFilterOptions.storeStatuses.map((estado) => (
+                    <SelectItem key={estado} value={estado}>
+                      {estado}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-end">
-              <Button variant="outline" onClick={resetFilters}>
+              <Button variant="outline" onClick={handleResetFilters}>
                 Limpiar filtros
               </Button>
             </div>

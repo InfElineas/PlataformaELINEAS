@@ -525,6 +525,7 @@ export default function ProductsPage() {
     appliedFilters.marca,
     appliedFilters.habilitado,
     appliedFilters.activado,
+    appliedFilters.estado_tienda,
     sortBy,
     sortDir,
   ]);
@@ -551,6 +552,8 @@ export default function ProductsPage() {
         params.set("habilitado", appliedFilters.habilitado);
       if (appliedFilters.activado !== ALL)
         params.set("activado", appliedFilters.activado);
+      if (appliedFilters.estado_tienda !== ALL)
+        params.set("estado_tienda", appliedFilters.estado_tienda);
       params.set("sortBy", sortBy);
       params.set("sortDir", sortDir);
 
@@ -578,6 +581,7 @@ export default function ProductsPage() {
     const sumin = new Set();
     const categorias = new Set();
     const marcas = new Set();
+    const estadosTienda = new Set();
 
     rows.forEach((p) => {
       const nal = String(getNoAlmacen(p) || "").trim();
@@ -591,6 +595,9 @@ export default function ProductsPage() {
 
       const m = String(getMarca(p) || "").trim();
       if (m) marcas.add(m);
+
+      const et = String(getEstadoTienda(p) || "").trim();
+      if (et) estadosTienda.add(et);
     });
 
     const toArr = (s) =>
@@ -601,6 +608,7 @@ export default function ProductsPage() {
       suministradores: toArr(sumin),
       categorias: toArr(categorias),
       marcas: toArr(marcas),
+      estadosTienda: toArr(estadosTienda),
     };
   }, [rows]);
 
@@ -612,6 +620,7 @@ export default function ProductsPage() {
     marca: aMarca,
     habilitado: aHabilitado,
     activado: aActivado,
+    estado_tienda: aEstadoTienda,
   } = appliedFilters;
 
   function toggleSort(field) {
@@ -832,7 +841,7 @@ export default function ProductsPage() {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-3 xl:grid-cols-7">
+            <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-3 xl:grid-cols-8">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">
                   Existencia
@@ -981,6 +990,28 @@ export default function ProductsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Estado en tienda
+                </span>
+                <Select
+                  value={pendingFilters.estado_tienda}
+                  onValueChange={(v) => setPendingFilter("estado_tienda", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Estado tienda" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 overflow-auto">
+                    <SelectItem value={ALL}>(Todos)</SelectItem>
+                    {opciones.estadosTienda.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Botones filtros */}
@@ -1026,12 +1057,17 @@ export default function ProductsPage() {
                   Habilitado: {aHabilitado}
                 </Badge>
               )}
-              {aActivado !== ALL && (
-                <Badge variant="secondary">
-                  Activado: {aActivado}
-                </Badge>
-              )}
-            </div>
+                {aActivado !== ALL && (
+                  <Badge variant="secondary">
+                    Activado: {aActivado}
+                  </Badge>
+                )}
+                {aEstadoTienda !== ALL && (
+                  <Badge variant="secondary">
+                    Estado tienda: {aEstadoTienda}
+                  </Badge>
+                )}
+              </div>
           </div>
            {/* Paginación */}
               <div className="flex items-center justify-end gap-4 pt-4">
