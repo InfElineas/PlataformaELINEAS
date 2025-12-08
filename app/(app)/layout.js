@@ -1,5 +1,6 @@
 import SidebarHandler from "@/components/Sidebar";
 import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
+import { ProductFiltersProvider } from "@/components/providers/ProductFiltersProvider";
 import { getSessionFromCookies } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
@@ -12,12 +13,9 @@ export default async function AppLayout({ children }) {
 
   return (
     <AuthSessionProvider initialSession={session}>
-      <div className="overflow-hidden">
-        <SidebarHandler />
-        <main className="flex-1 overflow-y-auto bg-background mt-16">
-          {children}
-        </main>
-      </div>
+      <ProductFiltersProvider>
+        <SidebarHandler>{children}</SidebarHandler>
+      </ProductFiltersProvider>
     </AuthSessionProvider>
   );
 }
