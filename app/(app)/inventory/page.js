@@ -80,17 +80,21 @@ const ADJUSTMENT_REASONS = [
 
 // Segmentos de análisis (prioridades de trabajo)
 const ANALYSIS_SEGMENTS = [
-  {
-    id: "all",
-    label: "Todos los productos",
-    predicate: () => true,
-  },
-  {
-    id: "no_store",
-    label: "No tienda (T = 0)",
-    predicate: (item) => getT(item) === 0,
-  },
+  { id: "sin_reserva", label: "Sin reserva", priority: 0 },
+  { id: "no_tienda", label: "No en tienda", priority: 1 },
+  { id: "ultimas", label: "Ultimas piezas", priority: 2 },
+  { id: "proximo", label: "Proximo", priority: 3 },
+  { id: "sin_id", label: "Sin ID", priority: 4 },
 ];
+
+const PRIORITY_BADGES = {
+  sin_reserva: { variant: "destructive" },
+  no_tienda: { variant: "destructive" },
+  ultimas: { variant: "secondary" },
+  proximo: { variant: "secondary" },
+  sin_id: { variant: "destructive" },
+  disponible: { variant: "default" },
+};
 
 // ===== Helpers de inventario =====
 
@@ -267,7 +271,7 @@ function deriveOptionsFromInventory(inventory) {
   inventory.forEach((item) => {
     const wh = normalizeOption(getWarehouseLabel(item));
     const sup = normalizeOption(getSupplierLabel(item));
-    const tienda = normalizeOption(getEstadoTienda(item));
+    const tienda = normalizeOption(getEstadoTienda(item)?.label);
     if (wh) warehouses.add(wh);
     if (sup) suppliers.add(sup);
     if (tienda) storeStatuses.add(tienda);
@@ -289,53 +293,33 @@ function getEstadoTienda(item) {
   const T = getT(item);
 
   if (!ID) {
-    return EF === 0
-      ? 'SIN ID (ID = "" y EF = 0)'
-      : 'SIN ID (ID = "" y EF > 0)';
+    return { id: "sin_id", label: "Sin ID" };
   }
 
-  if (EF === 0) {
-    return 'AGOTADO (ID ≠ "" y EF = 0)';
-  }
-
-  if (A === 0 && T > 6) {
-    return "SIN RESERVA (A = 0 y T > 6)";
+  if (A === 0 && (T > 0 || EF > 0)) {
+    return { id: "sin_reserva", label: "Sin reserva" };
   }
 
   if (T === 0) {
-    return EF > 10
-      ? "NO TIENDA (T = 0 y EF > 10)"
-      : "NO TIENDA (T = 0 y EF ≤ 10)";
-  }
-
-  if (T > 1 && T < A && A <= 10) {
-    return "ULTIMAS PIEZAS (1 < T < A ≤ 10)";
-  }
-
-  if (A >= 0 && A < T && T <= 10) {
-    return "ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)";
+    return { id: "no_tienda", label: "No en tienda" };
   }
 
   if (T <= 10) {
-    return "PROXIMO (T ≤ 10)";
+    return { id: "proximo", label: "Proximo" };
   }
 
-  if (T <= A) {
-    return "DISPONIBLE (T ≤ A)";
+  if (T > 1 && T <= A) {
+    return { id: "ultimas", label: "Ultimas piezas" };
   }
 
-  return "DISPONIBLE (A < T)";
+  return { id: "disponible", label: "Disponible" };
 }
 
 function badgeVariantEstadoTienda(label) {
-  if (label.startsWith("DISPONIBLE")) return "default";
-  if (
-    label.startsWith("PROXIMO") ||
-    label.startsWith("ULTIMAS PIEZAS")
-  ) {
-    return "secondary";
-  }
-  return "destructive";
+  const match = Object.entries(PRIORITY_BADGES).find(([key]) =>
+    label.toLowerCase().includes(key.replace("_", " ")),
+  );
+  return match ? match[1].variant : "default";
 }
 
 export default function InventoryPage() {
@@ -356,8 +340,8 @@ export default function InventoryPage() {
   });
 
   // filtros de análisis
-  const [segmentId, setSegmentId] = useState("no_store"); // por defecto: T = 0
-  const [maxRows, setMaxRows] = useState(50);
+  const [segmentId, setSegmentId] = useState("sin_reserva");
+  const [maxRows, setMaxRows] = useState(20);
 
   // ajustes en edición: { [snapshotId]: { existencia_fisica, reserva, disponible_tienda, reason, note } }
   const [adjustments, setAdjustments] = useState({});
@@ -449,35 +433,45 @@ export default function InventoryPage() {
 
   // ================= Inventario filtrado + segmentado =================
 
-  const filteredInventory = useMemo(() => {
-    // 1) segmento de análisis (prioridades)
-    let base = [...inventory];
-    const segment =
-      ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) ||
-      ANALYSIS_SEGMENTS[0];
+  const prioritizedInventory = useMemo(() => {
+    const order = Object.fromEntries(
+      ANALYSIS_SEGMENTS.map((s, idx) => [s.id, idx]),
+    );
 
-    base = base.filter((item) => segment.predicate(item));
-
-    // 2) orden simple: primero los de mayor EF, luego por nombre
-      base.sort((a, b) => {
-        const efDiff = getEF(b) - getEF(a);
+    return [...inventory]
+      .map((item) => ({ item, estado: getEstadoTienda(item) }))
+      .sort((a, b) => {
+        const pa = order[a.estado?.id] ?? 99;
+        const pb = order[b.estado?.id] ?? 99;
+        if (pa !== pb) return pa - pb;
+        const efDiff = getEF(b.item) - getEF(a.item);
         if (efDiff !== 0) return efDiff;
-        const nameA = getProductName(a);
-        const nameB = getProductName(b);
-        return nameA.localeCompare(nameB, "es");
-      });
+        return getProductName(a.item).localeCompare(
+          getProductName(b.item),
+          "es",
+        );
+      })
+      .map(({ item }) => item);
+  }, [inventory]);
 
-    // 3) limitar cantidad de productos a analizar
+  const filteredInventory = useMemo(() => {
+    const segment =
+      ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) || ANALYSIS_SEGMENTS[0];
+
+    const base = prioritizedInventory.filter(
+      (item) => getEstadoTienda(item)?.id === segment.id,
+    );
+
     const limit = Number(maxRows);
     if (!Number.isFinite(limit) || limit <= 0) return base;
     return base.slice(0, limit);
-  }, [inventory, segmentId, maxRows]);
+  }, [prioritizedInventory, segmentId, maxRows]);
 
-    const handleResetFilters = () => {
-      resetFilters();
-      setSegmentId("no_store");
-      setMaxRows(50);
-    };
+  const handleResetFilters = () => {
+    resetFilters();
+      setSegmentId("sin_reserva");
+      setMaxRows(20);
+  };
 
   // ================= Edición de ajustes =================
 
@@ -489,6 +483,24 @@ export default function InventoryPage() {
         [field]: value,
       },
     }));
+  }
+
+  function resolveRealQty(item, adj) {
+    if (adj.real_qty === undefined || adj.real_qty === null || adj.real_qty === "") {
+      return null;
+    }
+    const parsed = Number(adj.real_qty);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function resolveAdjustmentState(item, adj) {
+    const realQty = resolveRealQty(item, adj);
+    if (realQty === null) return { state: "pendiente", difference: 0 };
+
+    const diff = realQty - getEF(item);
+    if (diff === 0) return { state: "ok", difference: 0 };
+    if (diff > 0) return { state: "sobrante", difference: diff };
+    return { state: "faltante", difference: diff };
   }
 
   async function handleSaveAdjustments() {
@@ -503,6 +515,9 @@ export default function InventoryPage() {
         adj.existencia_fisica !== undefined ||
         adj.reserva !== undefined ||
         adj.disponible_tienda !== undefined ||
+        adj.real_qty !== undefined ||
+        adj.upload_qty !== undefined ||
+        adj.download_qty !== undefined ||
         (adj.reason && adj.reason !== NO_REASON) ||
         (adj.note && adj.note.trim() !== "");
 
@@ -524,6 +539,9 @@ export default function InventoryPage() {
           ? toSafeNumber(adj.disponible_tienda, getT(item))
           : getT(item);
 
+      const real_qty = resolveRealQty(item, adj);
+      const { state, difference } = resolveAdjustmentState(item, adj);
+
       payload.push({
         snapshot_id: item._id,
         product_id: item.product_id || item.product_code || item._id,
@@ -533,6 +551,17 @@ export default function InventoryPage() {
         existencia_fisica,
         reserva,
         disponible_tienda,
+        real_qty,
+        difference,
+        state,
+        upload_qty:
+          adj.upload_qty !== undefined && adj.upload_qty !== ""
+            ? toSafeNumber(adj.upload_qty, 0)
+            : 0,
+        download_qty:
+          adj.download_qty !== undefined && adj.download_qty !== ""
+            ? toSafeNumber(adj.download_qty, 0)
+            : 0,
         reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
         note: adj.note || "",
       });
@@ -564,6 +593,50 @@ export default function InventoryPage() {
       console.error("handleSaveAdjustments failed", err);
       alert("Error al guardar los ajustes.");
     }
+  }
+
+  function handleExportCSV() {
+    const header = [
+      "No",
+      "Nombre",
+      "Código",
+      "Estado tienda",
+      "EF plataforma",
+      "Real",
+      "Diferencia",
+      "Estado ajuste",
+      "Subir tienda",
+      "Bajar tienda",
+    ];
+
+    const rows = filteredInventory.map((item, idx) => {
+      const adj = adjustments[item._id] || {};
+      const { state, difference } = resolveAdjustmentState(item, adj);
+      const realQty = resolveRealQty(item, adj) ?? getEF(item);
+      const estado = getEstadoTienda(item)?.label || "";
+
+      return [
+        idx + 1,
+        getProductName(item).replace(/,/g, " "),
+        getProductCode(item),
+        estado,
+        getEF(item),
+        realQty,
+        difference,
+        state,
+        adj.upload_qty ?? "",
+        adj.download_qty ?? "",
+      ];
+    });
+
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "inventario-ajustes.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   // ================= Render =================
@@ -709,6 +782,14 @@ export default function InventoryPage() {
                 value={maxRows}
                 onChange={(e) => setMaxRows(e.target.value)}
               />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setMaxRows(20)}
+              >
+                Usar meta diaria (20)
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -726,6 +807,14 @@ export default function InventoryPage() {
               disabled={loading}
             >
               Guardar ajustes
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleExportCSV}
+              disabled={loading || filteredInventory.length === 0}
+            >
+              Exportar CSV
             </Button>
           </div>
 
@@ -750,12 +839,16 @@ export default function InventoryPage() {
                       <TableHead className="text-right">
                         EF (Existencia física)
                       </TableHead>
+                      <TableHead className="text-right">Real</TableHead>
                       <TableHead className="text-right">
                         A (Reserva)
                       </TableHead>
                       <TableHead className="text-right">
                         T (Disp. tienda)
                       </TableHead>
+                      <TableHead>Estado ajuste</TableHead>
+                      <TableHead className="text-right">Subir T</TableHead>
+                      <TableHead className="text-right">Bajar T</TableHead>
                       <TableHead>Clasificación</TableHead>
                       <TableHead>Nota</TableHead>
                     </TableRow>
@@ -764,8 +857,12 @@ export default function InventoryPage() {
                     {filteredInventory.map((item) => {
                       const snapshotId = item._id;
                       const estado = getEstadoTienda(item);
-                      const variant = badgeVariantEstadoTienda(estado);
+                      const variant = badgeVariantEstadoTienda(estado?.label || "");
                       const adj = adjustments[snapshotId] || {};
+                      const { state, difference } = resolveAdjustmentState(
+                        item,
+                        adj,
+                      );
 
                       const efValue =
                         adj.existencia_fisica ??
@@ -779,7 +876,7 @@ export default function InventoryPage() {
                       return (
                         <TableRow key={snapshotId}>
                           <TableCell>
-                            <Badge variant={variant}>{estado}</Badge>
+                            <Badge variant={variant}>{estado?.label}</Badge>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             {getProductCode(item)}
@@ -800,7 +897,17 @@ export default function InventoryPage() {
                                   snapshotId,
                                   "existencia_fisica",
                                   e.target.value
-                                )
+                              )
+                            }
+                          />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              className="h-8 w-24 text-right"
+                              value={adj.real_qty ?? ""}
+                              onChange={(e) =>
+                                updateAdjustment(snapshotId, "real_qty", e.target.value)
                               }
                             />
                           </TableCell>
@@ -814,9 +921,9 @@ export default function InventoryPage() {
                                   snapshotId,
                                   "reserva",
                                   e.target.value
-                                )
-                              }
-                            />
+                              )
+                            }
+                          />
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
@@ -828,7 +935,33 @@ export default function InventoryPage() {
                                   snapshotId,
                                   "disponible_tienda",
                                   e.target.value
-                                )
+                              )
+                            }
+                          />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={state === "ok" ? "default" : "secondary"}>
+                              {state.toUpperCase()}
+                              {difference !== 0 ? ` (${difference})` : ""}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              className="h-8 w-20 text-right"
+                              value={adj.upload_qty ?? ""}
+                              onChange={(e) =>
+                                updateAdjustment(snapshotId, "upload_qty", e.target.value)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              className="h-8 w-20 text-right"
+                              value={adj.download_qty ?? ""}
+                              onChange={(e) =>
+                                updateAdjustment(snapshotId, "download_qty", e.target.value)
                               }
                             />
                           </TableCell>
@@ -886,8 +1019,9 @@ export default function InventoryPage() {
                 {filteredInventory.map((item) => {
                   const snapshotId = item._id;
                   const estado = getEstadoTienda(item);
-                  const variant = badgeVariantEstadoTienda(estado);
+                  const variant = badgeVariantEstadoTienda(estado?.label || "");
                   const adj = adjustments[snapshotId] || {};
+                  const { state, difference } = resolveAdjustmentState(item, adj);
 
                   const efValue =
                     adj.existencia_fisica ??
@@ -915,10 +1049,10 @@ export default function InventoryPage() {
                             {getSupplierLabel(item) || "Suministrador no asignado"}
                           </p>
                         </div>
-                        <Badge variant={variant}>{estado}</Badge>
+                        <Badge variant={variant}>{estado?.label}</Badge>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="grid grid-cols-4 gap-2 text-xs">
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">EF</p>
                           <Input
@@ -930,6 +1064,21 @@ export default function InventoryPage() {
                                 snapshotId,
                                 "existencia_fisica",
                                 e.target.value
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="rounded-md bg-muted/60 p-2 text-center">
+                          <p className="text-[11px] text-muted-foreground">Real</p>
+                          <Input
+                            type="number"
+                            className="mt-1 h-8 w-full text-center"
+                            value={adj.real_qty ?? ""}
+                            onChange={(e) =>
+                              updateAdjustment(
+                                snapshotId,
+                                "real_qty",
+                                e.target.value,
                               )
                             }
                           />
@@ -964,6 +1113,47 @@ export default function InventoryPage() {
                             }
                           />
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-md bg-muted/60 p-2 text-center">
+                          <p className="text-[11px] text-muted-foreground">Subir T</p>
+                          <Input
+                            type="number"
+                            className="mt-1 h-8 w-full text-center"
+                            value={adj.upload_qty ?? ""}
+                            onChange={(e) =>
+                              updateAdjustment(
+                                snapshotId,
+                                "upload_qty",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="rounded-md bg-muted/60 p-2 text-center">
+                          <p className="text-[11px] text-muted-foreground">Bajar T</p>
+                          <Input
+                            type="number"
+                            className="mt-1 h-8 w-full text-center"
+                            value={adj.download_qty ?? ""}
+                            onChange={(e) =>
+                              updateAdjustment(
+                                snapshotId,
+                                "download_qty",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs font-semibold">
+                        <span>Estado</span>
+                        <Badge variant={state === "ok" ? "default" : "secondary"}>
+                          {state.toUpperCase()}
+                          {difference !== 0 ? ` (${difference})` : ""}
+                        </Badge>
                       </div>
 
                       <div className="space-y-2">

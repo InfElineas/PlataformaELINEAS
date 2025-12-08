@@ -688,40 +688,6 @@ export default function ProductsPage() {
     </TableHead>
   );
 
-  const {
-    existencia: aExistencia,
-    almacen: aAlmacen,
-    suministrador: aSuministrador,
-    categoria: aCategoria,
-    marca: aMarca,
-    habilitado: aHabilitado,
-    activado: aActivado,
-    estado_tienda: aEstadoTienda,
-  } = appliedFilters;
-
-  function toggleSort(field) {
-    setSort((prev) => {
-      if (prev.sortBy === field) {
-        return { ...prev, sortDir: prev.sortDir === "asc" ? "desc" : "asc" };
-      }
-      return { ...prev, sortBy: field, sortDir: "asc" };
-    });
-    setPage(1);
-  }
-
-  const SortableHead = ({ field, label, className = sortableHeader }) => (
-    <TableHead className={className}>
-      <button
-        type="button"
-        onClick={() => toggleSort(field)}
-        className="flex items-center gap-1 w-full"
-      >
-        <span className="text-left flex-1">{label}</span>
-        <SortIndicator active={sortBy === field} direction={sortDir} />
-      </button>
-    </TableHead>
-  );
-
   // Aplicar filtros → mueve pendientes a aplicados y resetea página
   function aplicarFiltros() {
     applyFilters();

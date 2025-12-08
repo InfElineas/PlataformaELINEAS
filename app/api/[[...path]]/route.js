@@ -5,6 +5,7 @@ import Category from "@/lib/models/Category";
 import Store from "@/lib/models/Store";
 import Supplier from "@/lib/models/Supplier";
 import InventorySnapshot from "@/lib/models/InventorySnapshot";
+import InventoryAdjustment from "@/lib/models/InventoryAdjustment";
 import ReplenishmentRule from "@/lib/models/ReplenishmentRule";
 import ReplenishmentPlan from "@/lib/models/ReplenishmentPlan";
 import PurchaseOrder from "@/lib/models/PurchaseOrder";
@@ -47,7 +48,13 @@ function resolvePermission(method, segments) {
     case "categories":
       return { permission: PERMISSIONS.CATALOG_READ, orgScoped: true };
     case "inventory":
-      return { permission: PERMISSIONS.INVENTORY_READ, orgScoped: true };
+      return {
+        permission:
+          method === "GET"
+            ? PERMISSIONS.INVENTORY_READ
+            : PERMISSIONS.INVENTORY_WRITE,
+        orgScoped: true,
+      };
     case "rules":
       return { permission: PERMISSIONS.CATALOG_READ, orgScoped: true };
     case "replenishment":
@@ -479,6 +486,86 @@ async function handleProducts(request, segments, searchParams, context) {
         totalPages: Math.ceil(total / limit),
         meta,
       },
+      { headers: corsHeaders(request) },
+    );
+  }
+
+  // POST /api/inventory/adjustments - guardar ajustes e histórico
+  if (method === "POST" && segments.length === 2 && segments[1] === "adjustments") {
+    const body = await request.json();
+    const adjustments = Array.isArray(body?.adjustments) ? body.adjustments : [];
+
+    if (adjustments.length === 0) {
+      return errorResponse("No se recibieron ajustes para guardar", 400, request);
+    }
+
+    const normalized = adjustments.map((adj) => {
+      const platformQty = Number(adj.existencia_fisica ?? adj.physical_stock ?? 0) || 0;
+      const realQty =
+        adj.real_qty === null || adj.real_qty === undefined || adj.real_qty === ""
+          ? null
+          : Number(adj.real_qty);
+      const reserve = Number(adj.reserva ?? adj.reserve_qty ?? 0) || 0;
+      const store = Number(adj.disponible_tienda ?? adj.store_qty ?? 0) || 0;
+
+      let state = "pendiente";
+      let difference = 0;
+      if (realQty !== null && Number.isFinite(realQty)) {
+        difference = realQty - platformQty;
+        if (difference === 0) state = "ok";
+        if (difference < 0) state = "faltante";
+        if (difference > 0) state = "sobrante";
+      }
+
+      return {
+        org_id: orgId,
+        product_id: adj.product_id,
+        snapshot_id: adj.snapshot_id || null,
+        platform_qty: platformQty,
+        platform_reserve: reserve,
+        platform_store: store,
+        real_qty: Number.isFinite(realQty) ? realQty : null,
+        difference,
+        state,
+        reason: adj.reason || "",
+        note: adj.note || "",
+        upload_qty: Number(adj.upload_qty || 0) || 0,
+        download_qty: Number(adj.download_qty || 0) || 0,
+        counted_by: context?.user?.id || null,
+      };
+    });
+
+    const saved = await InventoryAdjustment.insertMany(normalized);
+
+    return NextResponse.json(
+      { message: "Ajustes guardados", total: saved.length },
+      { status: 201, headers: corsHeaders(request) },
+    );
+  }
+
+  // GET /api/inventory/adjustments - histórico por fecha/producto
+  if (method === "GET" && segments.length === 2 && segments[1] === "adjustments") {
+    const productId = searchParams.get("product_id");
+    const state = searchParams.get("state");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    const query = { org_id: orgId };
+    if (productId) query.product_id = productId;
+    if (state) query.state = state;
+    if (from || to) {
+      query.counted_at = {};
+      if (from) query.counted_at.$gte = new Date(from);
+      if (to) query.counted_at.$lte = new Date(to);
+    }
+
+    const history = await InventoryAdjustment.find(query)
+      .sort({ counted_at: -1 })
+      .limit(500)
+      .lean();
+
+    return NextResponse.json(
+      { data: history },
       { headers: corsHeaders(request) },
     );
   }
@@ -937,6 +1024,8 @@ export async function POST(request) {
         return handleProducts(request, segments, searchParams, context);
       case "stores":
         return handleStores(request, segments, context);
+      case "inventory":
+        return handleInventory(request, segments, searchParams, context);
       case "replenishment":
         return handleReplenishment(request, segments, searchParams, context);
       case "purchase-orders":
