@@ -194,6 +194,10 @@ function getFirstString(obj, keys, fallback = "") {
   return fallback;
 }
 
+function mergeOptions(a = [], b = []) {
+  return Array.from(new Set([...(a || []), ...(b || [])]));
+}
+
 // Truncar a 12 caracteres con tooltip
 function TruncatedCell({ value, className }) {
   const raw = fmt(value);
@@ -469,6 +473,13 @@ function badgeVariantTienda(label) {
 export default function ProductsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterOptions, setFilterOptions] = useState({
+    almacenes: [],
+    suministradores: [],
+    categorias: [],
+    marcas: [],
+    estadosTienda: [],
+  });
 
   const {
     pendingFilters,
@@ -508,6 +519,11 @@ export default function ProductsPage() {
 
   const setCol = (k, v) => setCols((c) => ({ ...c, [k]: v }));
 
+  const setFilterAndApply = (key) => (value) => {
+    setPendingFilter(key, value);
+    setTimeout(() => applyFilters(), 0);
+  };
+
   // Carga de datos desde el servidor (global search + filtros + paginación)
   useEffect(() => {
     const id = setTimeout(() => {
@@ -538,6 +554,7 @@ export default function ProductsPage() {
       params.set("perPage", String(perPage));
 
       if (search.trim()) params.set("search", search.trim());
+      params.set("includeFilters", "1");
 
       if (appliedFilters.existencia !== ALL)
         params.set("existencia", appliedFilters.existencia);
@@ -563,9 +580,49 @@ export default function ProductsPage() {
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
 
-      setRows(Array.isArray(data.data) ? data.data : []);
+      const nextRows = Array.isArray(data.data) ? data.data : [];
+      setRows(nextRows);
       setTotal(Number(data.total || 0));
       setPerPage(Number(data.perPage || data.limit || perPage));
+
+      const derived = {
+        almacenes: [],
+        suministradores: [],
+        categorias: [],
+        marcas: [],
+        estadosTienda: [],
+      };
+
+      nextRows.forEach((p) => {
+        const nal = String(getNoAlmacen(p) || "").trim();
+        if (nal) derived.almacenes.push(nal);
+
+        const sup = String(getSuministrador(p) || "").trim();
+        if (sup) derived.suministradores.push(sup);
+
+        const cat = String(getCategoriaOnline(p) || "").trim();
+        if (cat) derived.categorias.push(cat);
+
+        const m = String(getMarca(p) || "").trim();
+        if (m) derived.marcas.push(m);
+
+        const et = String(getEstadoTienda(p) || "").trim();
+        if (et) derived.estadosTienda.push(et);
+      });
+
+      setFilterOptions({
+        almacenes: mergeOptions(data.meta?.warehouses, derived.almacenes),
+        suministradores: mergeOptions(
+          data.meta?.suppliers,
+          derived.suministradores,
+        ),
+        categorias: mergeOptions(data.meta?.categories, derived.categorias),
+        marcas: mergeOptions(data.meta?.brands, derived.marcas),
+        estadosTienda: mergeOptions(
+          data.meta?.storeStatuses,
+          derived.estadosTienda,
+        ),
+      });
     } catch (e) {
       console.error("Load products failed", e);
       setRows([]);
@@ -575,42 +632,61 @@ export default function ProductsPage() {
     }
   }
 
-  // Opciones de filtros derivadas de los datos cargados (pueden ser parciales, está bien)
-  const opciones = useMemo(() => {
-    const almacenes = new Set();
-    const sumin = new Set();
-    const categorias = new Set();
-    const marcas = new Set();
-    const estadosTienda = new Set();
+  // Opciones de filtros combinadas (API + derivadas de las filas)
+  const opciones = useMemo(
+    () => ({
+      almacenes: Array.from(new Set(filterOptions.almacenes || [])).sort(
+        (a, b) => a.localeCompare(b, "es"),
+      ),
+      suministradores: Array.from(
+        new Set(filterOptions.suministradores || []),
+      ).sort((a, b) => a.localeCompare(b, "es")),
+      categorias: Array.from(new Set(filterOptions.categorias || [])).sort(
+        (a, b) => a.localeCompare(b, "es"),
+      ),
+      marcas: Array.from(new Set(filterOptions.marcas || [])).sort((a, b) =>
+        a.localeCompare(b, "es"),
+      ),
+      estadosTienda: Array.from(
+        new Set(filterOptions.estadosTienda || []),
+      ).sort((a, b) => a.localeCompare(b, "es")),
+    }),
+    [filterOptions],
+  );
 
-    rows.forEach((p) => {
-      const nal = String(getNoAlmacen(p) || "").trim();
-      if (nal) almacenes.add(nal);
+  const {
+    existencia: aExistencia,
+    almacen: aAlmacen,
+    suministrador: aSuministrador,
+    categoria: aCategoria,
+    marca: aMarca,
+    habilitado: aHabilitado,
+    activado: aActivado,
+    estado_tienda: aEstadoTienda,
+  } = appliedFilters;
 
-      const sup = String(getSuministrador(p) || "").trim();
-      if (sup) sumin.add(sup);
-
-      const cat = String(getCategoriaOnline(p) || "").trim();
-      if (cat) categorias.add(cat);
-
-      const m = String(getMarca(p) || "").trim();
-      if (m) marcas.add(m);
-
-      const et = String(getEstadoTienda(p) || "").trim();
-      if (et) estadosTienda.add(et);
+  function toggleSort(field) {
+    setSort((prev) => {
+      if (prev.sortBy === field) {
+        return { ...prev, sortDir: prev.sortDir === "asc" ? "desc" : "asc" };
+      }
+      return { ...prev, sortBy: field, sortDir: "asc" };
     });
+    setPage(1);
+  }
 
-    const toArr = (s) =>
-      Array.from(s).sort((a, b) => a.localeCompare(b, "es"));
-
-    return {
-      almacenes: toArr(almacenes),
-      suministradores: toArr(sumin),
-      categorias: toArr(categorias),
-      marcas: toArr(marcas),
-      estadosTienda: toArr(estadosTienda),
-    };
-  }, [rows]);
+  const SortableHead = ({ field, label, className = sortableHeader }) => (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => toggleSort(field)}
+        className="flex items-center gap-1 w-full"
+      >
+        <span className="text-left flex-1">{label}</span>
+        <SortIndicator active={sortBy === field} direction={sortDir} />
+      </button>
+    </TableHead>
+  );
 
   const {
     existencia: aExistencia,
@@ -848,7 +924,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.existencia}
-                  onValueChange={(v) => setPendingFilter("existencia", v)}
+                  onValueChange={setFilterAndApply("existencia")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Existencia" />
@@ -871,7 +947,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.almacen}
-                  onValueChange={(v) => setPendingFilter("almacen", v)}
+                  onValueChange={setFilterAndApply("almacen")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Almacén" />
@@ -893,7 +969,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.suministrador}
-                  onValueChange={(v) => setPendingFilter("suministrador", v)}
+                  onValueChange={setFilterAndApply("suministrador")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Suministrador" />
@@ -915,7 +991,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.categoria}
-                  onValueChange={(v) => setPendingFilter("categoria", v)}
+                  onValueChange={setFilterAndApply("categoria")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Categoría Online" />
@@ -937,7 +1013,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.marca}
-                  onValueChange={(v) => setPendingFilter("marca", v)}
+                  onValueChange={setFilterAndApply("marca")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Marca" />
@@ -959,7 +1035,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.habilitado}
-                  onValueChange={(v) => setPendingFilter("habilitado", v)}
+                  onValueChange={setFilterAndApply("habilitado")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Habilitado" />
@@ -978,7 +1054,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.activado}
-                  onValueChange={(v) => setPendingFilter("activado", v)}
+                  onValueChange={setFilterAndApply("activado")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Activado" />
@@ -997,7 +1073,7 @@ export default function ProductsPage() {
                 </span>
                 <Select
                   value={pendingFilters.estado_tienda}
-                  onValueChange={(v) => setPendingFilter("estado_tienda", v)}
+                  onValueChange={setFilterAndApply("estado_tienda")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Estado tienda" />
@@ -1023,7 +1099,7 @@ export default function ProductsPage() {
                 Limpiar filtros
               </Button>
               <span className="text-xs text-muted-foreground">
-                (Los selectores se aplican al presionar “Aplicar filtros”)
+                (Los selectores globales se aplican al elegir una opción)
               </span>
             </div>
             {/* Resultados */}
