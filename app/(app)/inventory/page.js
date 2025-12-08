@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { utils as XLSXUtils, writeFile as writeXLSXFile } from "xlsx";
+import { jsPDF } from "jspdf";
 import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
 import { ALL } from "@/hooks/useProductFilters";
 
@@ -25,6 +27,11 @@ import {
 } from "@/components/ui/table";
 
 const NO_REASON = "__NONE__";
+const EXPORT_FORMATS = {
+  csv: { value: "csv", label: "CSV" },
+  xlsx: { value: "xlsx", label: "Excel" },
+  pdf: { value: "pdf", label: "PDF" },
+};
 
 const ADJUSTMENT_REASONS = [
   "Faltante Inventario",
@@ -357,6 +364,7 @@ export default function InventoryPage() {
 
   // ajustes en edición: { [snapshotId]: { real_qty, upload_qty, download_qty, reason, note } }
   const [adjustments, setAdjustments] = useState({});
+  const [exportFormat, setExportFormat] = useState(EXPORT_FORMATS.csv.value);
 
   // ================= Efectos =================
 
@@ -536,7 +544,6 @@ export default function InventoryPage() {
       const reserva = getA(item);
       const disponible_tienda = getT(item);
 
-      
       const real_qty = resolveRealQty(item, adj);
       const { state, difference } = resolveAdjustmentState(item, adj);
 
@@ -593,18 +600,20 @@ export default function InventoryPage() {
     }
   }
 
-  function handleExportCSV() {
+  function buildExportData() {
     const header = [
       "No",
       "Nombre",
       "Código",
       "Estado tienda",
       "EF plataforma",
+      "A (Reserva)",
+      "T (Disp. tienda)",
       "Real",
       "Diferencia",
-      "Estado ajuste",
       "Subir tienda",
       "Bajar tienda",
+      "Estado ajuste",
     ];
 
     const rows = filteredInventory.map((item, idx) => {
@@ -619,22 +628,82 @@ export default function InventoryPage() {
         getProductCode(item),
         estado,
         getEF(item),
+        getA(item),
+        getT(item),
         realQty,
         difference,
-        state,
         adj.upload_qty ?? "",
         adj.download_qty ?? "",
+        state,
       ];
     });
 
-    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "inventario-ajustes.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    return { header, rows };
+  }
+
+  function handleExport() {
+    const { header, rows } = buildExportData();
+    const filename = `inventario-ajustes.${exportFormat}`;
+
+    try {
+      if (exportFormat === EXPORT_FORMATS.csv.value) {
+        const csv = [header, ...rows]
+          .map((r) => r.map((c) => String(c ?? "")).join(","))
+          .join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      if (exportFormat === EXPORT_FORMATS.xlsx.value) {
+        const worksheet = XLSXUtils.aoa_to_sheet([header, ...rows]);
+        const workbook = XLSXUtils.book_new();
+        XLSXUtils.book_append_sheet(workbook, worksheet, "Ajustes");
+        writeXLSXFile(workbook, filename);
+        return;
+      }
+
+      if (exportFormat === EXPORT_FORMATS.pdf.value) {
+        const doc = new jsPDF();
+        doc.setFont("courier", "normal");
+        doc.setFontSize(10);
+        doc.text("Ajustes de inventario", 14, 16);
+
+        const startY = 24;
+        const colWidths = [10, 36, 24, 28, 18, 18, 18, 18, 18, 18, 18, 22];
+        const renderRow = (row, y) => {
+          let x = 14;
+          row.forEach((cell, idx) => {
+            const text = String(cell ?? "");
+            doc.text(text.substring(0, 20), x, y);
+            x += colWidths[idx];
+          });
+        };
+
+        renderRow(header, startY);
+        let y = startY + 6;
+        rows.forEach((row) => {
+          if (y > 280) {
+            doc.addPage();
+            y = 20;
+            renderRow(header, y);
+            y += 6;
+          }
+          renderRow(row, y);
+          y += 6;
+        });
+
+        doc.save(filename);
+      }
+    } catch (err) {
+      console.error("handleExport failed", err);
+      alert("No se pudo exportar el ajuste de inventario.");
+    }
   }
 
   // ================= Render =================
@@ -799,21 +868,38 @@ export default function InventoryPage() {
                 ? "Cargando inventario…"
                 : `${filteredInventory.length} producto(s) en la cola actual`}
             </span>
-            <Button
-              size="sm"
-              onClick={handleSaveAdjustments}
-              disabled={loading}
-            >
-              Guardar ajustes
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleExportCSV}
-              disabled={loading || filteredInventory.length === 0}
-            >
-              Exportar CSV
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleSaveAdjustments}
+                disabled={loading}
+              >
+                Guardar ajustes
+              </Button>
+              <Select
+                value={exportFormat}
+                onValueChange={(value) => setExportFormat(value)}
+              >
+                <SelectTrigger className="h-8 w-[150px]">
+                  <SelectValue placeholder="Formato" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(EXPORT_FORMATS).map((format) => (
+                    <SelectItem key={format.value} value={format.value}>
+                      {format.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleExport}
+                disabled={loading || filteredInventory.length === 0}
+              >
+                Exportar ajustes
+              </Button>
+            </div>
           </div>
 
           {loading ? (
@@ -837,18 +923,18 @@ export default function InventoryPage() {
                       <TableHead className="text-right">
                         EF (Existencia física)
                       </TableHead>
-                      <TableHead className="text-right">Real</TableHead>
                       <TableHead className="text-right">
                         A (Reserva)
                       </TableHead>
                       <TableHead className="text-right">
                         T (Disp. tienda)
                       </TableHead>
-                      <TableHead>Estado ajuste</TableHead>
+                      <TableHead className="text-right">Real</TableHead>
                       <TableHead className="text-right">Subir T</TableHead>
                       <TableHead className="text-right">Bajar T</TableHead>
                       <TableHead>Clasificación</TableHead>
                       <TableHead>Nota</TableHead>
+                      <TableHead>Estado ajuste</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -879,6 +965,12 @@ export default function InventoryPage() {
                           <TableCell className="text-right font-mono text-sm tabular-nums">
                             {formatQty(getEF(item))}
                           </TableCell>
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {formatQty(getA(item))}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {formatQty(getT(item))}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Input
                               type="number"
@@ -888,18 +980,6 @@ export default function InventoryPage() {
                                 updateAdjustment(snapshotId, "real_qty", e.target.value)
                               }
                             />
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm tabular-nums">
-                            {formatQty(getA(item))}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm tabular-nums">
-                            {formatQty(getT(item))}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={state === "ok" ? "default" : "secondary"}>
-                              {state.toUpperCase()}
-                              {difference !== 0 ? ` (${difference})` : ""}
-                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
@@ -964,6 +1044,12 @@ export default function InventoryPage() {
                               }
                             />
                           </TableCell>
+                          <TableCell>
+                            <Badge variant={state === "ok" ? "default" : "secondary"}>
+                              {state.toUpperCase()}
+                              {difference !== 0 ? ` (${difference})` : ""}
+                            </Badge>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -1007,6 +1093,18 @@ export default function InventoryPage() {
                           </p>
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
+                          <p className="text-[11px] text-muted-foreground">A</p>
+                          <p className="mt-1 font-mono text-sm tabular-nums">
+                            {formatQty(getA(item))}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-muted/60 p-2 text-center">
+                          <p className="text-[11px] text-muted-foreground">T</p>
+                          <p className="mt-1 font-mono text-sm tabular-nums">
+                            {formatQty(getT(item))}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">Real</p>
                           <Input
                             type="number"
@@ -1020,18 +1118,6 @@ export default function InventoryPage() {
                               )
                             }
                           />
-                        </div>
-                        <div className="rounded-md bg-muted/60 p-2 text-center">
-                          <p className="text-[11px] text-muted-foreground">A</p>
-                          <p className="mt-1 font-mono text-sm tabular-nums">
-                            {formatQty(getA(item))}
-                          </p>
-                        </div>
-                        <div className="rounded-md bg-muted/60 p-2 text-center">
-                          <p className="text-[11px] text-muted-foreground">T</p>
-                          <p className="mt-1 font-mono text-sm tabular-nums">
-                            {formatQty(getT(item))}
-                          </p>
                         </div>
                       </div>
 
@@ -1066,14 +1152,6 @@ export default function InventoryPage() {
                             }
                           />
                         </div>
-                      </div>
-
-                      <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs font-semibold">
-                        <span>Estado</span>
-                        <Badge variant={state === "ok" ? "default" : "secondary"}>
-                          {state.toUpperCase()}
-                          {difference !== 0 ? ` (${difference})` : ""}
-                        </Badge>
                       </div>
 
                       <div className="space-y-2">
@@ -1114,6 +1192,14 @@ export default function InventoryPage() {
                             )
                           }
                         />
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs font-semibold">
+                        <span>Estado</span>
+                        <Badge variant={state === "ok" ? "default" : "secondary"}>
+                          {state.toUpperCase()}
+                          {difference !== 0 ? ` (${difference})` : ""}
+                        </Badge>
                       </div>
                     </div>
                   );

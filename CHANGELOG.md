@@ -74,3 +74,6 @@
 - `app/api/[[...path]]/route.js`: se añadió el endpoint `/api/inventory/adjustments` con permisos de escritura para guardar históricos de conteo (real, diferencia, estado, subir/bajar tienda) y consultar ajustes recientes por fecha o producto.
 - `lib/models/InventoryAdjustment.js`: nuevo modelo que almacena el conteo real, diferencia calculada, estado (pendiente/ok/faltante/sobrante), motivo y cantidades a subir/bajar a tienda.
 - `app/(app)/inventory/page.js`: la vista agrupa por prioridad (Sin reserva, No en tienda, Últimas piezas, Próximo, Sin ID), limita la cola diaria por meta rápida de 20 productos, calcula estado al ingresar conteo real, captura subir/bajar a tienda, exporta CSV con el vale de ajustes y muestra el estado calculado en escritorio y móvil.
+
+## Ajustes visuales y exportación multiformato
+- `app/(app)/inventory/page.js`: se reordenaron las columnas para ubicar la “Cantidad real” entre la disponibilidad en tienda y los movimientos (Subir/Bajar T), dejando el estado del ajuste como último campo tanto en tabla como en tarjetas móviles. Se añadió selector de formato y exportación a CSV, Excel o PDF reutilizando las mismas filas calculadas.
