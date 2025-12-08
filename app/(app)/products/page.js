@@ -500,7 +500,7 @@ export default function ProductsPage() {
 
   // Columnas visibles
   const [cols, setCols] = useState({
-    categoria: true,
+    categoria: false,
     idTienda: true,
     codProducto: true,
     nombre: true,
@@ -510,9 +510,9 @@ export default function ProductsPage() {
     dispTienda: true,
     precioCosto: true,
     noAlmacen: true,
-    estadoAnuncio: true,
+    estadoAnuncio: false,
     estadoTienda: true,
-    creado: true,
+    creado: false,
     actualizado: true,
     marca: false,
   });
@@ -898,10 +898,10 @@ export default function ProductsPage() {
                   <SelectContent>
                     <SelectItem value={ALL}>(Todas)</SelectItem>
                     <SelectItem value="con">
-                      Con existencia (&gt; 0)
+                      Con existencia
                     </SelectItem>
                     <SelectItem value="sin">
-                      Sin existencia (= 0)
+                      Sin existencia
                     </SelectItem>
                   </SelectContent>
                 </Select>
