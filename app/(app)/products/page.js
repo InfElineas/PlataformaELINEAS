@@ -1059,7 +1059,7 @@ export default function ProductsPage() {
               </div>
         </CardHeader>
 
-        <CardContent className="overflow-x-auto rounded-lg border border-border/60 p-0 sm:p-2">
+        <CardContent className="rounded-lg border border-border/60 p-0 sm:p-2">
           {loading ? (
             <div className="py-8 text-center text-muted-foreground">
               Cargando productos…
@@ -1070,9 +1070,10 @@ export default function ProductsPage() {
             </div>
           ) : (
             <>
-              <Table className="w-full min-w-[1000px] sm:min-w-[1150px] lg:min-w-[1280px] xl:min-w-[1400px]">
-                <TableHeader>
-                  <TableRow>
+              <div className="hidden overflow-x-auto md:block">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow>
                     {cols.categoria && (
                       <SortableHead
                         field="category_name"
@@ -1272,31 +1273,135 @@ export default function ProductsPage() {
                     );
                   })}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
+
+              <div className="space-y-3 p-3 md:hidden">
+                {rows.map((p) => {
+                  const categoriaOnline = getCategoriaOnline(p);
+                  const idTienda = getIdTienda(p);
+                  const codProducto = getCodProducto(p);
+                  const suministrador = getSuministrador(p);
+                  const EF = getEF(p);
+                  const A = getReserva(p);
+                  const T = getDisponibleTienda(p);
+                  const precioCosto = getPrecioCosto(p);
+                  const noAlmacen = getNoAlmacen(p);
+                  const marca = getMarca(p);
+                  const estadoAnuncio = getEstadoAnuncio(p);
+                  const estadoTienda = getEstadoTienda(p);
+                  const anuncioVariant = badgeVariantAnuncio(estadoAnuncio);
+                  const tiendaVariant = badgeVariantTienda(estadoTienda);
+
+                  return (
+                    <div
+                      key={p._id}
+                      className="space-y-3 rounded-lg border border-border/60 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-1 items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={p.avatar} alt={p.name} />
+                            <AvatarFallback>
+                              {(p.name || "?")?.charAt(0)?.toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 space-y-1">
+                            <p className="text-sm font-semibold leading-tight line-clamp-2">
+                              {p.name || "Producto sin nombre"}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground font-mono">
+                              {codProducto || "Sin código"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 text-right">
+                          <Badge variant={tiendaVariant} className="text-[11px]">
+                            {estadoTienda}
+                          </Badge>
+                          <Badge variant={anuncioVariant} className="text-[11px]">
+                            {estadoAnuncio}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Categoría</p>
+                          <p className="line-clamp-2">
+                            {categoriaOnline || "Sin categoría"}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Suministrador</p>
+                          <p className="line-clamp-2">
+                            {suministrador || "—"}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Marca</p>
+                          <p>{marca || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Almacén</p>
+                          <p>{noAlmacen || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Id tienda</p>
+                          <p className="font-mono text-[11px] text-foreground">
+                            {idTienda || "—"}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Costo</p>
+                          <p className="text-foreground">{fmtMoney(precioCosto)}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+                        <div className="rounded-md bg-muted/70 p-2">
+                          <p className="text-[11px] text-muted-foreground">EF</p>
+                          <p className="text-sm text-foreground">{Number.isNaN(EF) ? "—" : EF}</p>
+                        </div>
+                        <div className="rounded-md bg-muted/70 p-2">
+                          <p className="text-[11px] text-muted-foreground">A</p>
+                          <p className="text-sm text-foreground">{Number.isNaN(A) ? "—" : A}</p>
+                        </div>
+                        <div className="rounded-md bg-muted/70 p-2">
+                          <p className="text-[11px] text-muted-foreground">T</p>
+                          <p className="text-sm text-foreground">{Number.isNaN(T) ? "—" : T}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
               {/* Paginación */}
-              <div className="flex items-center justify-end gap-4 pt-4">
+              <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-4 md:justify-end md:px-0">
                 <span className="text-xs text-muted-foreground">
                   Página {page} de {totalPages}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1 || loading}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || loading}
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
-                >
-                  Siguiente
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1 || loading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages || loading}
+                    onClick={() =>
+                      setPage((p) => Math.min(totalPages, p + 1))
+                    }
+                  >
+                    Siguiente
+                  </Button>
+                </div>
               </div>
             </>
           )}

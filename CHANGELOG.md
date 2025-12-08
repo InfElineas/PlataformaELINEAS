@@ -57,3 +57,7 @@
 - `app/(app)/layout.js`: el layout principal envuelve el panel en el proveedor de filtros para reutilizar el mismo estado en toda la plataforma.
 - `app/(app)/products/page.js`: la página de productos consume el contexto global de filtros y conserva la lógica de existencias, reserva y disponible leyendo alias y metadata.
 - `app/api/[[...path]]/route.js`: los alias de inventario incluyen rutas con metadata y el resolvedor soporta claves anidadas para no devolver 0 cuando los datos viven en metadata.
+
+## Experiencia responsive sin scroll lateral
+- `app/(app)/products/page.js`: la tabla de escritorio se mantiene intacta y se añadió una vista de tarjetas compactas en móviles que muestra EF/Reserva/Tienda, almacén y estados sin obligar a hacer scroll horizontal.
+- `app/(app)/inventory/page.js`: se incorporó una lista editable en tarjetas para pantallas pequeñas, centrando inputs de EF/A/T y selectores de clasificación dentro de un flujo vertical legible.
