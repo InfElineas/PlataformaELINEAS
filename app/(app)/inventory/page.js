@@ -536,9 +536,7 @@ export default function InventoryPage() {
       const reserva = getA(item);
       const disponible_tienda = getT(item);
 
-      const real_qty = resolveRealQty(item, adj);
-      const { state, difference } = resolveAdjustmentState(item, adj);
-
+      
       const real_qty = resolveRealQty(item, adj);
       const { state, difference } = resolveAdjustmentState(item, adj);
 
