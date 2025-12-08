@@ -528,7 +528,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Segmento de análisis + límite */}
-          <div className="mt-4 grid gap-4 md:grid-cols-[2fr_1fr]">
+          <div className="mt-4 grid gap-4 max-md:grid-cols-1 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-medium">
                 Segmento de análisis (Estado tienda)
