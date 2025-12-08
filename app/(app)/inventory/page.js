@@ -517,7 +517,11 @@ export default function InventoryPage() {
             </div>
 
             <div className="flex items-end">
-              <Button variant="outline" onClick={resetFilters}>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={resetFilters}
+              >
                 Limpiar filtros
               </Button>
             </div>
