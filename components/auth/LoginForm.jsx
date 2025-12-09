@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +15,18 @@ export default function LoginForm({ redirectTo = "/" }) {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
-    setError("");
+
+    // Mostrar loader
+    Swal.fire({
+      title: "Ingresando…",
+      text: "Por favor espera",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -28,20 +35,54 @@ export default function LoginForm({ redirectTo = "/" }) {
         body: JSON.stringify({ email: identifier, password, rememberMe }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const data = await response
-          .json()
-          .catch(() => ({ error: "Login failed" }));
-        setError(data.error || "Invalid credentials");
-        setLoading(false);
+        // Cerrar el loader antes de mostrar el error
+        Swal.close();
+
+        // Mostrar alerta específica para "Invalid credentials"
+        if (data.error === "Invalid credentials") {
+          await Swal.fire({
+            icon: "error",
+            title: "Credenciales incorrectas",
+            text: "El usuario o la contraseña son incorrectos",
+            timer: 2000, // 2 segundos
+            timerProgressBar: true,
+            showConfirmButton: false,
+          });
+        } else {
+          await Swal.fire({
+            icon: "error",
+            title: "Error al iniciar sesión",
+            text: data.error || "Ocurrió un error inesperado",
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+          });
+        }
         return;
       }
 
+      // Login exitoso
+      Swal.close();
       router.push(redirectTo || "/");
       router.refresh();
     } catch (err) {
       console.error("Login request failed", err);
-      setError("Unable to complete login. Please try again.");
+
+      // Cerrar loader antes de mostrar alerta
+      Swal.close();
+
+      await Swal.fire({
+        icon: "error",
+        title: "Error de conexión",
+        text: "No se pudo completar el login. Intenta nuevamente.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    } finally {
       setLoading(false);
     }
   }
@@ -87,15 +128,6 @@ export default function LoginForm({ redirectTo = "/" }) {
           ¿Olvidaste tu contraseña?
         </a>
       </div>
-      {error && (
-        <div
-          className={cn(
-            "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive",
-          )}
-        >
-          {error}
-        </div>
-      )}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Ingresando…" : "Iniciar sesión"}
       </Button>

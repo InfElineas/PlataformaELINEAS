@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/components/providers/AuthSessionProvider";
+import Swal from "sweetalert2";
 
 const navigation = [
   { name: "Tablero general", href: "/", icon: LayoutDashboard },
@@ -54,13 +55,51 @@ export default function SidebarHandler({ children }) {
     () => ({
       marginLeft: collapsed ? `${COLLAPSED_WIDTH}px` : `${EXPANDED_WIDTH}px`,
     }),
-    [collapsed],
+    [collapsed]
   );
 
   async function handleSignOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    // Mostrar loader
+    Swal.fire({
+      title: "Cerrando sesión…",
+      text: "Por favor espera",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+
+      if (!response.ok) {
+        // Cerrar loader antes de mostrar error
+        Swal.close();
+        await Swal.fire({
+          icon: "error",
+          title: "Error al cerrar sesión",
+          text: "No se pudo cerrar sesión. Intenta nuevamente.",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      // Logout exitoso
+      Swal.close();
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      console.error("Logout failed", err);
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "Error de conexión",
+        text: "No se pudo cerrar sesión. Intenta nuevamente.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    }
   }
 
   return (
@@ -68,19 +107,19 @@ export default function SidebarHandler({ children }) {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out",
-          collapsed ? "w-[72px]" : "w-64",
+          collapsed ? "w-[72px]" : "w-64"
         )}
       >
         <div
           className={cn(
             "flex h-16 items-center border-b px-4 transition-all duration-300 ease-in-out",
-            collapsed ? "justify-center" : "justify-between",
+            collapsed ? "justify-center" : "justify-between"
           )}
         >
           <button
             className={cn(
               "flex items-center gap-2 text-blue-800 transition-all duration-300 ease-in-out",
-              collapsed && "justify-center",
+              collapsed && "justify-center"
             )}
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
@@ -120,13 +159,15 @@ export default function SidebarHandler({ children }) {
                   collapsed
                     ? "justify-center px-0"
                     : "justify-start gap-3 px-4",
-                  isActive && "bg-secondary",
+                  isActive && "bg-secondary"
                 )}
                 onClick={() => router.push(item.href)}
                 title={item.name}
               >
                 <Icon className="h-5 w-5" />
-                <span className={collapsed ? "sr-only" : "inline"}>{item.name}</span>
+                <span className={collapsed ? "sr-only" : "inline"}>
+                  {item.name}
+                </span>
               </Button>
             );
           })}
@@ -138,9 +179,7 @@ export default function SidebarHandler({ children }) {
               <div className="text-sm font-medium">
                 {user?.full_name || "Usuario"}
               </div>
-              <div className="text-xs text-muted-foreground">
-                {user?.email}
-              </div>
+              <div className="text-xs text-muted-foreground">{user?.email}</div>
             </>
           )}
           <Button
@@ -148,17 +187,19 @@ export default function SidebarHandler({ children }) {
             variant="outline"
             className={cn(
               "w-full items-center transition-all duration-300 ease-in-out",
-              collapsed ? "justify-center px-0" : "justify-start gap-2 px-4",
+              collapsed ? "justify-center px-0" : "justify-start gap-2 px-4"
             )}
             title="Cerrar sesión"
           >
             <LogOut className="h-4 w-4" />
-            <span className={collapsed ? "sr-only" : "inline"}>Cerrar sesión</span>
+            <span className={collapsed ? "sr-only" : "inline"}>
+              Cerrar sesión
+            </span>
           </Button>
           <p
             className={cn(
-              "text-xs text-muted-foreground transition-opacity", 
-              collapsed ? "text-center" : "text-left",
+              "text-xs text-muted-foreground transition-opacity",
+              collapsed ? "text-center" : "text-left"
             )}
           >
             {collapsed ? "v1.0" : "v1.0 • Elíneas"}
