@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { utils as XLSXUtils, writeFile as writeXLSXFile } from "xlsx";
-import { jsPDF } from "jspdf";
 import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
 import { ALL } from "@/hooks/useProductFilters";
 
@@ -102,6 +100,30 @@ const PRIORITY_BADGES = {
   sin_id: { variant: "destructive" },
   disponible: { variant: "default" },
 };
+
+const loadXLSX = (() => {
+  let cached;
+  return async () => {
+    if (!cached) {
+      cached = await import(
+        "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm"
+      );
+    }
+    return cached;
+  };
+})();
+
+const loadJsPDF = (() => {
+  let cached;
+  return async () => {
+    if (!cached) {
+      cached = await import(
+        "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm"
+      );
+    }
+    return cached;
+  };
+})();
 
 // ===== Helpers de inventario =====
 
@@ -641,7 +663,7 @@ export default function InventoryPage() {
     return { header, rows };
   }
 
-  function handleExport() {
+  async function handleExport() {
     const { header, rows } = buildExportData();
     const filename = `inventario-ajustes.${exportFormat}`;
 
@@ -661,14 +683,16 @@ export default function InventoryPage() {
       }
 
       if (exportFormat === EXPORT_FORMATS.xlsx.value) {
-        const worksheet = XLSXUtils.aoa_to_sheet([header, ...rows]);
-        const workbook = XLSXUtils.book_new();
-        XLSXUtils.book_append_sheet(workbook, worksheet, "Ajustes");
-        writeXLSXFile(workbook, filename);
+        const XLSX = await loadXLSX();
+        const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Ajustes");
+        XLSX.writeFile(workbook, filename);
         return;
       }
 
       if (exportFormat === EXPORT_FORMATS.pdf.value) {
+        const { jsPDF } = await loadJsPDF();
         const doc = new jsPDF();
         doc.setFont("courier", "normal");
         doc.setFontSize(10);
