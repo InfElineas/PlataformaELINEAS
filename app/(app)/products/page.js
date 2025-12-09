@@ -500,7 +500,7 @@ export default function ProductsPage() {
 
   // Columnas visibles
   const [cols, setCols] = useState({
-    categoria: true,
+    categoria: false,
     idTienda: true,
     codProducto: true,
     nombre: true,
@@ -510,9 +510,9 @@ export default function ProductsPage() {
     dispTienda: true,
     precioCosto: true,
     noAlmacen: true,
-    estadoAnuncio: true,
+    estadoAnuncio: false,
     estadoTienda: true,
-    creado: true,
+    creado: false,
     actualizado: true,
     marca: false,
   });
@@ -898,10 +898,10 @@ export default function ProductsPage() {
                   <SelectContent>
                     <SelectItem value={ALL}>(Todas)</SelectItem>
                     <SelectItem value="con">
-                      Con existencia (&gt; 0)
+                      Con existencia
                     </SelectItem>
                     <SelectItem value="sin">
-                      Sin existencia (= 0)
+                      Sin existencia
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -1111,6 +1111,30 @@ export default function ProductsPage() {
                 )}
               </div>
           </div>
+           {/* Paginación */}
+              <div className="flex items-center justify-end gap-4 pt-4">
+                <span className="text-xs text-muted-foreground">
+                  Página {page} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || loading}
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages, p + 1))
+                  }
+                >
+                  Siguiente
+                </Button>
+              </div>
         </CardHeader>
 
         <CardContent className="rounded-lg border border-border/60 p-0 sm:p-2">
