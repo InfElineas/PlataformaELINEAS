@@ -63,15 +63,15 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Tablero general</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 pb-8">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">Tablero general</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Vista general de tu sistema de inventarios
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
