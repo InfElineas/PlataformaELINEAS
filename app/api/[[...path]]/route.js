@@ -5,6 +5,7 @@ import Category from "@/lib/models/Category";
 import Store from "@/lib/models/Store";
 import Supplier from "@/lib/models/Supplier";
 import InventorySnapshot from "@/lib/models/InventorySnapshot";
+import InventoryAdjustment from "@/lib/models/InventoryAdjustment";
 import ReplenishmentRule from "@/lib/models/ReplenishmentRule";
 import ReplenishmentPlan from "@/lib/models/ReplenishmentPlan";
 import PurchaseOrder from "@/lib/models/PurchaseOrder";
@@ -47,7 +48,13 @@ function resolvePermission(method, segments) {
     case "categories":
       return { permission: PERMISSIONS.CATALOG_READ, orgScoped: true };
     case "inventory":
-      return { permission: PERMISSIONS.INVENTORY_READ, orgScoped: true };
+      return {
+        permission:
+          method === "GET"
+            ? PERMISSIONS.INVENTORY_READ
+            : PERMISSIONS.INVENTORY_WRITE,
+        orgScoped: true,
+      };
     case "rules":
       return { permission: PERMISSIONS.CATALOG_READ, orgScoped: true };
     case "replenishment":
@@ -90,6 +97,53 @@ function errorResponse(message, status = 400, request) {
   return NextResponse.json({ error: message }, init);
 }
 
+const STOCK_ALIASES = {
+  existencia: [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "existencia",
+    "ef",
+    "metadata.existencia_fisica",
+    "metadata.physical_stock",
+    "metadata.exist_fisica",
+    "metadata.stock",
+    "metadata.existencia",
+    "metadata.ef",
+  ],
+  reserva: [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "almacen",
+    "A",
+    "metadata.reserva",
+    "metadata.reserve_qty",
+    "metadata.reserved",
+    "metadata.reserved_qty",
+    "metadata.almacen",
+    "metadata.A",
+  ],
+  tienda: [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+    "T",
+    "metadata.disponible_tienda",
+    "metadata.store_qty",
+    "metadata.disponible",
+    "metadata.available_store",
+    "metadata.available",
+    "metadata.tienda",
+    "metadata.T",
+  ],
+};
+
 // CORS
 function corsHeaders(request) {
   const fallbackOrigin = process.env.ALLOWED_ORIGIN || "http://localhost:3000";
@@ -123,12 +177,33 @@ async function handleProducts(request, segments, searchParams, context) {
     const marca = searchParams.get("marca");
     const habilitado = searchParams.get("habilitado");
     const activado = searchParams.get("activado");
+    const estadoTienda = searchParams.get("estado_tienda");
     const includeFilters = searchParams.get("includeFilters") === "1";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(
       searchParams.get("perPage") || searchParams.get("limit") || "50",
     );
     const skip = (page - 1) * limit;
+    const sortBy = searchParams.get("sortBy") || "created_at";
+    const sortDir = searchParams.get("sortDir") === "asc" ? 1 : -1;
+
+    const SORT_MAP = {
+      name: "name",
+      category_name: "category_name",
+      store_external_id: "store_external_id",
+      product_code: "product_code",
+      brand: "brand",
+      supplier_name: "supplier_name",
+      existencia_fisica: "existencia_fisica",
+      reserva: "reserva",
+      disponible_tienda: "disponible_tienda",
+      precio_costo: "precio_costo",
+      no_almacen: "no_almacen",
+      status: "status",
+      store_status: "store_status",
+      created_at: "created_at",
+      updated_at: "updated_at",
+    };
 
     const andFilters = [{ org_id: orgId }];
 
@@ -146,9 +221,19 @@ async function handleProducts(request, segments, searchParams, context) {
     if (category) andFilters.push({ category_id: category });
 
     if (existencia === "con") {
-      andFilters.push({ physical_stock: { $gt: 0 } });
+      andFilters.push({
+        $or: [
+          { existencia_fisica: { $gt: 0 } },
+          { physical_stock: { $gt: 0 } },
+        ],
+      });
     } else if (existencia === "sin") {
-      andFilters.push({ physical_stock: { $lte: 0 } });
+      andFilters.push({
+        $or: [
+          { existencia_fisica: { $lte: 0 } },
+          { physical_stock: { $lte: 0 } },
+        ],
+      });
     }
 
     if (almacen) {
@@ -175,6 +260,15 @@ async function handleProducts(request, segments, searchParams, context) {
       andFilters.push({ brand: marca });
     }
 
+    if (estadoTienda && estadoTienda !== "__ALL__") {
+      andFilters.push({
+        $or: [
+          { store_status: estadoTienda },
+          { "metadata.store_status": estadoTienda },
+        ],
+      });
+    }
+
     if (habilitado === "si") {
       andFilters.push({ mgmt_mode: "managed" });
     } else if (habilitado === "no") {
@@ -189,51 +283,138 @@ async function handleProducts(request, segments, searchParams, context) {
 
     const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
+    const sortField = SORT_MAP[sortBy] || "created_at";
+    const sort = { [sortField]: sortDir };
+    if (sortField !== "created_at") sort.created_at = -1;
+
     const [productsRaw, total] = await Promise.all([
       Product.find(query)
-        .sort({ created_at: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean({ virtuals: true }),
       Product.countDocuments(query),
     ]);
 
+    const pickText = (...candidates) => {
+      for (const value of candidates) {
+        if (value === null || value === undefined) continue;
+        const text = value.toString().trim();
+        if (text) return text;
+      }
+      return "";
+    };
+
+    const deriveStoreStatus = (doc, EF, A, T) => {
+      const ID = pickText(
+        doc.product_code,
+        doc.codigo,
+        doc.cod_prod,
+        doc.barcode,
+      );
+
+      if (!ID) {
+        return EF === 0
+          ? 'SIN ID (ID = "" y EF = 0)'
+          : 'SIN ID (ID = "" y EF > 0)';
+      }
+
+      if (EF === 0) return 'AGOTADO (ID ≠ "" y EF = 0)';
+
+      if (A === 0 && T > 6) return "SIN RESERVA (A = 0 y T > 6)";
+
+      if (T === 0) {
+        return EF > 10
+          ? "NO TIENDA (T = 0 y EF > 10)"
+          : "NO TIENDA (T = 0 y EF ≤ 10)";
+      }
+
+      if (T > 1 && T < A && A <= 10) return "ULTIMAS PIEZAS (1 < T < A ≤ 10)";
+
+      if (A >= 0 && A < T && T <= 10) return "ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)";
+
+      if (T <= 10) return "PROXIMO (T ≤ 10)";
+      if (T <= A) return "DISPONIBLE (T ≤ A)";
+      return "DISPONIBLE (A < T)";
+    };
+
     const parseStock = (raw) => {
       if (raw === null || raw === undefined) return null;
       if (typeof raw === "number" && Number.isFinite(raw)) return raw;
 
-      const normalized = String(raw)
-        .replace(/,/g, ".")
-        .replace(/[^0-9.-]/g, "")
-        .trim();
+      let cleaned = String(raw).trim();
+      if (!cleaned) return null;
 
-      const value = Number(normalized);
+      cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+      if (!cleaned) return null;
+
+      const hasComma = cleaned.includes(",");
+      const hasDot = cleaned.includes(".");
+
+      if (hasComma && hasDot) {
+        if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+          cleaned = cleaned.replace(/,/g, "");
+        } else {
+          cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+        }
+      } else if (hasComma && !hasDot) {
+        cleaned = cleaned.replace(/,/g, ".");
+      }
+
+      const value = Number(cleaned);
       return Number.isFinite(value) ? value : null;
     };
 
+    const pickStock = (doc, keys) => {
+      const resolve = (target, path) => {
+        if (!target || !path) return undefined;
+        return path.split(".").reduce((acc, part) => acc?.[part], target);
+      };
+
+      for (const key of keys) {
+        const direct = parseStock(resolve(doc, key));
+        if (direct !== null) return direct;
+
+        const metaVal = parseStock(resolve(doc?.metadata, key));
+        if (metaVal !== null) return metaVal;
+      }
+      return 0;
+    };
+
     const products = productsRaw.map((doc) => {
-      const physical =
-        parseStock(doc.existencia_fisica) ??
-        parseStock(doc.physical_stock) ??
-        parseStock(doc.stock) ??
-        parseStock(doc?.metadata?.existencia_fisica) ??
-        0;
+      const physical = pickStock(doc, STOCK_ALIASES.existencia);
+      const reserve = pickStock(doc, STOCK_ALIASES.reserva);
+      const store = pickStock(doc, STOCK_ALIASES.tienda);
+      const storeStatus = pickText(
+        doc.store_status,
+        doc?.metadata?.store_status,
+        deriveStoreStatus(doc, physical, reserve, store),
+      );
 
-      const reserve =
-        parseStock(doc.reserva) ??
-        parseStock(doc.reserve_qty) ??
-        parseStock(doc.reserved) ??
-        parseStock(doc.reserved_qty) ??
-        parseStock(doc?.metadata?.reserva) ??
-        0;
+      const warehouseNumber = pickText(
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.warehouse_name,
+      );
 
-      const store =
-        parseStock(doc.disponible_tienda) ??
-        parseStock(doc.store_qty) ??
-        parseStock(doc.available_store) ??
-        parseStock(doc.available) ??
-        parseStock(doc?.metadata?.disponible_tienda) ??
-        0;
+      const warehouseDisplay = pickText(
+        doc.warehouse_name,
+        doc.no_almacen,
+        doc.warehouse_code,
+        doc?.metadata?.warehouse_name,
+        doc?.metadata?.no_almacen,
+        doc?.metadata?.warehouse_code,
+      );
+
+      const warehouseCode = pickText(
+        doc.warehouse_code,
+        doc.no_almacen,
+        doc?.metadata?.warehouse_code,
+        doc?.metadata?.no_almacen,
+      );
 
       return {
         ...doc,
@@ -243,6 +424,10 @@ async function handleProducts(request, segments, searchParams, context) {
         reserva: reserve,
         store_qty: store,
         disponible_tienda: store,
+        store_status: storeStatus,
+        no_almacen: warehouseNumber,
+        warehouse_code: warehouseCode,
+        warehouse_name: warehouseDisplay,
       };
     });
 
@@ -258,6 +443,7 @@ async function handleProducts(request, segments, searchParams, context) {
         supplierNames,
         supplierIds,
         brands,
+        storeStatuses,
       ] = await Promise.all([
         Product.distinct("warehouse_code", baseMatch),
         Product.distinct("warehouse_name", baseMatch),
@@ -265,6 +451,7 @@ async function handleProducts(request, segments, searchParams, context) {
         Product.distinct("supplier_name", baseMatch),
         Product.distinct("provider_id", baseMatch),
         Product.distinct("brand", baseMatch),
+        Product.distinct("store_status", baseMatch),
       ]);
 
       const normalize = (value) => {
@@ -285,6 +472,7 @@ async function handleProducts(request, segments, searchParams, context) {
         warehouses: mergeDistinct(warehouseCodes, warehouseNames, noAlmacenes),
         suppliers: mergeDistinct(supplierNames, supplierIds),
         brands: mergeDistinct(brands),
+        storeStatuses: mergeDistinct(storeStatuses),
       };
     }
 
@@ -298,6 +486,86 @@ async function handleProducts(request, segments, searchParams, context) {
         totalPages: Math.ceil(total / limit),
         meta,
       },
+      { headers: corsHeaders(request) },
+    );
+  }
+
+  // POST /api/inventory/adjustments - guardar ajustes e histórico
+  if (method === "POST" && segments.length === 2 && segments[1] === "adjustments") {
+    const body = await request.json();
+    const adjustments = Array.isArray(body?.adjustments) ? body.adjustments : [];
+
+    if (adjustments.length === 0) {
+      return errorResponse("No se recibieron ajustes para guardar", 400, request);
+    }
+
+    const normalized = adjustments.map((adj) => {
+      const platformQty = Number(adj.existencia_fisica ?? adj.physical_stock ?? 0) || 0;
+      const realQty =
+        adj.real_qty === null || adj.real_qty === undefined || adj.real_qty === ""
+          ? null
+          : Number(adj.real_qty);
+      const reserve = Number(adj.reserva ?? adj.reserve_qty ?? 0) || 0;
+      const store = Number(adj.disponible_tienda ?? adj.store_qty ?? 0) || 0;
+
+      let state = "pendiente";
+      let difference = 0;
+      if (realQty !== null && Number.isFinite(realQty)) {
+        difference = realQty - platformQty;
+        if (difference === 0) state = "ok";
+        if (difference < 0) state = "faltante";
+        if (difference > 0) state = "sobrante";
+      }
+
+      return {
+        org_id: orgId,
+        product_id: adj.product_id,
+        snapshot_id: adj.snapshot_id || null,
+        platform_qty: platformQty,
+        platform_reserve: reserve,
+        platform_store: store,
+        real_qty: Number.isFinite(realQty) ? realQty : null,
+        difference,
+        state,
+        reason: adj.reason || "",
+        note: adj.note || "",
+        upload_qty: Number(adj.upload_qty || 0) || 0,
+        download_qty: Number(adj.download_qty || 0) || 0,
+        counted_by: context?.user?.id || null,
+      };
+    });
+
+    const saved = await InventoryAdjustment.insertMany(normalized);
+
+    return NextResponse.json(
+      { message: "Ajustes guardados", total: saved.length },
+      { status: 201, headers: corsHeaders(request) },
+    );
+  }
+
+  // GET /api/inventory/adjustments - histórico por fecha/producto
+  if (method === "GET" && segments.length === 2 && segments[1] === "adjustments") {
+    const productId = searchParams.get("product_id");
+    const state = searchParams.get("state");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    const query = { org_id: orgId };
+    if (productId) query.product_id = productId;
+    if (state) query.state = state;
+    if (from || to) {
+      query.counted_at = {};
+      if (from) query.counted_at.$gte = new Date(from);
+      if (to) query.counted_at.$lte = new Date(to);
+    }
+
+    const history = await InventoryAdjustment.find(query)
+      .sort({ counted_at: -1 })
+      .limit(500)
+      .lean();
+
+    return NextResponse.json(
+      { data: history },
       { headers: corsHeaders(request) },
     );
   }
@@ -756,6 +1024,8 @@ export async function POST(request) {
         return handleProducts(request, segments, searchParams, context);
       case "stores":
         return handleStores(request, segments, context);
+      case "inventory":
+        return handleInventory(request, segments, searchParams, context);
       case "replenishment":
         return handleReplenishment(request, segments, searchParams, context);
       case "purchase-orders":
