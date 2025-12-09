@@ -105,9 +105,10 @@ const loadXLSX = (() => {
   let cached;
   return async () => {
     if (!cached) {
-      cached = await import(
+      const mod = await import(
         "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm"
       );
+      cached = mod?.default || mod;
     }
     return cached;
   };
@@ -117,9 +118,10 @@ const loadJsPDF = (() => {
   let cached;
   return async () => {
     if (!cached) {
-      cached = await import(
+      const mod = await import(
         "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm"
       );
+      cached = mod?.default || mod;
     }
     return cached;
   };
@@ -569,6 +571,20 @@ export default function InventoryPage() {
       const real_qty = resolveRealQty(item, adj);
       const { state, difference } = resolveAdjustmentState(item, adj);
 
+      if (
+        real_qty !== null &&
+        real_qty !== undefined &&
+        difference !== 0 &&
+        (!adj.reason || adj.reason === NO_REASON)
+      ) {
+        alert(
+          `La clasificación es obligatoria cuando hay diferencia en el conteo (producto: ${getProductName(
+            item,
+          )}).`,
+        );
+        return;
+      }
+
       payload.push({
         snapshot_id: item._id,
         product_id: item.product_id || item.product_code || item._id,
@@ -638,33 +654,49 @@ export default function InventoryPage() {
       "Estado ajuste",
     ];
 
-    const rows = filteredInventory.map((item, idx) => {
-      const adj = adjustments[item._id] || {};
-      const { state, difference } = resolveAdjustmentState(item, adj);
-      const realQty = resolveRealQty(item, adj) ?? getEF(item);
-      const estado = getEstadoTienda(item)?.label || "";
+    let rowIndex = 0;
+    const rows = filteredInventory
+      .map((item) => {
+        const adj = adjustments[item._id] || {};
+        const { state, difference } = resolveAdjustmentState(item, adj);
+        const realQty = resolveRealQty(item, adj);
+        const estado = getEstadoTienda(item)?.label || "";
+        const hasReal = realQty !== null && realQty !== undefined && realQty !== "";
+        const hasUpload =
+          adj.upload_qty !== undefined && adj.upload_qty !== null && adj.upload_qty !== "";
+        const hasDownload =
+          adj.download_qty !== undefined &&
+          adj.download_qty !== null &&
+          adj.download_qty !== "";
 
-      return [
-        idx + 1,
-        getProductName(item).replace(/,/g, " "),
-        getProductCode(item),
-        estado,
-        getEF(item),
-        getA(item),
-        getT(item),
-        realQty,
-        difference,
-        adj.upload_qty ?? "",
-        adj.download_qty ?? "",
-        state,
-      ];
-    });
+        if (!hasReal && !hasUpload && !hasDownload) return null;
+
+        return [
+          ++rowIndex,
+          getProductName(item).replace(/,/g, " "),
+          getProductCode(item),
+          estado,
+          getEF(item),
+          getA(item),
+          getT(item),
+          hasReal ? realQty : "",
+          difference,
+          hasUpload ? adj.upload_qty : "",
+          hasDownload ? adj.download_qty : "",
+          state,
+        ];
+      })
+      .filter(Boolean);
 
     return { header, rows };
   }
 
   async function handleExport() {
     const { header, rows } = buildExportData();
+    if (!rows.length) {
+      alert("No hay ajustes con Real/Subir/Bajar para exportar.");
+      return;
+    }
     const filename = `inventario-ajustes.${exportFormat}`;
 
     try {
@@ -684,16 +716,24 @@ export default function InventoryPage() {
 
       if (exportFormat === EXPORT_FORMATS.xlsx.value) {
         const XLSX = await loadXLSX();
-        const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Ajustes");
-        XLSX.writeFile(workbook, filename);
+        const xlsxUtils = XLSX.utils || XLSX?.default?.utils;
+        const xlsxWriteFile = XLSX.writeFile || XLSX?.default?.writeFile;
+        if (!xlsxUtils || !xlsxWriteFile) {
+          throw new Error("No se pudo cargar XLSX");
+        }
+
+        const worksheet = xlsxUtils.aoa_to_sheet([header, ...rows]);
+        const workbook = xlsxUtils.book_new();
+        xlsxUtils.book_append_sheet(workbook, worksheet, "Ajustes");
+        xlsxWriteFile(workbook, filename);
         return;
       }
 
       if (exportFormat === EXPORT_FORMATS.pdf.value) {
-        const { jsPDF } = await loadJsPDF();
-        const doc = new jsPDF();
+        const jsPDFModule = await loadJsPDF();
+        const JsPDFCtor = jsPDFModule.jsPDF || jsPDFModule;
+        if (!JsPDFCtor) throw new Error("No se pudo cargar jsPDF");
+        const doc = new JsPDFCtor();
         doc.setFont("courier", "normal");
         doc.setFontSize(10);
         doc.text("Ajustes de inventario", 14, 16);
