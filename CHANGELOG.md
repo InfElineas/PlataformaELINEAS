@@ -80,3 +80,6 @@
 
 ## Ajustes visuales y exportación multiformato
 - `app/(app)/inventory/page.js`: se reordenaron las columnas para ubicar la “Cantidad real” entre la disponibilidad en tienda y los movimientos (Subir/Bajar T), dejando el estado del ajuste como último campo tanto en tabla como en tarjetas móviles. Se añadió selector de formato y exportación a CSV, Excel o PDF reutilizando las mismas filas calculadas.
+
+## Corrección de carga de dependencias de exportación
+- `app/(app)/inventory/page.js`: las utilidades de exportación ahora cargan `xlsx` y `jspdf` desde dependencias locales para evitar errores de build con esquemas remotos y mantener operativas las descargas en Excel y PDF.
