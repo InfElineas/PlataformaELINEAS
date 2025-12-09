@@ -5,6 +5,7 @@
 
 ## Exportación y validaciones de ajustes de inventario (actual)
 - `app/(app)/inventory/page.js`: se corrige la carga de dependencias remotas para exportar a Excel/PDF, se limita la exportación a filas con valores en Real/Subir/Bajar, se exige clasificación cuando la diferencia del conteo es distinta de cero y se muestran avisos claros si no hay filas elegibles para exportar.
+- `lib/vendor/xlsx.mjs` y `lib/vendor/jspdf.umd.min.js`: se incluyen copias locales de las librerías de exportación para eliminar errores de compilación por dependencias faltantes en la cadena de build.
 
 ## Ajustes responsivos y densidad tipográfica
 - `app/globals.css`: se redujo ligeramente el tamaño base de fuente y se evitó el scroll horizontal global para mejorar la lectura en pantallas pequeñas.

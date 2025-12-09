@@ -105,7 +105,7 @@ const loadXLSX = (() => {
   let cached;
   return async () => {
     if (!cached) {
-      const mod = await import("xlsx");
+      const mod = await import("@/lib/vendor/xlsx.mjs");
       cached = mod?.default || mod;
     }
     return cached;
@@ -116,8 +116,8 @@ const loadJsPDF = (() => {
   let cached;
   return async () => {
     if (!cached) {
-      const mod = await import("jspdf");
-      cached = mod?.default || mod;
+      const mod = await import("@/lib/vendor/jspdf.umd.min.js");
+      cached = mod?.jsPDF || mod?.default || mod;
     }
     return cached;
   };
