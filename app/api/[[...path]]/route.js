@@ -191,11 +191,26 @@ async function handleProducts(request, segments, searchParams, context) {
       andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
     const [products, total] = await Promise.all([
-      Product.find(query)
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean({ virtuals: true }),
+      Product.aggregate([
+        { $match: query },
+        { $sort: { created_at: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: "users",
+            localField: "specialist",
+            foreignField: "email",
+            as: "specialist",
+          },
+        },
+        // If you want to convert specialist array to single object
+        {
+          $addFields: {
+            specialist: { $arrayElemAt: ["$specialist", 0] },
+          },
+        },
+      ]),
       Product.countDocuments(query),
     ]);
 

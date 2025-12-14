@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAuthSession } from "@/components/providers/AuthSessionProvider";
 
 const ALL = "__ALL__";
 
@@ -188,6 +189,20 @@ function deriveOptionsFromInventory(inventory) {
     warehouses: Array.from(warehouses),
     suppliers: Array.from(suppliers),
   };
+}
+
+function fmtDate(val) {
+  if (!val) return "—";
+  const d = new Date(val);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleString("es-ES", {
+        year: "2-digit",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 }
 
 // ===== Estado tienda (mismo criterio que en Products) =====
@@ -372,6 +387,7 @@ export default function InventoryPage() {
     }));
   }
 
+  const { user } = useAuthSession();
   async function handleSaveAdjustments() {
     // construir payload sólo con las filas que tienen cambios
     const payload = [];
@@ -415,6 +431,7 @@ export default function InventoryPage() {
         disponible_tienda,
         reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
         note: adj.note || "",
+        specialist: user.email,
       });
     }
 
@@ -595,6 +612,8 @@ export default function InventoryPage() {
                   <TableHead className="text-right">A (Reserva)</TableHead>
                   <TableHead className="text-right">T (Disp. tienda)</TableHead>
                   <TableHead>Clasificación</TableHead>
+                  <TableHead>Especialista</TableHead>
+                  <TableHead>Fecha de modificación</TableHead>
                   <TableHead>Nota</TableHead>
                 </TableRow>
               </TableHeader>
@@ -620,6 +639,10 @@ export default function InventoryPage() {
                     );
                     const aValue = Number(adj.reserva ?? getA(item));
                     const tValue = Number(adj.disponible_tienda ?? getT(item));
+                    const specialist = String(
+                      item.specialist?.full_name ?? "(Vacío)",
+                    );
+                    const fecha_act = fmtDate(item.updated_at);
 
                     return (
                       <TableRow key={snapshotId}>
@@ -702,6 +725,12 @@ export default function InventoryPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {specialist}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {fecha_act}
                         </TableCell>
                         <TableCell>
                           <Input

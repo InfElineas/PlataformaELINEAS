@@ -810,6 +810,7 @@ async function seed() {
 
       status: "active",
       mgmt_mode: "managed",
+      specialist: null,
     });
 
     createdProducts.push(doc);
