@@ -337,21 +337,17 @@ function mergeOptions(...lists) {
 function deriveOptionsFromInventory(inventory) {
   const warehouses = new Set();
   const suppliers = new Set();
-  const storeStatuses = new Set();
 
   inventory.forEach((item) => {
     const wh = normalizeOption(getWarehouseLabel(item));
     const sup = normalizeOption(getSupplierLabel(item));
-    const tienda = normalizeOption(getEstadoTienda(item)?.label);
     if (wh) warehouses.add(wh);
     if (sup) suppliers.add(sup);
-    if (tienda) storeStatuses.add(tienda);
   });
 
   return {
     warehouses: Array.from(warehouses),
     suppliers: Array.from(suppliers),
-    storeStatuses: Array.from(storeStatuses),
   };
 }
 
@@ -406,7 +402,6 @@ export default function InventoryPage() {
   const [filterOptions, setFilterOptions] = useState({
     warehouses: [],
     suppliers: [],
-    storeStatuses: [],
   });
 
   // filtros de análisis
@@ -429,10 +424,8 @@ export default function InventoryPage() {
     }, 200);
     return () => clearTimeout(id);
   }, [
-    appliedFilters.existencia,
     appliedFilters.almacen,
     appliedFilters.suministrador,
-    appliedFilters.estado_tienda,
   ]);
 
   useEffect(() => {
@@ -447,14 +440,10 @@ export default function InventoryPage() {
       const params = new URLSearchParams();
       params.set("perPage", "500");
       params.set("includeFilters", "1");
-      if (appliedFilters.existencia !== ALL)
-        params.set("existencia", appliedFilters.existencia);
       if (appliedFilters.almacen !== ALL)
         params.set("almacen", appliedFilters.almacen);
       if (appliedFilters.suministrador !== ALL)
         params.set("suministrador", appliedFilters.suministrador);
-      if (appliedFilters.estado_tienda !== ALL)
-        params.set("estado_tienda", appliedFilters.estado_tienda);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -474,10 +463,6 @@ export default function InventoryPage() {
       setFilterOptions({
         warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
         suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
-        storeStatuses: mergeOptions(
-          data.meta?.storeStatuses || [],
-          derived.storeStatuses,
-        ),
       });
     } catch (err) {
       console.error("loadInventory failed", err);
@@ -500,9 +485,6 @@ export default function InventoryPage() {
         : [],
       suppliers: Array.isArray(filterOptions?.suppliers)
         ? filterOptions.suppliers
-        : [],
-      storeStatuses: Array.isArray(filterOptions?.storeStatuses)
-        ? filterOptions.storeStatuses
         : [],
     }),
     [filterOptions],
