@@ -67,19 +67,19 @@ export default function SidebarHandler({ children }) {
     <div className="flex min-h-screen bg-background text-[15px] sm:text-[16px]">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out",
+          "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r border-slate-900/40 bg-slate-950 text-slate-100 shadow-xl shadow-slate-950/30 transition-all duration-300 ease-in-out",
           collapsed ? "w-[72px]" : "w-64",
         )}
       >
         <div
           className={cn(
-            "flex h-16 items-center border-b px-4 transition-all duration-300 ease-in-out",
+            "flex h-16 items-center border-b border-white/5 px-4 transition-all duration-300 ease-in-out",
             collapsed ? "justify-center" : "justify-between",
           )}
         >
           <button
             className={cn(
-              "flex items-center gap-2 text-blue-800 transition-all duration-300 ease-in-out",
+              "flex items-center gap-2 text-white transition-all duration-300 ease-in-out",
               collapsed && "justify-center",
             )}
             onClick={() => setCollapsed(!collapsed)}
@@ -87,19 +87,19 @@ export default function SidebarHandler({ children }) {
           >
             <h1 className="text-xl font-bold leading-none">
               {collapsed ? (
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-lg text-blue-800 ring-1 ring-inset ring-blue-100">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-lg text-white ring-1 ring-inset ring-white/10">
                   E
                 </span>
               ) : (
                 <>
-                  <span className="text-red-800">E</span>líneas
+                  <span className="text-sky-300">E</span>líneas
                 </>
               )}
             </h1>
             {collapsed ? (
-              <PanelLeftOpen className="h-6 w-6" />
+              <PanelLeftOpen className="h-6 w-6 text-slate-200" />
             ) : (
-              <PanelLeftClose className="h-6 w-6" />
+              <PanelLeftClose className="h-6 w-6 text-slate-200" />
             )}
           </button>
         </div>
@@ -114,13 +114,14 @@ export default function SidebarHandler({ children }) {
             return (
               <Button
                 key={item.name}
-                variant={isActive ? "secondary" : "ghost"}
+                variant="ghost"
                 className={cn(
-                  "w-full items-center transition-all duration-300 ease-in-out",
+                  "w-full items-center justify-start text-slate-200 transition-all duration-300 ease-in-out hover:bg-white/10 hover:text-white",
                   collapsed
                     ? "justify-center px-0"
                     : "justify-start gap-3 px-4",
-                  isActive && "bg-secondary",
+                  isActive &&
+                    "bg-white/10 text-white shadow-sm shadow-slate-900/30",
                 )}
                 onClick={() => router.push(item.href)}
                 title={item.name}
@@ -138,16 +139,16 @@ export default function SidebarHandler({ children }) {
               <div className="text-sm font-medium">
                 {user?.full_name || "Usuario"}
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-slate-400">
                 {user?.email}
               </div>
             </>
           )}
           <Button
             onClick={handleSignOut}
-            variant="outline"
+            variant="ghost"
             className={cn(
-              "w-full items-center transition-all duration-300 ease-in-out",
+              "w-full items-center border border-white/10 text-slate-100 transition-all duration-300 ease-in-out hover:bg-white/10",
               collapsed ? "justify-center px-0" : "justify-start gap-2 px-4",
             )}
             title="Cerrar sesión"
@@ -157,7 +158,7 @@ export default function SidebarHandler({ children }) {
           </Button>
           <p
             className={cn(
-              "text-xs text-muted-foreground transition-opacity", 
+              "text-xs text-slate-500 transition-opacity",
               collapsed ? "text-center" : "text-left",
             )}
           >
@@ -170,7 +171,7 @@ export default function SidebarHandler({ children }) {
         className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out"
         style={contentPadding}
       >
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -193,8 +194,10 @@ export default function SidebarHandler({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 bg-background px-3 py-4 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-screen-2xl">{children}</div>
+        <main className="flex-1 bg-transparent px-3 py-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-screen-2xl rounded-3xl border border-border/60 bg-background/80 p-4 shadow-sm shadow-black/5 backdrop-blur sm:p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>
