@@ -429,6 +429,10 @@ export default function InventoryPage() {
     appliedFilters.suministrador,
   ]);
 
+  useEffect(() => {
+    setAdjustments({});
+  }, [segmentId]);
+
   // ================= Fetch inventory =================
 
   async function loadInventory() {
@@ -567,8 +571,8 @@ export default function InventoryPage() {
 
       const hasData =
         adj.real_qty !== undefined ||
-        adj.upload_qty !== undefined ||
-        adj.download_qty !== undefined ||
+        (showUploadToStore && adj.upload_qty !== undefined) ||
+        (showDownloadFromStore && adj.download_qty !== undefined) ||
         (adj.reason && adj.reason !== NO_REASON) ||
         (adj.note && adj.note.trim() !== "");
 
@@ -608,11 +612,15 @@ export default function InventoryPage() {
         difference,
         state,
         upload_qty:
-          adj.upload_qty !== undefined && adj.upload_qty !== ""
+          showUploadToStore &&
+          adj.upload_qty !== undefined &&
+          adj.upload_qty !== ""
             ? toSafeNumber(adj.upload_qty, 0)
             : 0,
         download_qty:
-          adj.download_qty !== undefined && adj.download_qty !== ""
+          showDownloadFromStore &&
+          adj.download_qty !== undefined &&
+          adj.download_qty !== ""
             ? toSafeNumber(adj.download_qty, 0)
             : 0,
         reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
