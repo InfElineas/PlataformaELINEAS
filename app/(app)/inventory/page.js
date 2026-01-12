@@ -895,31 +895,6 @@ export default function InventoryPage() {
             <div>
               <label className="mb-2 block text-sm font-medium">
                 Estado en tienda
-<<<<<<< HEAD
-              </label>
-              <Select
-                value={appliedFilters.estado_tienda}
-                onValueChange={setFilterAndApply("estado_tienda")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="(Todos)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72 overflow-auto">
-                  <SelectItem value={ALL}>(Todos)</SelectItem>
-                  {globalFilterOptions.storeStatuses.map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">
-                Segmento de análisis (Estado tienda)
-=======
->>>>>>> f2fb979 (update)
               </label>
               <Select
                 value={appliedFilters.estado_tienda}
@@ -968,7 +943,7 @@ export default function InventoryPage() {
                 </SelectContent>
               </Select>
             </div>
-
+          
             <div>
               <label className="mb-2 block text-sm font-medium">
                 Máx. productos a mostrar
@@ -986,6 +961,11 @@ export default function InventoryPage() {
                 onClick={() => setMaxRows(20)}
               >
                 Usar meta diaria (20)
+              </Button>
+            </div>
+          <div className="flex items-end">
+              <Button variant="outline" onClick={handleResetFilters}>
+                Limpiar filtros
               </Button>
             </div>
           </div>
