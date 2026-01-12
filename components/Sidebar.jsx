@@ -73,7 +73,7 @@ export default function SidebarHandler({ children }) {
       >
         <div
           className={cn(
-            "flex h-16 items-center border-b border-white/5 px-4 transition-all duration-300 ease-in-out",
+            "flex h-14 items-center border-b border-white/5 px-4 transition-all duration-300 ease-in-out",
             collapsed ? "justify-center" : "justify-between",
           )}
         >
@@ -104,7 +104,7 @@ export default function SidebarHandler({ children }) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 px-2 py-4">
+        <nav className="flex-1 space-y-0.5 px-2 py-3">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -171,7 +171,7 @@ export default function SidebarHandler({ children }) {
         className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out"
         style={contentPadding}
       >
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -194,8 +194,8 @@ export default function SidebarHandler({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 bg-transparent px-3 py-4 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-screen-2xl rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm shadow-black/5 backdrop-blur sm:p-6 overflow-hidden">
+        <main className="flex-1 bg-transparent px-2 py-3 sm:px-4 lg:px-6">
+          <div className="mx-auto w-full max-w-[1440px] rounded-2xl border border-border/60 bg-background/80 p-3 shadow-sm shadow-black/5 backdrop-blur sm:p-5 overflow-hidden">
             {children}
           </div>
         </main>
