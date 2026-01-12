@@ -413,6 +413,10 @@ export default function InventoryPage() {
   const showUploadToStore = segmentConfig.showUploadToStore;
   const showDownloadFromStore = segmentConfig.showDownloadFromStore;
 
+  const ui = getVisibleFieldsByState(segmentId);
+  const showUploadToStore = ui.showUploadToStore;
+  const showDownloadFromStore = ui.showDownloadFromStore;
+
   // ================= Efectos =================
 
   useEffect(() => {
@@ -522,10 +526,8 @@ export default function InventoryPage() {
       (item) => getEstadoTienda(item)?.id === segment.id,
     );
 
-    const limit = Number(maxRows);
-    if (!Number.isFinite(limit) || limit <= 0) return base;
-    return base.slice(0, limit);
-  }, [prioritizedInventory, segmentId, maxRows]);
+    return base.slice(0, DEFAULT_MAX_ROWS);
+  }, [prioritizedInventory, segmentId]);
 
   const handleResetFilters = () => {
     resetFilters();
@@ -1272,21 +1274,23 @@ export default function InventoryPage() {
                             {formatQty(getT(item))}
                           </p>
                         </div>
-                        <div className="rounded-md bg-muted/60 p-2 text-center">
-                          <p className="text-[11px] text-muted-foreground">Real</p>
-                          <Input
-                            type="number"
-                            className="mt-1 h-8 w-full text-center"
-                            value={adj.real_qty ?? ""}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "real_qty",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </div>
+                        {ui.showReal ? (
+                          <div className="rounded-md bg-muted/60 p-2 text-center">
+                            <p className="text-[11px] text-muted-foreground">Real</p>
+                            <Input
+                              type="number"
+                              className="mt-1 h-8 w-full text-center"
+                              value={adj.real_qty ?? ""}
+                              onChange={(e) =>
+                                updateAdjustment(
+                                  snapshotId,
+                                  "real_qty",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </div>
+                        ) : null}
                       </div>
 
                       {showUploadToStore || showDownloadFromStore ? (
