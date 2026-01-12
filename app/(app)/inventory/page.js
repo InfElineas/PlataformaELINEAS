@@ -95,43 +95,43 @@ const ANALYSIS_SEGMENTS = [
 const DEFAULT_MAX_ROWS = 200;
 
 // Reglas de UI por segmento de análisis
-const SEGMENT_CONFIG = {
+const FIELDS_BY_STATE = {
   sin_reserva: {
-    showStoreStatus: false,
+    showReal: true,
     showUploadToStore: false,
     showDownloadFromStore: true,
   },
   no_tienda: {
-    showStoreStatus: false,
+    showReal: true,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   ultimas: {
-    showStoreStatus: false,
+    showReal: true,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   proximo: {
-    showStoreStatus: false,
+    showReal: true,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   sin_id: {
-    showStoreStatus: false,
+    showReal: true,
     showUploadToStore: false,
     showDownloadFromStore: false,
     // TODO: Confirmar si se debe permitir acción manual con productos sin ID.
   },
+  default: {
+    showReal: true,
+    showUploadToStore: false,
+    showDownloadFromStore: false,
+  },
 };
 
-const PRIORITY_BADGES = {
-  sin_reserva: { variant: "destructive" },
-  no_tienda: { variant: "destructive" },
-  ultimas: { variant: "secondary" },
-  proximo: { variant: "secondary" },
-  sin_id: { variant: "destructive" },
-  disponible: { variant: "default" },
-};
+function getVisibleFieldsByState(segmentId) {
+  return FIELDS_BY_STATE[segmentId] || FIELDS_BY_STATE.default;
+}
 
 const loadXLSX = (() => {
   let cached;
@@ -382,13 +382,6 @@ function getEstadoTienda(item) {
   return { id: "disponible", label: "Disponible" };
 }
 
-function badgeVariantEstadoTienda(label) {
-  const match = Object.entries(PRIORITY_BADGES).find(([key]) =>
-    label.toLowerCase().includes(key.replace("_", " ")),
-  );
-  return match ? match[1].variant : "default";
-}
-
 export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -408,11 +401,6 @@ export default function InventoryPage() {
   // ajustes en edición: { [snapshotId]: { real_qty, upload_qty, download_qty, reason, note } }
   const [adjustments, setAdjustments] = useState({});
   const [exportFormat, setExportFormat] = useState(EXPORT_FORMATS.csv.value);
-  const segmentConfig = SEGMENT_CONFIG[segmentId] || SEGMENT_CONFIG.sin_reserva;
-  const showStoreStatus = segmentConfig.showStoreStatus;
-  const showUploadToStore = segmentConfig.showUploadToStore;
-  const showDownloadFromStore = segmentConfig.showDownloadFromStore;
-
   const ui = getVisibleFieldsByState(segmentId);
   const showUploadToStore = ui.showUploadToStore;
   const showDownloadFromStore = ui.showDownloadFromStore;
@@ -678,12 +666,6 @@ export default function InventoryPage() {
         value: (item) => getProductCode(item),
       },
       {
-        key: "estado",
-        label: "Estado tienda",
-        show: segmentConfig.showStoreStatus,
-        value: (item) => getEstadoTienda(item)?.label || "",
-      },
-      {
         key: "ef",
         label: "EF plataforma",
         value: (item) => getEF(item),
@@ -701,6 +683,7 @@ export default function InventoryPage() {
       {
         key: "real",
         label: "Real",
+        show: ui.showReal,
         value: (_item, adj, _index, helpers) =>
           helpers.hasReal ? helpers.realQty : "",
       },
@@ -712,14 +695,14 @@ export default function InventoryPage() {
       {
         key: "upload",
         label: "Subir tienda",
-        show: segmentConfig.showUploadToStore,
+        show: showUploadToStore,
         value: (_item, adj, _index, helpers) =>
           helpers.hasUpload ? adj.upload_qty : "",
       },
       {
         key: "download",
         label: "Bajar tienda",
-        show: segmentConfig.showDownloadFromStore,
+        show: showDownloadFromStore,
         value: (_item, adj, _index, helpers) =>
           helpers.hasDownload ? adj.download_qty : "",
       },
@@ -748,9 +731,8 @@ export default function InventoryPage() {
           adj.download_qty !== null &&
           adj.download_qty !== "";
 
-        const hasSegmentUpload = segmentConfig.showUploadToStore && hasUpload;
-        const hasSegmentDownload =
-          segmentConfig.showDownloadFromStore && hasDownload;
+        const hasSegmentUpload = showUploadToStore && hasUpload;
+        const hasSegmentDownload = showDownloadFromStore && hasDownload;
 
         if (!hasReal && !hasSegmentUpload && !hasSegmentDownload) return null;
 
@@ -853,14 +835,6 @@ export default function InventoryPage() {
 
   const tableColumns = [
     {
-      key: "estado",
-      label: "Estado tienda",
-      show: segmentConfig.showStoreStatus,
-      cell: ({ estado, variant }) => (
-        <Badge variant={variant}>{estado?.label}</Badge>
-      ),
-    },
-    {
       key: "code",
       label: "Cód. Prod.",
       className: "font-mono text-xs",
@@ -900,6 +874,7 @@ export default function InventoryPage() {
       key: "real",
       label: "Real",
       className: "text-right",
+      show: ui.showReal,
       cell: ({ snapshotId, adj }) => (
         <Input
           type="number"
@@ -915,7 +890,7 @@ export default function InventoryPage() {
       key: "upload",
       label: "Subir T",
       className: "text-right",
-      show: segmentConfig.showUploadToStore,
+      show: showUploadToStore,
       cell: ({ snapshotId, adj }) => (
         <Input
           type="number"
@@ -931,7 +906,7 @@ export default function InventoryPage() {
       key: "download",
       label: "Bajar T",
       className: "text-right",
-      show: segmentConfig.showDownloadFromStore,
+      show: showDownloadFromStore,
       cell: ({ snapshotId, adj }) => (
         <Input
           type="number"
@@ -1192,8 +1167,6 @@ export default function InventoryPage() {
                   <TableBody>
                     {filteredInventory.map((item) => {
                       const snapshotId = item._id;
-                      const estado = getEstadoTienda(item);
-                      const variant = badgeVariantEstadoTienda(estado?.label || "");
                       const adj = adjustments[snapshotId] || {};
                       const { state, difference } = resolveAdjustmentState(
                         item,
@@ -1211,8 +1184,6 @@ export default function InventoryPage() {
                                 item,
                                 adj,
                                 snapshotId,
-                                estado,
-                                variant,
                                 state,
                                 difference,
                               })}
@@ -1228,8 +1199,6 @@ export default function InventoryPage() {
               <div className="space-y-3 md:hidden">
                 {filteredInventory.map((item) => {
                   const snapshotId = item._id;
-                  const estado = getEstadoTienda(item);
-                  const variant = badgeVariantEstadoTienda(estado?.label || "");
                   const adj = adjustments[snapshotId] || {};
                   const { state, difference } = resolveAdjustmentState(item, adj);
 
@@ -1250,9 +1219,6 @@ export default function InventoryPage() {
                             {getSupplierLabel(item) || "Suministrador no asignado"}
                           </p>
                         </div>
-                        {showStoreStatus ? (
-                          <Badge variant={variant}>{estado?.label}</Badge>
-                        ) : null}
                       </div>
 
                       <div className="grid grid-cols-4 gap-2 text-xs">
