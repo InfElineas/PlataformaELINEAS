@@ -64,6 +64,14 @@ export function useProductFilters() {
     setPendingFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const applyFilter = (key, value) => {
+    setPendingFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      setAppliedFilters(next);
+      return next;
+    });
+  };
+
   const applyFilters = () => {
     setAppliedFilters(pendingFilters);
   };
@@ -83,6 +91,7 @@ export function useProductFilters() {
       sort,
       setSearch,
       setPendingFilter,
+      applyFilter,
       setSort,
       applyFilters,
       resetFilters,
