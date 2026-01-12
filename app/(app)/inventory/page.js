@@ -92,7 +92,6 @@ const ANALYSIS_SEGMENTS = [
   { id: "sin_id", label: "Sin ID", priority: 4 },
 ];
 
-<<<<<<< HEAD
 const DEFAULT_MAX_ROWS = 200;
 
 // Reglas de UI por segmento de análisis
@@ -121,12 +120,9 @@ const SEGMENT_CONFIG = {
     showStoreStatus: false,
     showUploadToStore: false,
     showDownloadFromStore: false,
-    // TODO: Confirmar si se debe permitir acción manual con productos sin ID.
   },
 };
 
-=======
->>>>>>> f2fb979 (update)
 const PRIORITY_BADGES = {
   sin_reserva: { variant: "destructive" },
   no_tienda: { variant: "destructive" },
@@ -258,9 +254,7 @@ function toSafeNumber(value, fallback = 0) {
 
 function formatQty(value) {
   const num = toSafeNumber(value, 0);
-  return new Intl.NumberFormat("es-ES", {
-    maximumFractionDigits: 2,
-  }).format(num);
+  return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(num);
 }
 
 function getEF(item) {
@@ -316,10 +310,10 @@ function getSupplierLabel(item) {
 function getProductName(item) {
   return (
     item.name ??
-      item.product_name ??
-      item.product ??
-      item.title ??
-      ""
+    item.product_name ??
+    item.product ??
+    item.title ??
+    ""
   ).toString();
 }
 
@@ -358,7 +352,7 @@ function deriveOptionsFromInventory(inventory) {
   };
 }
 
-// ===== Estado tienda (mismo criterio que en Products) =====
+// ===== Estado tienda =====
 
 function getEstadoTienda(item) {
   const ID = getProductCode(item);
@@ -366,34 +360,22 @@ function getEstadoTienda(item) {
   const A = getA(item);
   const T = getT(item);
 
-  if (!ID) {
-    return { id: "sin_id", label: "Sin ID" };
-  }
+  if (!ID) return { id: "sin_id", label: "Sin ID" };
 
-  if (A === 0 && (T > 0 || EF > 0)) {
-    return { id: "sin_reserva", label: "Sin reserva" };
-  }
+  if (A === 0 && (T > 0 || EF > 0)) return { id: "sin_reserva", label: "Sin reserva" };
 
-  if (T === 0) {
-    return { id: "no_tienda", label: "No en tienda" };
-  }
+  if (T === 0) return { id: "no_tienda", label: "No en tienda" };
 
-  if (T <= 10) {
-    return { id: "proximo", label: "Proximo" };
-  }
+  if (T <= 10) return { id: "proximo", label: "Proximo" };
 
-  if (T > 1 && T <= A) {
-    return { id: "ultimas", label: "Ultimas piezas" };
-  }
+  if (T > 1 && T <= A) return { id: "ultimas", label: "Ultimas piezas" };
 
   return { id: "disponible", label: "Disponible" };
 }
 
-function badgeVariantEstadoTienda(label) {
-  const match = Object.entries(PRIORITY_BADGES).find(([key]) =>
-    label.toLowerCase().includes(key.replace("_", " ")),
-  );
-  return match ? match[1].variant : "default";
+function badgeVariantEstadoTienda(estado) {
+  const id = estado?.id || "";
+  return PRIORITY_BADGES[id]?.variant ?? "default";
 }
 
 export default function InventoryPage() {
@@ -401,11 +383,8 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(false);
 
   // filtros globales compartidos con productos
-  const {
-    appliedFilters,
-    applyFilter,
-    resetFilters,
-  } = useGlobalProductFilters();
+  const { appliedFilters, applyFilter, resetFilters } = useGlobalProductFilters();
+
   const [filterOptions, setFilterOptions] = useState({
     warehouses: [],
     suppliers: [],
@@ -420,6 +399,12 @@ export default function InventoryPage() {
   const [adjustments, setAdjustments] = useState({});
   const [exportFormat, setExportFormat] = useState(EXPORT_FORMATS.csv.value);
 
+  // UI flags por segmento
+  const segmentUi = SEGMENT_CONFIG[segmentId] || SEGMENT_CONFIG.sin_reserva;
+  const showStoreStatus = !!segmentUi.showStoreStatus; // reservado para futuro
+  const showUploadToStore = !!segmentUi.showUploadToStore;
+  const showDownloadFromStore = !!segmentUi.showDownloadFromStore;
+
   // ================= Efectos =================
 
   useEffect(() => {
@@ -428,6 +413,7 @@ export default function InventoryPage() {
       setAdjustments({});
     }, 200);
     return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     appliedFilters.existencia,
     appliedFilters.almacen,
@@ -447,18 +433,13 @@ export default function InventoryPage() {
       const params = new URLSearchParams();
       params.set("perPage", "500");
       params.set("includeFilters", "1");
-      if (appliedFilters.existencia !== ALL)
-        params.set("existencia", appliedFilters.existencia);
-      if (appliedFilters.almacen !== ALL)
-        params.set("almacen", appliedFilters.almacen);
-      if (appliedFilters.suministrador !== ALL)
-        params.set("suministrador", appliedFilters.suministrador);
-      if (appliedFilters.estado_tienda !== ALL)
-        params.set("estado_tienda", appliedFilters.estado_tienda);
 
-      const res = await fetch(`/api/products?${params.toString()}`, {
-        cache: "no-store",
-      });
+      if (appliedFilters.existencia !== ALL) params.set("existencia", appliedFilters.existencia);
+      if (appliedFilters.almacen !== ALL) params.set("almacen", appliedFilters.almacen);
+      if (appliedFilters.suministrador !== ALL) params.set("suministrador", appliedFilters.suministrador);
+      if (appliedFilters.estado_tienda !== ALL) params.set("estado_tienda", appliedFilters.estado_tienda);
+
+      const res = await fetch(`/api/products?${params.toString()}`, { cache: "no-store" });
 
       if (!res.ok) {
         console.error("Inventory API error", res.status);
@@ -474,10 +455,7 @@ export default function InventoryPage() {
       setFilterOptions({
         warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
         suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
-        storeStatuses: mergeOptions(
-          data.meta?.storeStatuses || [],
-          derived.storeStatuses,
-        ),
+        storeStatuses: mergeOptions(data.meta?.storeStatuses || [], derived.storeStatuses),
       });
     } catch (err) {
       console.error("loadInventory failed", err);
@@ -495,15 +473,9 @@ export default function InventoryPage() {
 
   const globalFilterOptions = useMemo(
     () => ({
-      warehouses: Array.isArray(filterOptions?.warehouses)
-        ? filterOptions.warehouses
-        : [],
-      suppliers: Array.isArray(filterOptions?.suppliers)
-        ? filterOptions.suppliers
-        : [],
-      storeStatuses: Array.isArray(filterOptions?.storeStatuses)
-        ? filterOptions.storeStatuses
-        : [],
+      warehouses: Array.isArray(filterOptions?.warehouses) ? filterOptions.warehouses : [],
+      suppliers: Array.isArray(filterOptions?.suppliers) ? filterOptions.suppliers : [],
+      storeStatuses: Array.isArray(filterOptions?.storeStatuses) ? filterOptions.storeStatuses : [],
     }),
     [filterOptions],
   );
@@ -511,9 +483,7 @@ export default function InventoryPage() {
   // ================= Inventario filtrado + segmentado =================
 
   const prioritizedInventory = useMemo(() => {
-    const order = Object.fromEntries(
-      ANALYSIS_SEGMENTS.map((s, idx) => [s.id, idx]),
-    );
+    const order = Object.fromEntries(ANALYSIS_SEGMENTS.map((s, idx) => [s.id, idx]));
 
     return [...inventory]
       .map((item) => ({ item, estado: getEstadoTienda(item) }))
@@ -521,33 +491,30 @@ export default function InventoryPage() {
         const pa = order[a.estado?.id] ?? 99;
         const pb = order[b.estado?.id] ?? 99;
         if (pa !== pb) return pa - pb;
+
         const efDiff = getEF(b.item) - getEF(a.item);
         if (efDiff !== 0) return efDiff;
-        return getProductName(a.item).localeCompare(
-          getProductName(b.item),
-          "es",
-        );
+
+        return getProductName(a.item).localeCompare(getProductName(b.item), "es");
       })
       .map(({ item }) => item);
   }, [inventory]);
 
   const filteredInventory = useMemo(() => {
-    const segment =
-      ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) || ANALYSIS_SEGMENTS[0];
+    const segment = ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) || ANALYSIS_SEGMENTS[0];
 
-    const base = prioritizedInventory.filter(
-      (item) => getEstadoTienda(item)?.id === segment.id,
-    );
+    const base = prioritizedInventory.filter((item) => getEstadoTienda(item)?.id === segment.id);
 
     const limit = Number(maxRows);
     if (!Number.isFinite(limit) || limit <= 0) return base;
-    return base.slice(0, limit);
+
+    return base.slice(0, Math.min(limit, DEFAULT_MAX_ROWS));
   }, [prioritizedInventory, segmentId, maxRows]);
 
   const handleResetFilters = () => {
     resetFilters();
-      setSegmentId("sin_reserva");
-      setMaxRows(20);
+    setSegmentId("sin_reserva");
+    setMaxRows(20);
   };
 
   // ================= Edición de ajustes =================
@@ -563,9 +530,7 @@ export default function InventoryPage() {
   }
 
   function resolveRealQty(item, adj) {
-    if (adj.real_qty === undefined || adj.real_qty === null || adj.real_qty === "") {
-      return null;
-    }
+    if (adj.real_qty === undefined || adj.real_qty === null || adj.real_qty === "") return null;
     const parsed = Number(adj.real_qty);
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -581,7 +546,6 @@ export default function InventoryPage() {
   }
 
   async function handleSaveAdjustments() {
-    // construir payload sólo con las filas que tienen cambios
     const payload = [];
 
     for (const item of inventory) {
@@ -604,16 +568,9 @@ export default function InventoryPage() {
       const real_qty = resolveRealQty(item, adj);
       const { state, difference } = resolveAdjustmentState(item, adj);
 
-      if (
-        real_qty !== null &&
-        real_qty !== undefined &&
-        difference !== 0 &&
-        (!adj.reason || adj.reason === NO_REASON)
-      ) {
+      if (real_qty !== null && difference !== 0 && (!adj.reason || adj.reason === NO_REASON)) {
         alert(
-          `La clasificación es obligatoria cuando hay diferencia en el conteo (producto: ${getProductName(
-            item,
-          )}).`,
+          `La clasificación es obligatoria cuando hay diferencia en el conteo (producto: ${getProductName(item)}).`,
         );
         return;
       }
@@ -631,15 +588,11 @@ export default function InventoryPage() {
         difference,
         state,
         upload_qty:
-          showUploadToStore &&
-          adj.upload_qty !== undefined &&
-          adj.upload_qty !== ""
+          showUploadToStore && adj.upload_qty !== undefined && adj.upload_qty !== ""
             ? toSafeNumber(adj.upload_qty, 0)
             : 0,
         download_qty:
-          showDownloadFromStore &&
-          adj.download_qty !== undefined &&
-          adj.download_qty !== ""
+          showDownloadFromStore && adj.download_qty !== undefined && adj.download_qty !== ""
             ? toSafeNumber(adj.download_qty, 0)
             : 0,
         reason: adj.reason && adj.reason !== NO_REASON ? adj.reason : null,
@@ -665,7 +618,6 @@ export default function InventoryPage() {
         return;
       }
 
-      // opcional: recargar snapshot para ver valores actualizados
       await loadInventory();
       setAdjustments({});
       alert("Ajustes guardados correctamente.");
@@ -686,8 +638,8 @@ export default function InventoryPage() {
       "T (Disp. tienda)",
       "Real",
       "Diferencia",
-      "Subir tienda",
-      "Bajar tienda",
+      ...(showUploadToStore ? ["Subir tienda"] : []),
+      ...(showDownloadFromStore ? ["Bajar tienda"] : []),
       "Estado ajuste",
     ];
 
@@ -698,17 +650,15 @@ export default function InventoryPage() {
         const { state, difference } = resolveAdjustmentState(item, adj);
         const realQty = resolveRealQty(item, adj);
         const estado = getEstadoTienda(item)?.label || "";
+
         const hasReal = realQty !== null && realQty !== undefined && realQty !== "";
-        const hasUpload =
-          adj.upload_qty !== undefined && adj.upload_qty !== null && adj.upload_qty !== "";
+        const hasUpload = showUploadToStore && adj.upload_qty !== undefined && adj.upload_qty !== "";
         const hasDownload =
-          adj.download_qty !== undefined &&
-          adj.download_qty !== null &&
-          adj.download_qty !== "";
+          showDownloadFromStore && adj.download_qty !== undefined && adj.download_qty !== "";
 
         if (!hasReal && !hasUpload && !hasDownload) return null;
 
-        return [
+        const base = [
           ++rowIndex,
           getProductName(item).replace(/,/g, " "),
           getProductCode(item),
@@ -718,10 +668,13 @@ export default function InventoryPage() {
           getT(item),
           hasReal ? realQty : "",
           difference,
-          hasUpload ? adj.upload_qty : "",
-          hasDownload ? adj.download_qty : "",
-          state,
         ];
+
+        if (showUploadToStore) base.push(hasUpload ? adj.upload_qty : "");
+        if (showDownloadFromStore) base.push(hasDownload ? adj.download_qty : "");
+
+        base.push(state);
+        return base;
       })
       .filter(Boolean);
 
@@ -755,9 +708,7 @@ export default function InventoryPage() {
         const XLSX = await loadXLSX();
         const xlsxUtils = XLSX.utils || XLSX?.default?.utils;
         const xlsxWriteFile = XLSX.writeFile || XLSX?.default?.writeFile;
-        if (!xlsxUtils || !xlsxWriteFile) {
-          throw new Error("No se pudo cargar XLSX");
-        }
+        if (!xlsxUtils || !xlsxWriteFile) throw new Error("No se pudo cargar XLSX");
 
         const worksheet = xlsxUtils.aoa_to_sheet([header, ...rows]);
         const workbook = xlsxUtils.book_new();
@@ -770,24 +721,34 @@ export default function InventoryPage() {
         const jsPDFModule = await loadJsPDF();
         const JsPDFCtor = jsPDFModule.jsPDF || jsPDFModule;
         if (!JsPDFCtor) throw new Error("No se pudo cargar jsPDF");
+
         const doc = new JsPDFCtor();
         doc.setFont("courier", "normal");
         doc.setFontSize(10);
         doc.text("Ajustes de inventario", 14, 16);
 
         const startY = 24;
-        const colWidths = [10, 36, 24, 28, 18, 18, 18, 18, 18, 18, 18, 22];
+
+        const baseWidths = [10, 36, 24, 28, 18, 18, 18, 18, 18];
+        const extraWidths = [
+          ...(showUploadToStore ? [18] : []),
+          ...(showDownloadFromStore ? [18] : []),
+          22,
+        ];
+        const colWidths = [...baseWidths, ...extraWidths];
+
         const renderRow = (row, y) => {
           let x = 14;
           row.forEach((cell, idx) => {
             const text = String(cell ?? "");
             doc.text(text.substring(0, 20), x, y);
-            x += colWidths[idx];
+            x += colWidths[idx] ?? 18;
           });
         };
 
         renderRow(header, startY);
         let y = startY + 6;
+
         rows.forEach((row) => {
           if (y > 280) {
             doc.addPage();
@@ -814,8 +775,7 @@ export default function InventoryPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">Inventario</h1>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Ver niveles de inventario con filtros globales de existencias y
-          suministradores.
+          Ver niveles de inventario con filtros globales de existencias y suministradores.
         </p>
       </div>
 
@@ -824,19 +784,10 @@ export default function InventoryPage() {
           <CardTitle className="text-lg sm:text-xl">Inventario</CardTitle>
 
           {/* Filtros globales */}
-<<<<<<< HEAD
-          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-=======
           <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
->>>>>>> f2fb979 (update)
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Existencia Física
-              </label>
-              <Select
-                value={appliedFilters.existencia}
-                onValueChange={setFilterAndApply("existencia")}
-              >
+              <label className="mb-2 block text-sm font-medium">Existencia Física</label>
+              <Select value={appliedFilters.existencia} onValueChange={setFilterAndApply("existencia")}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todas)" />
                 </SelectTrigger>
@@ -849,13 +800,8 @@ export default function InventoryPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Almacén
-              </label>
-              <Select
-                value={appliedFilters.almacen}
-                onValueChange={setFilterAndApply("almacen")}
-              >
+              <label className="mb-2 block text-sm font-medium">Almacén</label>
+              <Select value={appliedFilters.almacen} onValueChange={setFilterAndApply("almacen")}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
@@ -871,13 +817,8 @@ export default function InventoryPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Suministrador
-              </label>
-              <Select
-                value={appliedFilters.suministrador}
-                onValueChange={setFilterAndApply("suministrador")}
-              >
+              <label className="mb-2 block text-sm font-medium">Suministrador</label>
+              <Select value={appliedFilters.suministrador} onValueChange={setFilterAndApply("suministrador")}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
@@ -893,13 +834,8 @@ export default function InventoryPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Estado en tienda
-              </label>
-              <Select
-                value={appliedFilters.estado_tienda}
-                onValueChange={setFilterAndApply("estado_tienda")}
-              >
+              <label className="mb-2 block text-sm font-medium">Estado en tienda</label>
+              <Select value={appliedFilters.estado_tienda} onValueChange={setFilterAndApply("estado_tienda")}>
                 <SelectTrigger>
                   <SelectValue placeholder="(Todos)" />
                 </SelectTrigger>
@@ -927,10 +863,7 @@ export default function InventoryPage() {
               <label className="mb-2 block text-sm font-medium">
                 Segmento de análisis (Estado tienda)
               </label>
-              <Select
-                value={segmentId}
-                onValueChange={setSegmentId}
-              >
+              <Select value={segmentId} onValueChange={setSegmentId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -943,29 +876,21 @@ export default function InventoryPage() {
                 </SelectContent>
               </Select>
             </div>
-          
+
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Máx. productos a mostrar
-              </label>
+              <label className="mb-2 block text-sm font-medium">Máx. productos a mostrar</label>
               <Input
                 type="number"
                 min={1}
+                max={DEFAULT_MAX_ROWS}
                 value={maxRows}
-                onChange={(e) => setMaxRows(e.target.value)}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setMaxRows(Number.isFinite(n) ? n : 20);
+                }}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-                onClick={() => setMaxRows(20)}
-              >
+              <Button variant="ghost" size="sm" className="mt-2" onClick={() => setMaxRows(20)}>
                 Usar meta diaria (20)
-              </Button>
-            </div>
-          <div className="flex items-end">
-              <Button variant="outline" onClick={handleResetFilters}>
-                Limpiar filtros
               </Button>
             </div>
           </div>
@@ -974,22 +899,15 @@ export default function InventoryPage() {
         <CardContent className="space-y-4 rounded-lg border border-border/60 p-3 sm:p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground leading-tight">
-              {loading
-                ? "Cargando inventario…"
-                : `${filteredInventory.length} producto(s) en la cola actual`}
+              {loading ? "Cargando inventario…" : `${filteredInventory.length} producto(s) en la cola actual`}
             </span>
+
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                onClick={handleSaveAdjustments}
-                disabled={loading}
-              >
+              <Button size="sm" onClick={handleSaveAdjustments} disabled={loading}>
                 Guardar ajustes
               </Button>
-              <Select
-                value={exportFormat}
-                onValueChange={(value) => setExportFormat(value)}
-              >
+
+              <Select value={exportFormat} onValueChange={(value) => setExportFormat(value)}>
                 <SelectTrigger className="h-8 w-[150px]">
                   <SelectValue placeholder="Formato" />
                 </SelectTrigger>
@@ -1001,6 +919,7 @@ export default function InventoryPage() {
                   ))}
                 </SelectContent>
               </Select>
+
               <Button
                 size="sm"
                 variant="secondary"
@@ -1013,15 +932,14 @@ export default function InventoryPage() {
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">
-              Cargando...
-            </div>
+            <div className="py-8 text-center text-muted-foreground">Cargando...</div>
           ) : filteredInventory.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               No hay datos de inventario para los filtros seleccionados.
             </div>
           ) : (
             <>
+              {/* Desktop */}
               <div className="hidden overflow-x-auto rounded-lg border border-border/60 md:block">
                 <Table className="w-full">
                   <TableHeader>
@@ -1030,130 +948,109 @@ export default function InventoryPage() {
                       <TableHead>Cód. Prod.</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead>Suministrador</TableHead>
-                      <TableHead className="text-right">
-                        EF (Existencia física)
-                      </TableHead>
-                      <TableHead className="text-right">
-                        A (Reserva)
-                      </TableHead>
-                      <TableHead className="text-right">
-                        T (Disp. tienda)
-                      </TableHead>
+                      <TableHead className="text-right">EF (Existencia física)</TableHead>
+                      <TableHead className="text-right">A (Reserva)</TableHead>
+                      <TableHead className="text-right">T (Disp. tienda)</TableHead>
                       <TableHead className="text-right">Real</TableHead>
-                      <TableHead className="text-right">Subir T</TableHead>
-                      <TableHead className="text-right">Bajar T</TableHead>
+                      {showUploadToStore && <TableHead className="text-right">Subir T</TableHead>}
+                      {showDownloadFromStore && <TableHead className="text-right">Bajar T</TableHead>}
                       <TableHead>Clasificación</TableHead>
                       <TableHead>Nota</TableHead>
                       <TableHead>Estado ajuste</TableHead>
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
                     {filteredInventory.map((item) => {
                       const snapshotId = item._id;
                       const estado = getEstadoTienda(item);
-                      const variant = badgeVariantEstadoTienda(estado?.label || "");
+                      const variant = badgeVariantEstadoTienda(estado);
                       const adj = adjustments[snapshotId] || {};
-                      const { state, difference } = resolveAdjustmentState(
-                        item,
-                        adj,
-                      );
+                      const { state, difference } = resolveAdjustmentState(item, adj);
 
                       return (
                         <TableRow key={snapshotId}>
                           <TableCell>
                             <Badge variant={variant}>{estado?.label}</Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {getProductCode(item)}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {getProductName(item) || "—"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {getSupplierLabel(item) || "—"}
-                          </TableCell>
+
+                          <TableCell className="font-mono text-xs">{getProductCode(item)}</TableCell>
+
+                          <TableCell className="text-sm">{getProductName(item) || "—"}</TableCell>
+
+                          <TableCell className="text-sm">{getSupplierLabel(item) || "—"}</TableCell>
+
                           <TableCell className="text-right font-mono text-sm tabular-nums">
                             {formatQty(getEF(item))}
                           </TableCell>
+
                           <TableCell className="text-right font-mono text-sm tabular-nums">
                             {formatQty(getA(item))}
                           </TableCell>
+
                           <TableCell className="text-right font-mono text-sm tabular-nums">
                             {formatQty(getT(item))}
                           </TableCell>
+
                           <TableCell className="text-right">
                             <Input
                               type="number"
                               className="h-8 w-24 text-right"
                               value={adj.real_qty ?? ""}
-                              onChange={(e) =>
-                                updateAdjustment(snapshotId, "real_qty", e.target.value)
-                              }
+                              onChange={(e) => updateAdjustment(snapshotId, "real_qty", e.target.value)}
                             />
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              className="h-8 w-20 text-right"
-                              value={adj.upload_qty ?? ""}
-                              onChange={(e) =>
-                                updateAdjustment(snapshotId, "upload_qty", e.target.value)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              className="h-8 w-20 text-right"
-                              value={adj.download_qty ?? ""}
-                              onChange={(e) =>
-                                updateAdjustment(snapshotId, "download_qty", e.target.value)
-                              }
-                            />
-                          </TableCell>
+
+                          {showUploadToStore && (
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                className="h-8 w-20 text-right"
+                                value={adj.upload_qty ?? ""}
+                                onChange={(e) => updateAdjustment(snapshotId, "upload_qty", e.target.value)}
+                              />
+                            </TableCell>
+                          )}
+
+                          {showDownloadFromStore && (
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                className="h-8 w-20 text-right"
+                                value={adj.download_qty ?? ""}
+                                onChange={(e) => updateAdjustment(snapshotId, "download_qty", e.target.value)}
+                              />
+                            </TableCell>
+                          )}
+
                           <TableCell>
                             <Select
                               value={adj.reason || NO_REASON}
-                              onValueChange={(v) =>
-                                updateAdjustment(
-                                  snapshotId,
-                                  "reason",
-                                  v || NO_REASON
-                                )
-                              }
+                              onValueChange={(v) => updateAdjustment(snapshotId, "reason", v || NO_REASON)}
                             >
                               <SelectTrigger className="h-8 w-64">
                                 <SelectValue placeholder="Seleccionar..." />
                               </SelectTrigger>
                               <SelectContent className="max-h-72 overflow-auto">
-                                <SelectItem value={NO_REASON}>
-                                  (Sin clasificación)
-                                </SelectItem>
+                                <SelectItem value={NO_REASON}>(Sin clasificación)</SelectItem>
                                 {ADJUSTMENT_REASONS.map((reason) => (
-                                  <SelectItem
-                                    key={reason}
-                                    value={reason}
-                                  >
+                                  <SelectItem key={reason} value={reason}>
                                     {reason}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </TableCell>
+
                           <TableCell>
                             <Input
                               className="h-8 w-64"
                               placeholder="Nota..."
                               value={adj.note || ""}
-                              onChange={(e) =>
-                                updateAdjustment(
-                                  snapshotId,
-                                  "note",
-                                  e.target.value
-                                )
-                              }
+                              onChange={(e) => updateAdjustment(snapshotId, "note", e.target.value)}
                             />
                           </TableCell>
+
                           <TableCell>
                             <Badge variant={state === "ok" ? "default" : "secondary"}>
                               {state.toUpperCase()}
@@ -1167,11 +1064,12 @@ export default function InventoryPage() {
                 </Table>
               </div>
 
+              {/* Mobile */}
               <div className="space-y-3 md:hidden">
                 {filteredInventory.map((item) => {
                   const snapshotId = item._id;
                   const estado = getEstadoTienda(item);
-                  const variant = badgeVariantEstadoTienda(estado?.label || "");
+                  const variant = badgeVariantEstadoTienda(estado);
                   const adj = adjustments[snapshotId] || {};
                   const { state, difference } = resolveAdjustmentState(item, adj);
 
@@ -1182,9 +1080,7 @@ export default function InventoryPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {getProductCode(item)}
-                          </p>
+                          <p className="text-xs text-muted-foreground font-mono">{getProductCode(item)}</p>
                           <p className="text-sm font-semibold leading-tight">
                             {getProductName(item) || "Producto sin nombre"}
                           </p>
@@ -1198,21 +1094,15 @@ export default function InventoryPage() {
                       <div className="grid grid-cols-4 gap-2 text-xs">
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">EF</p>
-                          <p className="mt-1 font-mono text-sm tabular-nums">
-                            {formatQty(getEF(item))}
-                          </p>
+                          <p className="mt-1 font-mono text-sm tabular-nums">{formatQty(getEF(item))}</p>
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">A</p>
-                          <p className="mt-1 font-mono text-sm tabular-nums">
-                            {formatQty(getA(item))}
-                          </p>
+                          <p className="mt-1 font-mono text-sm tabular-nums">{formatQty(getA(item))}</p>
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">T</p>
-                          <p className="mt-1 font-mono text-sm tabular-nums">
-                            {formatQty(getT(item))}
-                          </p>
+                          <p className="mt-1 font-mono text-sm tabular-nums">{formatQty(getT(item))}</p>
                         </div>
                         <div className="rounded-md bg-muted/60 p-2 text-center">
                           <p className="text-[11px] text-muted-foreground">Real</p>
@@ -1220,68 +1110,49 @@ export default function InventoryPage() {
                             type="number"
                             className="mt-1 h-8 w-full text-center"
                             value={adj.real_qty ?? ""}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "real_qty",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => updateAdjustment(snapshotId, "real_qty", e.target.value)}
                           />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="rounded-md bg-muted/60 p-2 text-center">
-                          <p className="text-[11px] text-muted-foreground">Subir T</p>
-                          <Input
-                            type="number"
-                            className="mt-1 h-8 w-full text-center"
-                            value={adj.upload_qty ?? ""}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "upload_qty",
-                                e.target.value,
-                              )
-                            }
-                          />
+                      {(showUploadToStore || showDownloadFromStore) && (
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {showUploadToStore && (
+                            <div className="rounded-md bg-muted/60 p-2 text-center">
+                              <p className="text-[11px] text-muted-foreground">Subir T</p>
+                              <Input
+                                type="number"
+                                className="mt-1 h-8 w-full text-center"
+                                value={adj.upload_qty ?? ""}
+                                onChange={(e) => updateAdjustment(snapshotId, "upload_qty", e.target.value)}
+                              />
+                            </div>
+                          )}
+
+                          {showDownloadFromStore && (
+                            <div className="rounded-md bg-muted/60 p-2 text-center">
+                              <p className="text-[11px] text-muted-foreground">Bajar T</p>
+                              <Input
+                                type="number"
+                                className="mt-1 h-8 w-full text-center"
+                                value={adj.download_qty ?? ""}
+                                onChange={(e) => updateAdjustment(snapshotId, "download_qty", e.target.value)}
+                              />
+                            </div>
+                          )}
                         </div>
-                        <div className="rounded-md bg-muted/60 p-2 text-center">
-                          <p className="text-[11px] text-muted-foreground">Bajar T</p>
-                          <Input
-                            type="number"
-                            className="mt-1 h-8 w-full text-center"
-                            value={adj.download_qty ?? ""}
-                            onChange={(e) =>
-                              updateAdjustment(
-                                snapshotId,
-                                "download_qty",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
+                      )}
 
                       <div className="space-y-2">
                         <Select
                           value={adj.reason || NO_REASON}
-                          onValueChange={(v) =>
-                            updateAdjustment(
-                              snapshotId,
-                              "reason",
-                              v || NO_REASON
-                            )
-                          }
+                          onValueChange={(v) => updateAdjustment(snapshotId, "reason", v || NO_REASON)}
                         >
                           <SelectTrigger className="h-9 w-full text-left text-xs">
                             <SelectValue placeholder="Clasificación" />
                           </SelectTrigger>
                           <SelectContent className="max-h-56 overflow-auto text-xs">
-                            <SelectItem value={NO_REASON}>
-                              (Sin clasificación)
-                            </SelectItem>
+                            <SelectItem value={NO_REASON}>(Sin clasificación)</SelectItem>
                             {ADJUSTMENT_REASONS.map((reason) => (
                               <SelectItem key={reason} value={reason}>
                                 {reason}
@@ -1294,13 +1165,7 @@ export default function InventoryPage() {
                           className="h-9 w-full text-sm"
                           placeholder="Nota..."
                           value={adj.note || ""}
-                          onChange={(e) =>
-                            updateAdjustment(
-                              snapshotId,
-                              "note",
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => updateAdjustment(snapshotId, "note", e.target.value)}
                         />
                       </div>
 
