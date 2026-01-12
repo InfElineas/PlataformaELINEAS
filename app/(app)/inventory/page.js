@@ -94,43 +94,35 @@ const ANALYSIS_SEGMENTS = [
 
 const DEFAULT_MAX_ROWS = 200;
 
-// Config de visibilidad por segmento
-const FIELDS_BY_STATE = {
+// Reglas de UI por segmento de análisis
+const SEGMENT_CONFIG = {
   sin_reserva: {
-    showReal: true,
+    showStoreStatus: false,
     showUploadToStore: false,
     showDownloadFromStore: true,
   },
   no_tienda: {
-    showReal: true,
+    showStoreStatus: false,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   ultimas: {
-    showReal: true,
+    showStoreStatus: false,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   proximo: {
-    showReal: true,
+    showStoreStatus: false,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   sin_id: {
-    showReal: true,
+    showStoreStatus: false,
     showUploadToStore: false,
     showDownloadFromStore: false,
-  },
-  default: {
-    showReal: true,
-    showUploadToStore: false,
-    showDownloadFromStore: false,
+    // TODO: Confirmar si se debe permitir acción manual con productos sin ID.
   },
 };
-
-function getVisibleFieldsByState(segmentId) {
-  return FIELDS_BY_STATE[segmentId] || FIELDS_BY_STATE.default;
-}
 
 const PRIORITY_BADGES = {
   sin_reserva: { variant: "destructive" },
@@ -345,21 +337,17 @@ function mergeOptions(...lists) {
 function deriveOptionsFromInventory(inventory) {
   const warehouses = new Set();
   const suppliers = new Set();
-  const storeStatuses = new Set();
 
   inventory.forEach((item) => {
     const wh = normalizeOption(getWarehouseLabel(item));
     const sup = normalizeOption(getSupplierLabel(item));
-    const tienda = normalizeOption(getEstadoTienda(item)?.label);
     if (wh) warehouses.add(wh);
     if (sup) suppliers.add(sup);
-    if (tienda) storeStatuses.add(tienda);
   });
 
   return {
     warehouses: Array.from(warehouses),
     suppliers: Array.from(suppliers),
-    storeStatuses: Array.from(storeStatuses),
   };
 }
 
@@ -406,23 +394,24 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(false);
 
   // filtros globales compartidos con productos
-  const {
-    appliedFilters,
-    applyFilter,
-    resetFilters,
-  } = useGlobalProductFilters();
+  const { appliedFilters, applyFilter, resetFilters } =
+    useGlobalProductFilters();
   const [filterOptions, setFilterOptions] = useState({
     warehouses: [],
     suppliers: [],
-    storeStatuses: [],
   });
 
   // filtros de análisis
   const [segmentId, setSegmentId] = useState("sin_reserva");
+  const [maxRows, setMaxRows] = useState(DEFAULT_MAX_ROWS);
 
   // ajustes en edición: { [snapshotId]: { real_qty, upload_qty, download_qty, reason, note } }
   const [adjustments, setAdjustments] = useState({});
   const [exportFormat, setExportFormat] = useState(EXPORT_FORMATS.csv.value);
+  const segmentConfig = SEGMENT_CONFIG[segmentId] || SEGMENT_CONFIG.sin_reserva;
+  const showStoreStatus = segmentConfig.showStoreStatus;
+  const showUploadToStore = segmentConfig.showUploadToStore;
+  const showDownloadFromStore = segmentConfig.showDownloadFromStore;
 
   const ui = getVisibleFieldsByState(segmentId);
   const showUploadToStore = ui.showUploadToStore;
@@ -440,7 +429,6 @@ export default function InventoryPage() {
     appliedFilters.existencia,
     appliedFilters.almacen,
     appliedFilters.suministrador,
-    appliedFilters.estado_tienda,
   ]);
 
   useEffect(() => {
@@ -461,8 +449,6 @@ export default function InventoryPage() {
         params.set("almacen", appliedFilters.almacen);
       if (appliedFilters.suministrador !== ALL)
         params.set("suministrador", appliedFilters.suministrador);
-      if (appliedFilters.estado_tienda !== ALL)
-        params.set("estado_tienda", appliedFilters.estado_tienda);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
@@ -482,10 +468,6 @@ export default function InventoryPage() {
       setFilterOptions({
         warehouses: mergeOptions(data.meta?.warehouses || [], derived.warehouses),
         suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
-        storeStatuses: mergeOptions(
-          data.meta?.storeStatuses || [],
-          derived.storeStatuses,
-        ),
       });
     } catch (err) {
       console.error("loadInventory failed", err);
@@ -508,9 +490,6 @@ export default function InventoryPage() {
         : [],
       suppliers: Array.isArray(filterOptions?.suppliers)
         ? filterOptions.suppliers
-        : [],
-      storeStatuses: Array.isArray(filterOptions?.storeStatuses)
-        ? filterOptions.storeStatuses
         : [],
     }),
     [filterOptions],
@@ -553,6 +532,7 @@ export default function InventoryPage() {
   const handleResetFilters = () => {
     resetFilters();
     setSegmentId("sin_reserva");
+    setMaxRows(DEFAULT_MAX_ROWS);
   };
 
   // ================= Edición de ajustes =================
@@ -698,6 +678,12 @@ export default function InventoryPage() {
         value: (item) => getProductCode(item),
       },
       {
+        key: "estado",
+        label: "Estado tienda",
+        show: segmentConfig.showStoreStatus,
+        value: (item) => getEstadoTienda(item)?.label || "",
+      },
+      {
         key: "ef",
         label: "EF plataforma",
         value: (item) => getEF(item),
@@ -715,7 +701,6 @@ export default function InventoryPage() {
       {
         key: "real",
         label: "Real",
-        show: ui.showReal,
         value: (_item, adj, _index, helpers) =>
           helpers.hasReal ? helpers.realQty : "",
       },
@@ -727,14 +712,14 @@ export default function InventoryPage() {
       {
         key: "upload",
         label: "Subir tienda",
-        show: showUploadToStore,
+        show: segmentConfig.showUploadToStore,
         value: (_item, adj, _index, helpers) =>
           helpers.hasUpload ? adj.upload_qty : "",
       },
       {
         key: "download",
         label: "Bajar tienda",
-        show: showDownloadFromStore,
+        show: segmentConfig.showDownloadFromStore,
         value: (_item, adj, _index, helpers) =>
           helpers.hasDownload ? adj.download_qty : "",
       },
@@ -763,8 +748,9 @@ export default function InventoryPage() {
           adj.download_qty !== null &&
           adj.download_qty !== "";
 
-        const hasSegmentUpload = showUploadToStore && hasUpload;
-        const hasSegmentDownload = showDownloadFromStore && hasDownload;
+        const hasSegmentUpload = segmentConfig.showUploadToStore && hasUpload;
+        const hasSegmentDownload =
+          segmentConfig.showDownloadFromStore && hasDownload;
 
         if (!hasReal && !hasSegmentUpload && !hasSegmentDownload) return null;
 
@@ -867,6 +853,14 @@ export default function InventoryPage() {
 
   const tableColumns = [
     {
+      key: "estado",
+      label: "Estado tienda",
+      show: segmentConfig.showStoreStatus,
+      cell: ({ estado, variant }) => (
+        <Badge variant={variant}>{estado?.label}</Badge>
+      ),
+    },
+    {
       key: "code",
       label: "Cód. Prod.",
       className: "font-mono text-xs",
@@ -906,7 +900,6 @@ export default function InventoryPage() {
       key: "real",
       label: "Real",
       className: "text-right",
-      show: ui.showReal,
       cell: ({ snapshotId, adj }) => (
         <Input
           type="number"
@@ -922,7 +915,7 @@ export default function InventoryPage() {
       key: "upload",
       label: "Subir T",
       className: "text-right",
-      show: showUploadToStore,
+      show: segmentConfig.showUploadToStore,
       cell: ({ snapshotId, adj }) => (
         <Input
           type="number"
@@ -938,7 +931,7 @@ export default function InventoryPage() {
       key: "download",
       label: "Bajar T",
       className: "text-right",
-      show: showDownloadFromStore,
+      show: segmentConfig.showDownloadFromStore,
       cell: ({ snapshotId, adj }) => (
         <Input
           type="number"
@@ -1017,7 +1010,7 @@ export default function InventoryPage() {
           <CardTitle className="text-lg sm:text-xl">Inventario</CardTitle>
 
           {/* Filtros globales */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-5">
             <div>
               <label className="mb-2 block text-sm font-medium">
                 Existencia Física
@@ -1083,28 +1076,6 @@ export default function InventoryPage() {
 
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Estado en tienda
-              </label>
-              <Select
-                value={appliedFilters.estado_tienda}
-                onValueChange={setFilterAndApply("estado_tienda")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="(Todos)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72 overflow-auto">
-                  <SelectItem value={ALL}>(Todos)</SelectItem>
-                  {globalFilterOptions.storeStatuses.map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">
                 Segmento de análisis (Estado tienda)
               </label>
               <Select
@@ -1129,7 +1100,28 @@ export default function InventoryPage() {
                 Limpiar filtros
               </Button>
             </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Máx. productos a mostrar
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={maxRows}
+                onChange={(e) => setMaxRows(e.target.value)}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setMaxRows(DEFAULT_MAX_ROWS)}
+              >
+                Restablecer ({DEFAULT_MAX_ROWS})
+              </Button>
+            </div>
           </div>
+
+          {/* Segmento de análisis es el filtro principal */}
         </CardHeader>
 
         <CardContent className="space-y-4 rounded-lg border border-border/60 p-3 sm:p-4">
@@ -1258,7 +1250,9 @@ export default function InventoryPage() {
                             {getSupplierLabel(item) || "Suministrador no asignado"}
                           </p>
                         </div>
-                        <Badge variant={variant}>{estado?.label}</Badge>
+                        {showStoreStatus ? (
+                          <Badge variant={variant}>{estado?.label}</Badge>
+                        ) : null}
                       </div>
 
                       <div className="grid grid-cols-4 gap-2 text-xs">
