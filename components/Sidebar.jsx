@@ -195,7 +195,7 @@ export default function SidebarHandler({ children }) {
         </header>
 
         <main className="flex-1 bg-transparent px-3 py-4 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-screen-2xl rounded-3xl border border-border/60 bg-background/80 p-4 shadow-sm shadow-black/5 backdrop-blur sm:p-6">
+          <div className="mx-auto w-full max-w-screen-2xl rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm shadow-black/5 backdrop-blur sm:p-6 overflow-hidden">
             {children}
           </div>
         </main>

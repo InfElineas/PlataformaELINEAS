@@ -102,22 +102,22 @@ const SEGMENT_CONFIG = {
     showDownloadFromStore: true,
   },
   no_tienda: {
-    showStoreStatus: true,
+    showStoreStatus: false,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   ultimas: {
-    showStoreStatus: true,
+    showStoreStatus: false,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   proximo: {
-    showStoreStatus: true,
+    showStoreStatus: false,
     showUploadToStore: true,
     showDownloadFromStore: false,
   },
   sin_id: {
-    showStoreStatus: true,
+    showStoreStatus: false,
     showUploadToStore: false,
     showDownloadFromStore: false,
     // TODO: Confirmar si se debe permitir acción manual con productos sin ID.
@@ -396,8 +396,7 @@ export default function InventoryPage() {
   // filtros globales compartidos con productos
   const {
     appliedFilters,
-    setPendingFilter,
-    applyFilters,
+    applyFilter,
     resetFilters,
   } = useGlobalProductFilters();
   const [filterOptions, setFilterOptions] = useState({
@@ -474,8 +473,7 @@ export default function InventoryPage() {
   }
 
   const setFilterAndApply = (key) => (value) => {
-    setPendingFilter(key, value);
-    setTimeout(() => applyFilters(), 0);
+    applyFilter(key, value);
   };
 
   // ================= Opciones de filtros globales =================
@@ -1006,7 +1004,26 @@ export default function InventoryPage() {
           <CardTitle className="text-lg sm:text-xl">Inventario</CardTitle>
 
           {/* Filtros globales */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Existencia Física
+              </label>
+              <Select
+                value={appliedFilters.existencia}
+                onValueChange={setFilterAndApply("existencia")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="(Todas)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>(Todas)</SelectItem>
+                  <SelectItem value="con">Con existencia (&gt; 0)</SelectItem>
+                  <SelectItem value="sin">Sin existencia (= 0)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <label className="mb-2 block text-sm font-medium">
                 Almacén
@@ -1045,6 +1062,28 @@ export default function InventoryPage() {
                   {globalFilterOptions.suppliers.map((sup) => (
                     <SelectItem key={sup} value={sup}>
                       {sup}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Estado en tienda
+              </label>
+              <Select
+                value={appliedFilters.estado_tienda}
+                onValueChange={setFilterAndApply("estado_tienda")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="(Todos)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 overflow-auto">
+                  <SelectItem value={ALL}>(Todos)</SelectItem>
+                  {globalFilterOptions.storeStatuses.map((estado) => (
+                    <SelectItem key={estado} value={estado}>
+                      {estado}
                     </SelectItem>
                   ))}
                 </SelectContent>
