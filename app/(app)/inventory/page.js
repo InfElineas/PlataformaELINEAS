@@ -514,10 +514,8 @@ export default function InventoryPage() {
       (item) => getEstadoTienda(item)?.id === segment.id,
     );
 
-    const limit = Number(maxRows);
-    if (!Number.isFinite(limit) || limit <= 0) return base;
-    return base.slice(0, limit);
-  }, [prioritizedInventory, segmentId, maxRows]);
+    return base.slice(0, DEFAULT_MAX_ROWS);
+  }, [prioritizedInventory, segmentId]);
 
   const handleResetFilters = () => {
     resetFilters();
