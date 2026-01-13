@@ -3,6 +3,10 @@
 ## Ajustes visuales de inventario (actual)
 - `app/(app)/inventory/page.js`: las columnas de existencia física, reserva y disponible en tienda ahora se muestran en solo lectura con formato numérico consistente (igual a la vista de productos) y sin inputs redundantes.
 
+## Exportación y validaciones de ajustes de inventario (actual)
+- `app/(app)/inventory/page.js`: se corrige la carga de dependencias remotas para exportar a Excel/PDF, se limita la exportación a filas con valores en Real/Subir/Bajar, se exige clasificación cuando la diferencia del conteo es distinta de cero y se muestran avisos claros si no hay filas elegibles para exportar.
+- `lib/vendor/xlsx.mjs` y `lib/vendor/jspdf.umd.min.js`: se incluyen copias locales de las librerías de exportación para eliminar errores de compilación por dependencias faltantes en la cadena de build.
+
 ## Ajustes responsivos y densidad tipográfica
 - `app/globals.css`: se redujo ligeramente el tamaño base de fuente y se evitó el scroll horizontal global para mejorar la lectura en pantallas pequeñas.
 - `components/Sidebar.jsx`: el panel lateral se colapsa automáticamente en pantallas estrechas, conserva la transición suave y aplica un contenedor centralizado para el contenido.
@@ -77,3 +81,6 @@
 
 ## Ajustes visuales y exportación multiformato
 - `app/(app)/inventory/page.js`: se reordenaron las columnas para ubicar la “Cantidad real” entre la disponibilidad en tienda y los movimientos (Subir/Bajar T), dejando el estado del ajuste como último campo tanto en tabla como en tarjetas móviles. Se añadió selector de formato y exportación a CSV, Excel o PDF reutilizando las mismas filas calculadas.
+
+## Corrección de carga de dependencias de exportación
+- `app/(app)/inventory/page.js`: las utilidades de exportación ahora cargan `xlsx` y `jspdf` desde dependencias locales para evitar errores de build con esquemas remotos y mantener operativas las descargas en Excel y PDF.

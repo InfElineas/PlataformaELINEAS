@@ -496,7 +496,7 @@ export default function ProductsPage() {
     search,
     sort,
     setSearch,
-    setPendingFilter,
+    applyFilter,
     setSort,
     applyFilters,
     resetFilters,
@@ -529,8 +529,7 @@ export default function ProductsPage() {
   const setCol = (k, v) => setCols((c) => ({ ...c, [k]: v }));
 
   const setFilterAndApply = (key) => (value) => {
-    setPendingFilter(key, value);
-    setTimeout(() => applyFilters(), 0);
+    applyFilter(key, value);
   };
 
   // Carga de datos desde el servidor (global search + filtros + paginación)
