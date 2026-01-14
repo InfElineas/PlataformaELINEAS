@@ -1,64 +1,87 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
-import { swalLoading, swalSuccess, swalError, swalClose } from '@/lib/swal';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
-export default function LoginForm({ redirectTo = '/' }) {
+export default function LoginForm({ redirectTo = "/" }) {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   async function handleSubmit(event) {
     event.preventDefault();
-
     setLoading(true);
-    setError('');
-    swalLoading('Autenticando...', 'Validando credenciales');
+
+    // Mostrar loader
+    Swal.fire({
+      title: "Ingresando…",
+      text: "Por favor espera",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: identifier, password, rememberMe }),
       });
 
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        // cerrar el loading y mostrar error visual
-        swalClose();
-        const msg = data.error || 'Credenciales inválidas';
-        setError(msg);
-        await swalError('Error de login', msg);
+        // Cerrar el loader antes de mostrar el error
+        Swal.close();
+
+        // Mostrar alerta específica para "Invalid credentials"
+        if (data.error === "Invalid credentials") {
+          await Swal.fire({
+            icon: "error",
+            title: "Credenciales incorrectas",
+            text: "El usuario o la contraseña son incorrectos",
+            timer: 2000, // 2 segundos
+            timerProgressBar: true,
+            showConfirmButton: false,
+          });
+        } else {
+          await Swal.fire({
+            icon: "error",
+            title: "Error al iniciar sesión",
+            text: data.error || "Ocurrió un error inesperado",
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+          });
+        }
         return;
       }
 
-      // éxito: cerrar loading y mostrar success
-      swalClose();
-      await swalSuccess('Bienvenido', '');
-
-      setLoading(false);
-
-      // pequeña pausa para que se vea el swal antes de navegar
-      setTimeout(() => {
-        router.push(redirectTo || '/');
-        router.refresh();
-      }, 200);
+      // Login exitoso
+      Swal.close();
+      router.push(redirectTo || "/");
+      router.refresh();
     } catch (err) {
-      console.error(err);
-      swalClose();
-      const msg = err.message || 'No se pudo iniciar sesión.';
-      setError('Unable to complete login. Please try again.');
-      await swalError('Error de login', msg);
+      console.error("Login request failed", err);
+
+      // Cerrar loader antes de mostrar alerta
+      Swal.close();
+
+      await Swal.fire({
+        icon: "error",
+        title: "Error de conexión",
+        text: "No se pudo completar el login. Intenta nuevamente.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -98,21 +121,15 @@ export default function LoginForm({ redirectTo = '/' }) {
           />
           <span>Recordarme</span>
         </label>
-        <a href="/forgot-password" className="text-sm text-primary hover:underline">
+        <a
+          href="/forgot-password"
+          className="text-sm text-primary hover:underline"
+        >
           ¿Olvidaste tu contraseña?
         </a>
       </div>
-      {error && (
-        <div
-          className={cn(
-            'rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive',
-          )}
-        >
-          {error}
-        </div>
-      )}
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Ingresando…' : 'Iniciar sesión'}
+        {loading ? "Ingresando…" : "Iniciar sesión"}
       </Button>
     </form>
   );

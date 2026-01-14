@@ -1,12 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Search, Settings2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { Search, Settings2 } from "lucide-react";
+import { ALL } from "@/hooks/useProductFilters";
+import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -14,124 +17,384 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu';
-import { swalLoading, swalSuccess, swalError } from '@/lib/swal';
+} from "@/components/ui/dropdown-menu";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 /* ================= Helpers ================= */
 
 function fmt(val) {
-  if (val === null || val === undefined || val === '') return '—';
+  if (val === null || val === undefined || val === "") return "—";
   return String(val);
 }
 
 function fmtDate(val) {
-  if (!val) return '—';
+  if (!val) return "—";
   const d = new Date(val);
   return Number.isNaN(d.getTime())
-    ? '—'
-    : d.toLocaleString('es-ES', {
-        year: '2-digit',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
+    ? "—"
+    : d.toLocaleString("es-ES", {
+        year: "2-digit",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
       });
 }
 
+const compactNumberCell =
+  "text-center text-xs font-semibold tabular-nums whitespace-nowrap px-2";
+const compactHeader =
+  "text-center text-xs font-semibold whitespace-nowrap px-2";
+const sortableHeader =
+  "text-left text-xs font-semibold whitespace-nowrap px-2 select-none";
+
+const STOCK_KEYS = {
+  existencia: [
+    "existencia_fisica",
+    "physical_stock",
+    "exist_fisica",
+    "stock",
+    "existencia",
+    "ef",
+    "metadata.existencia_fisica",
+    "metadata.physical_stock",
+    "metadata.exist_fisica",
+    "metadata.stock",
+    "metadata.existencia",
+    "metadata.ef",
+  ],
+  reserva: [
+    "reserva",
+    "reserve_qty",
+    "reserved",
+    "reserved_qty",
+    "almacen",
+    "A",
+    "metadata.reserva",
+    "metadata.reserve_qty",
+    "metadata.reserved",
+    "metadata.reserved_qty",
+    "metadata.almacen",
+    "metadata.A",
+  ],
+  tienda: [
+    "disponible_tienda",
+    "store_qty",
+    "disponible",
+    "available_store",
+    "available",
+    "tienda",
+    "T",
+    "metadata.disponible_tienda",
+    "metadata.store_qty",
+    "metadata.disponible",
+    "metadata.available_store",
+    "metadata.available",
+    "metadata.tienda",
+    "metadata.T",
+  ],
+};
+
 function fmtMoney(val) {
   const n = Number(val);
-  if (Number.isNaN(n)) return '—';
-  return n.toLocaleString('es-ES', {
-    style: 'currency',
-    currency: 'USD',
+  if (Number.isNaN(n)) return "—";
+  return n.toLocaleString("es-ES", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function toNumber(raw, fallback = 0) {
-  const n = Number(raw);
-  return Number.isNaN(n) ? fallback : n;
+function parseStockValue(raw) {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+
+  let cleaned = String(raw).trim();
+  if (!cleaned) return null;
+
+  cleaned = cleaned.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return null;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(",") < cleaned.lastIndexOf(".")) {
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+    }
+  } else if (hasComma && !hasDot) {
+    cleaned = cleaned.replace(/,/g, ".");
+  }
+
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
 }
 
-/* ===== Map de campos según tu modelo actual (ajustables) ===== */
+function getFirstNumber(obj, keys, fallback = 0) {
+  const resolve = (target, path) => {
+    if (!target || !path) return undefined;
+    if (!path.includes(".")) return target?.[path];
+    return path.split(".").reduce((acc, part) => acc?.[part], target);
+  };
+
+  for (const key of keys) {
+    const direct = parseStockValue(resolve(obj, key));
+    if (direct !== null) return direct;
+
+    const meta = parseStockValue(resolve(obj?.metadata, key));
+    if (meta !== null) return meta;
+  }
+  return fallback;
+}
+
+function toNumber(raw, fallback = 0) {
+  const value = parseStockValue(raw);
+  return value === null ? fallback : value;
+}
+
+function getFirstString(obj, keys, fallback = "") {
+  const resolve = (target, path) => {
+    if (!target || !path) return undefined;
+    if (!path.includes(".")) return target?.[path];
+    return path.split(".").reduce((acc, part) => acc?.[part], target);
+  };
+
+  for (const key of keys) {
+    const value = resolve(obj, key);
+    if (value !== undefined && value !== null) {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+
+    const metaVal = resolve(obj?.metadata, key);
+    if (metaVal !== undefined && metaVal !== null) {
+      const text = String(metaVal).trim();
+      if (text) return text;
+    }
+  }
+  return fallback;
+}
+
+function mergeOptions(a = [], b = []) {
+  return Array.from(new Set([...(a || []), ...(b || [])]));
+}
+
+// Truncar a 12 caracteres con tooltip
+function TruncatedCell({ value, className }) {
+  const raw = fmt(value);
+  if (raw === "—") return <span className={className}>—</span>;
+
+  const truncated = raw.length > 12 ? `${raw.slice(0, 12)}…` : raw;
+
+  return (
+    <span className={className} title={raw}>
+      {truncated}
+    </span>
+  );
+}
+
+function SortIndicator({ active, direction }) {
+  if (!active) {
+    return <span className="text-muted-foreground">↕</span>;
+  }
+  return (
+    <span className="font-semibold text-muted-foreground">
+      {direction === "asc" ? "↑" : "↓"}
+    </span>
+  );
+}
+
+function InfoRow({ label, value }) {
+  const display = fmt(value);
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span
+        className="truncate text-xs font-medium"
+        title={display === "—" ? undefined : display}
+      >
+        {display}
+      </span>
+    </div>
+  );
+}
+
+function getProductImage(p) {
+  return (
+    p.image ||
+    p.image_url ||
+    p.thumbnail ||
+    p.thumbnail_url ||
+    p.metadata?.image ||
+    p.metadata?.image_url ||
+    p.metadata?.thumbnail ||
+    p.metadata?.thumbnail_url ||
+    ""
+  );
+}
+
+function ProductHoverCard({
+  product,
+  categoriaOnline,
+  idTienda,
+  codProducto,
+  suministrador,
+  marca,
+  noAlmacen,
+  ef,
+  reserva,
+  tienda,
+  precioCosto,
+  children,
+}) {
+  const description = getFirstString(
+    product,
+    ["description", "metadata.description", "metadata.descripcion"],
+    ""
+  );
+  const image = getProductImage(product);
+
+  return (
+    <HoverCard openDelay={150} closeDelay={100}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent className="w-96 space-y-3">
+        <div className="flex gap-3">
+          <Avatar className="h-16 w-16 rounded-md border">
+            {image ? <AvatarImage src={image} alt={product.name} /> : null}
+            <AvatarFallback className="rounded-md bg-primary/10 font-semibold text-primary">
+              {(product.name || "P").slice(0, 1).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 space-y-1">
+            <p
+              className="truncate text-sm font-semibold leading-tight"
+              title={product.name}
+            >
+              {fmt(product.name)}
+            </p>
+            {marca ? (
+              <p className="text-xs text-muted-foreground">{marca}</p>
+            ) : null}
+            {categoriaOnline ? (
+              <p
+                className="text-xs text-muted-foreground truncate"
+                title={categoriaOnline}
+              >
+                {categoriaOnline}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <InfoRow label="Cód. Producto" value={codProducto} />
+          <InfoRow label="Id Tienda" value={idTienda} />
+          <InfoRow label="Suministrador" value={suministrador} />
+          <InfoRow label="No. Almacén" value={noAlmacen} />
+          <InfoRow label="EF" value={ef} />
+          <InfoRow label="Reserva" value={reserva} />
+          <InfoRow label="Disp. Tienda" value={tienda} />
+          <InfoRow label="Precio costo" value={fmtMoney(precioCosto)} />
+        </div>
+
+        {description ? (
+          <p
+            className="max-h-20 overflow-hidden text-xs leading-snug text-muted-foreground"
+            title={description}
+          >
+            {description}
+          </p>
+        ) : null}
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+/* ===== Map de campos según tu modelo ===== */
 
 function getCategoriaOnline(p) {
   if (Array.isArray(p.category_path) && p.category_path.length > 0) {
-    return p.category_path.join(' - ');
+    return p.category_path.join(" - ");
   }
-  return p.category_name || p.category_id || '—';
+  return p.online_category || p.category_name || p.category_id || "—";
 }
 
 function getIdTienda(p) {
-  return p.idTienda ?? '';
+  return getFirstString(p, ["idTienda", "store_external_id"], "");
 }
 
 function getCodProducto(p) {
-  return p.tkc_code ?? p.product_code ?? p.barcode ?? '';
+  return getFirstString(p, ["tkc_code", "product_code", "barcode"], "");
 }
 
 function getSuministrador(p) {
-  return (
-    p.supplier_name ??
-    p.provider_name ??
-    p.provider_id ??
-    p.supplier_id ??
-    ''
+  return getFirstString(
+    p,
+    ["supplier_name", "provider_name", "provider_id", "supplier_id"],
+    ""
   );
 }
 
 function getEF(p) {
-  return toNumber(
-    p.existencia_fisica ??
-      p.exist_fisica ??
-      p.physical_stock ??
-      p.stock ??
-      0
-  );
+  return getFirstNumber(p, STOCK_KEYS.existencia);
 }
 
 function getReserva(p) {
-  return toNumber(p.reserva ?? p.reserved ?? p.reserved_qty ?? 0);
+  return getFirstNumber(p, STOCK_KEYS.reserva);
 }
 
 function getDisponibleTienda(p) {
-  return toNumber(
-    p.disponible_tienda ??
-      p.disponible ??
-      p.available_store ??
-      p.available ??
-      0
-  );
+  return getFirstNumber(p, STOCK_KEYS.tienda);
 }
 
 function getPrecioCosto(p) {
-  return toNumber(p.precio_costo ?? p.cost_price ?? p.costo ?? 0);
+  return toNumber(p.precio_costo ?? p.cost_price ?? p.costo ?? p.price ?? 0);
 }
 
 function getNoAlmacen(p) {
-  return p.no_almacen ?? p.warehouse_code ?? p.store_warehouse ?? '';
+  return getFirstString(
+    p,
+    [
+      "no_almacen",
+      "warehouse_code",
+      "warehouse_name",
+      "store_warehouse",
+      "metadata.no_almacen",
+      "metadata.warehouse_code",
+      "metadata.warehouse_name",
+    ],
+    ""
+  );
 }
 
 function getMarca(p) {
-  return p.brand ?? '';
+  return getFirstString(p, ["brand"], "");
 }
 
 function getActivado(p) {
-  return (p.status ?? '') === 'active';
+  return (p.status ?? "") === "active";
 }
 
 /* ===== Estados derivados para badges ===== */
@@ -139,23 +402,21 @@ function getActivado(p) {
 function getEstadoAnuncio(p) {
   const EF = getEF(p);
   const ID = getCodProducto(p);
-  const status = p.status || '';
+  const status = p.status || "";
 
   if (!ID) {
-    return EF === 0 ? 'SIN ID EF = 0' : 'SIN ID EF > 0';
+    return EF === 0 ? "SIN ID EF = 0" : "SIN ID EF > 0";
   }
 
-  if (status === 'active') {
-    return 'ACTIVADO';
+  if (status === "active") {
+    return "ACTIVADO";
   }
 
-  if (status === 'dead' || status === 'muerto') {
-    return EF === 0
-      ? 'DESACTIVADO MUERTO EF = 0'
-      : 'DESACTIVADO MUERTO EF > 0';
+  if (status === "dead" || status === "muerto") {
+    return EF === 0 ? "DESACTIVADO MUERTO EF = 0" : "DESACTIVADO MUERTO EF > 0";
   }
 
-  return EF === 0 ? 'DESACTIVADO EF = 0' : 'DESACTIVADO EF > 0';
+  return EF === 0 ? "DESACTIVADO EF = 0" : "DESACTIVADO EF > 0";
 }
 
 function getEstadoTienda(p) {
@@ -165,9 +426,7 @@ function getEstadoTienda(p) {
   const T = getDisponibleTienda(p);
 
   if (!ID) {
-    return EF === 0
-      ? 'SIN ID (ID = "" y EF = 0)'
-      : 'SIN ID (ID = "" y EF > 0)';
+    return EF === 0 ? 'SIN ID (ID = "" y EF = 0)' : 'SIN ID (ID = "" y EF > 0)';
   }
 
   if (EF === 0) {
@@ -175,79 +434,82 @@ function getEstadoTienda(p) {
   }
 
   if (A === 0 && T > 6) {
-    return 'SIN RESERVA (A = 0 y T > 6)';
+    return "SIN RESERVA (A = 0 y T > 6)";
   }
 
   if (T === 0) {
     return EF > 10
-      ? 'NO TIENDA (T = 0 y EF > 10)'
-      : 'NO TIENDA (T = 0 y EF ≤ 10)';
+      ? "NO TIENDA (T = 0 y EF > 10)"
+      : "NO TIENDA (T = 0 y EF ≤ 10)";
   }
 
   if (T > 1 && T < A && A <= 10) {
-    return 'ULTIMAS PIEZAS (1 < T < A ≤ 10)';
+    return "ULTIMAS PIEZAS (1 < T < A ≤ 10)";
   }
 
   if (A >= 0 && A < T && T <= 10) {
-    return 'ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)';
+    return "ULTIMAS PIEZAS (0 ≤ A < T ≤ 10)";
   }
 
   if (T <= 10) {
-    return 'PROXIMO (T ≤ 10)';
+    return "PROXIMO (T ≤ 10)";
   }
 
   if (T <= A) {
-    return 'DISPONIBLE (T ≤ A)';
+    return "DISPONIBLE (T ≤ A)";
   }
 
-  return 'DISPONIBLE (A < T)';
+  return "DISPONIBLE (A < T)";
 }
 
 function badgeVariantAnuncio(label) {
-  if (label.startsWith('ACTIVADO')) return 'default';
-  if (label.startsWith('SIN ID')) return 'secondary';
-  if (label.startsWith('DESACTIVADO')) return 'destructive';
-  return 'outline';
+  if (label.startsWith("ACTIVADO")) return "default";
+  if (label.startsWith("SIN ID")) return "secondary";
+  if (label.startsWith("DESACTIVADO")) return "destructive";
+  return "outline";
 }
 
 function badgeVariantTienda(label) {
-  if (label.startsWith('DISPONIBLE')) return 'default';
-  if (label.startsWith('PROXIMO') || label.startsWith('ULTIMAS PIEZAS')) {
-    return 'secondary';
+  if (label.startsWith("DISPONIBLE")) return "default";
+  if (label.startsWith("PROXIMO") || label.startsWith("ULTIMAS PIEZAS")) {
+    return "secondary";
   }
-  return 'destructive';
+  return "destructive";
 }
 
 /* ================= Página ================= */
 
-const ALL = '__ALL__';
-
 export default function ProductsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [filterOptions, setFilterOptions] = useState({
+    almacenes: [],
+    suministradores: [],
+    categorias: [],
+    marcas: [],
+    estadosTienda: [],
+  });
 
-  // Filtros PENDIENTES (selección del usuario)
-  const [pExistencia, setPExistencia] = useState(ALL);
-  const [pAlmacen, setPAlmacen] = useState(ALL);
-  const [pSuministrador, setPSuministrador] = useState(ALL);
-  const [pCategoria, setPCategoria] = useState(ALL);
-  const [pMarca, setPMarca] = useState(ALL);
-  const [pHabilitado, setPHabilitado] = useState(ALL);
-  const [pActivado, setPActivado] = useState(ALL);
+  const {
+    pendingFilters,
+    appliedFilters,
+    search,
+    sort,
+    setSearch,
+    applyFilter,
+    setSort,
+    applyFilters,
+    resetFilters,
+  } = useGlobalProductFilters();
 
-  // Filtros APLICADOS
-  const [aExistencia, setAExistencia] = useState(ALL);
-  const [aAlmacen, setAAlmacen] = useState(ALL);
-  const [aSuministrador, setASuministrador] = useState(ALL);
-  const [aCategoria, setACategoria] = useState(ALL);
-  const [aMarca, setAMarca] = useState(ALL);
-  const [aHabilitado, setAHabilitado] = useState(ALL);
-  const [aActivado, setAActivado] = useState(ALL);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(100);
+  const [total, setTotal] = useState(0);
+  const { sortBy, sortDir } = sort;
 
   // Columnas visibles
   const [cols, setCols] = useState({
-    categoria: true,
+    categoria: false,
     idTienda: true,
     codProducto: true,
     nombre: true,
@@ -257,200 +519,237 @@ export default function ProductsPage() {
     dispTienda: true,
     precioCosto: true,
     noAlmacen: true,
-    estadoAnuncio: true,
+    estadoAnuncio: false,
     estadoTienda: true,
-    creado: true,
+    creado: false,
     actualizado: true,
     marca: false,
   });
 
-  // Carga de datos (debounce por búsqueda)
-  useEffect(() => {
-        let cancelled = false;
-    const id = setTimeout(() => loadProducts(search), 250);
-    return () => clearTimeout(id);
-  }, [search]);
+  const setCol = (k, v) => setCols((c) => ({ ...c, [k]: v }));
 
-  async function loadProducts(term) {
-     // Mostrar loading
-      swalLoading('Cargando productos', '');
+  const setFilterAndApply = (key) => (value) => {
+    applyFilter(key, value);
+  };
+
+  // Carga de datos desde el servidor (global search + filtros + paginación)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      loadProducts();
+    }, 250);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    page,
+    search,
+    appliedFilters.existencia,
+    appliedFilters.almacen,
+    appliedFilters.suministrador,
+    appliedFilters.categoria,
+    appliedFilters.marca,
+    appliedFilters.habilitado,
+    appliedFilters.activado,
+    appliedFilters.estado_tienda,
+    sortBy,
+    sortDir,
+  ]);
+
+  async function loadProducts() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (term) params.set('search', term);
-      params.set('limit', '100');
+      params.set("page", String(page));
+      params.set("perPage", String(perPage));
+
+      if (search.trim()) params.set("search", search.trim());
+      params.set("includeFilters", "1");
+
+      if (appliedFilters.existencia !== ALL)
+        params.set("existencia", appliedFilters.existencia);
+      if (appliedFilters.almacen !== ALL)
+        params.set("almacen", appliedFilters.almacen);
+      if (appliedFilters.suministrador !== ALL)
+        params.set("suministrador", appliedFilters.suministrador);
+      if (appliedFilters.categoria !== ALL)
+        params.set("categoria", appliedFilters.categoria);
+      if (appliedFilters.marca !== ALL)
+        params.set("marca", appliedFilters.marca);
+      if (appliedFilters.habilitado !== ALL)
+        params.set("habilitado", appliedFilters.habilitado);
+      if (appliedFilters.activado !== ALL)
+        params.set("activado", appliedFilters.activado);
+      if (appliedFilters.estado_tienda !== ALL)
+        params.set("estado_tienda", appliedFilters.estado_tienda);
+      params.set("sortBy", sortBy);
+      params.set("sortDir", sortDir);
 
       const res = await fetch(`/api/products?${params.toString()}`, {
-        cache: 'no-store',
+        cache: "no-store",
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
-      setRows(Array.isArray(data.data) ? data.data : []);
-      // Cerrar loading y mostrar success
-      swalSuccess('Productos cargados', '');
+
+      const nextRows = Array.isArray(data.data) ? data.data : [];
+      setRows(nextRows);
+      setTotal(Number(data.total || 0));
+      setPerPage(Number(data.perPage || data.limit || perPage));
+
+      const derived = {
+        almacenes: [],
+        suministradores: [],
+        categorias: [],
+        marcas: [],
+        estadosTienda: [],
+      };
+
+      nextRows.forEach((p) => {
+        const nal = String(getNoAlmacen(p) || "").trim();
+        if (nal) derived.almacenes.push(nal);
+
+        const sup = String(getSuministrador(p) || "").trim();
+        if (sup) derived.suministradores.push(sup);
+
+        const cat = String(getCategoriaOnline(p) || "").trim();
+        if (cat) derived.categorias.push(cat);
+
+        const m = String(getMarca(p) || "").trim();
+        if (m) derived.marcas.push(m);
+
+        const et = String(getEstadoTienda(p) || "").trim();
+        if (et) derived.estadosTienda.push(et);
+      });
+
+      setFilterOptions({
+        almacenes: mergeOptions(data.meta?.warehouses, derived.almacenes),
+        suministradores: mergeOptions(
+          data.meta?.suppliers,
+          derived.suministradores
+        ),
+        categorias: mergeOptions(data.meta?.categories, derived.categorias),
+        marcas: mergeOptions(data.meta?.brands, derived.marcas),
+        estadosTienda: mergeOptions(
+          data.meta?.storeStatuses,
+          derived.estadosTienda
+        ),
+      });
     } catch (e) {
-       console.error(err);
-        swalError('Error al cargar productos', err.message || 'Revisa el backend o la conexión.');
+      console.error("Load products failed", e);
       setRows([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   }
 
-  // Opciones de filtros derivadas de los datos actuales
-  const opciones = useMemo(() => {
-    const almacenes = new Set();
-    const sumin = new Set();
-    const categorias = new Set();
-    const marcas = new Set();
+  // Opciones de filtros combinadas (API + derivadas de las filas)
+  const opciones = useMemo(
+    () => ({
+      almacenes: Array.from(new Set(filterOptions.almacenes || [])).sort(
+        (a, b) => a.localeCompare(b, "es")
+      ),
+      suministradores: Array.from(
+        new Set(filterOptions.suministradores || [])
+      ).sort((a, b) => a.localeCompare(b, "es")),
+      categorias: Array.from(new Set(filterOptions.categorias || [])).sort(
+        (a, b) => a.localeCompare(b, "es")
+      ),
+      marcas: Array.from(new Set(filterOptions.marcas || [])).sort((a, b) =>
+        a.localeCompare(b, "es")
+      ),
+      estadosTienda: Array.from(
+        new Set(filterOptions.estadosTienda || [])
+      ).sort((a, b) => a.localeCompare(b, "es")),
+    }),
+    [filterOptions]
+  );
 
-    rows.forEach((p) => {
-      const nal = String(getNoAlmacen(p) || '').trim();
-      if (nal) almacenes.add(nal);
+  const {
+    existencia: aExistencia,
+    almacen: aAlmacen,
+    suministrador: aSuministrador,
+    categoria: aCategoria,
+    marca: aMarca,
+    habilitado: aHabilitado,
+    activado: aActivado,
+    estado_tienda: aEstadoTienda,
+  } = appliedFilters;
 
-      const sup = String(getSuministrador(p) || '').trim();
-      if (sup) sumin.add(sup);
-
-      const cat = String(getCategoriaOnline(p) || '').trim();
-      if (cat) categorias.add(cat);
-
-      const m = String(getMarca(p) || '').trim();
-      if (m) marcas.add(m);
+  function toggleSort(field) {
+    setSort((prev) => {
+      if (prev.sortBy === field) {
+        return { ...prev, sortDir: prev.sortDir === "asc" ? "desc" : "asc" };
+      }
+      return { ...prev, sortBy: field, sortDir: "asc" };
     });
+    setPage(1);
+  }
 
-    const toArr = (s) => Array.from(s).sort((a, b) => a.localeCompare(b, 'es'));
+  const SortableHead = ({ field, label, className = sortableHeader }) => (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => toggleSort(field)}
+        className="flex items-center gap-1 w-full"
+      >
+        <span className="text-left flex-1">{label}</span>
+        <SortIndicator active={sortBy === field} direction={sortDir} />
+      </button>
+    </TableHead>
+  );
 
-    return {
-      almacenes: toArr(almacenes),
-      suministradores: toArr(sumin),
-      categorias: toArr(categorias),
-      marcas: toArr(marcas),
-    };
-  }, [rows]);
-
-  // Aplicar y limpiar filtros (mover PENDIENTES → APLICADOS)
+  // Aplicar filtros → mueve pendientes a aplicados y resetea página
   function aplicarFiltros() {
-    setAExistencia(pExistencia);
-    setAAlmacen(pAlmacen);
-    setASuministrador(pSuministrador);
-    setACategoria(pCategoria);
-    setAMarca(pMarca);
-    setAHabilitado(pHabilitado);
-    setAActivado(pActivado);
+    applyFilters();
+    setPage(1);
   }
 
   function resetFiltros() {
-    setPExistencia(ALL);
-    setPAlmacen(ALL);
-    setPSuministrador(ALL);
-    setPCategoria(ALL);
-    setPMarca(ALL);
-    setPHabilitado(ALL);
-    setPActivado(ALL);
-
-    setAExistencia(ALL);
-    setAAlmacen(ALL);
-    setASuministrador(ALL);
-    setACategoria(ALL);
-    setAMarca(ALL);
-    setAHabilitado(ALL);
-    setAActivado(ALL);
+    resetFilters();
+    setPage(1);
   }
 
-  // Filtrado client-side usando filtros APLICADOS
-  const filtered = useMemo(() => {
-    return rows.filter((p) => {
-      const term = search.trim().toLowerCase();
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const firstItem = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const lastItem = total === 0 ? 0 : firstItem + rows.length - 1;
 
-      const haySearch =
-        term.length === 0
-          ? true
-          : fmt(getCodProducto(p)).toLowerCase().includes(term) ||
-            fmt(p.name).toLowerCase().includes(term) ||
-            fmt(p.barcode).toLowerCase().includes(term);
-
-      if (!haySearch) return false;
-
-      const EF = getEF(p);
-      const T = getDisponibleTienda(p);
-      const nal = String(getNoAlmacen(p) || '');
-      const sup = String(getSuministrador(p) || '');
-      const cat = String(getCategoriaOnline(p) || '');
-      const marca = String(getMarca(p) || '');
-      const activado = getActivado(p);
-      const habilitado = T > 0;
-
-      if (aExistencia !== ALL) {
-        if (aExistencia === 'con' && !(EF > 0)) return false;
-        if (aExistencia === 'sin' && !(EF === 0)) return false;
-      }
-
-      if (aAlmacen !== ALL && nal !== aAlmacen) return false;
-      if (aSuministrador !== ALL && sup !== aSuministrador) return false;
-      if (aCategoria !== ALL && cat !== aCategoria) return false;
-      if (aMarca !== ALL && marca !== aMarca) return false;
-
-      if (aHabilitado !== ALL) {
-        if (aHabilitado === 'si' && !habilitado) return false;
-        if (aHabilitado === 'no' && habilitado) return false;
-      }
-
-      if (aActivado !== ALL) {
-        if (aActivado === 'si' && !activado) return false;
-        if (aActivado === 'no' && activado) return false;
-      }
-
-      return true;
-    });
-  }, [
-    rows,
-    search,
-    aExistencia,
-    aAlmacen,
-    aSuministrador,
-    aCategoria,
-    aMarca,
-    aHabilitado,
-    aActivado,
-  ]);
-
-  const resultsLabel = useMemo(
-    () => (loading ? 'Cargando…' : `${filtered.length} resultado(s)`),
-    [loading, filtered.length]
-  );
-
-  // Helper para columnas visibles
-  const setCol = (k, v) => setCols((c) => ({ ...c, [k]: v }));
+  const resultsLabel = loading
+    ? "Cargando…"
+    : `${total} resultado(s) · ${firstItem}-${lastItem} en la página ${page} de ${totalPages}`;
 
   /* ================= Render ================= */
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Productos</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 pb-10">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">Productos</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Vista operativa del inventario por tienda y categoría online.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4 sm:pb-6">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>Listado de productos</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Busca por nombre, código o código de barras.
+            <div className="grid gap-3 lg:flex lg:items-center lg:justify-between">
+              <div className="max-lg:pb-1">
+                <CardTitle className="text-lg sm:text-xl">
+                  Listado de productos
+                </CardTitle>
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  Busca por nombre, código, código de barras o Id tienda.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="relative w-64">
+              <div className="grid gap-3 lg:flex lg:items-center">
+                <div className="relative w-full min-w-[240px] lg:w-72">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Buscar productos..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
                     className="pl-10"
                   />
                 </div>
@@ -458,7 +757,10 @@ export default function ProductsPage() {
                 {/* Columnas visibles */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-2 whitespace-nowrap"
+                    >
                       <Settings2 className="h-4 w-4" />
                       Columnas visibles
                     </Button>
@@ -469,124 +771,126 @@ export default function ProductsPage() {
                   >
                     <DropdownMenuCheckboxItem
                       checked={cols.categoria}
-                      onCheckedChange={(v) => setCol('categoria', !!v)}
+                      onCheckedChange={(v) => setCol("categoria", !!v)}
                     >
                       Categoría Online
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.idTienda}
-                      onCheckedChange={(v) => setCol('idTienda', !!v)}
+                      onCheckedChange={(v) => setCol("idTienda", !!v)}
                     >
                       Id Tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.codProducto}
-                      onCheckedChange={(v) => setCol('codProducto', !!v)}
+                      onCheckedChange={(v) => setCol("codProducto", !!v)}
                     >
                       Cod. Producto
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.nombre}
-                      onCheckedChange={(v) => setCol('nombre', !!v)}
+                      onCheckedChange={(v) => setCol("nombre", !!v)}
                     >
                       Nombre
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.marca}
-                      onCheckedChange={(v) => setCol('marca', !!v)}
+                      onCheckedChange={(v) => setCol("marca", !!v)}
                     >
                       Marca
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.suministrador}
-                      onCheckedChange={(v) => setCol('suministrador', !!v)}
+                      onCheckedChange={(v) => setCol("suministrador", !!v)}
                     >
                       Suministrador
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.exist}
-                      onCheckedChange={(v) => setCol('exist', !!v)}
+                      onCheckedChange={(v) => setCol("exist", !!v)}
                     >
                       Existencia Física
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.reserva}
-                      onCheckedChange={(v) => setCol('reserva', !!v)}
+                      onCheckedChange={(v) => setCol("reserva", !!v)}
                     >
-                      Reserva
+                      Reserva (A)
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.dispTienda}
-                      onCheckedChange={(v) => setCol('dispTienda', !!v)}
+                      onCheckedChange={(v) => setCol("dispTienda", !!v)}
                     >
-                      Disp. Tienda
+                      Disp. Tienda (T)
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.precioCosto}
-                      onCheckedChange={(v) => setCol('precioCosto', !!v)}
+                      onCheckedChange={(v) => setCol("precioCosto", !!v)}
                     >
                       Precio Costo
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.noAlmacen}
-                      onCheckedChange={(v) => setCol('noAlmacen', !!v)}
+                      onCheckedChange={(v) => setCol("noAlmacen", !!v)}
                     >
                       No. Almacén
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoAnuncio}
-                      onCheckedChange={(v) => setCol('estadoAnuncio', !!v)}
+                      onCheckedChange={(v) => setCol("estadoAnuncio", !!v)}
                     >
                       Estado de Anuncio
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoTienda}
-                      onCheckedChange={(v) => setCol('estadoTienda', !!v)}
+                      onCheckedChange={(v) => setCol("estadoTienda", !!v)}
                     >
                       Estado en tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.creado}
-                      onCheckedChange={(v) => setCol('creado', !!v)}
+                      onCheckedChange={(v) => setCol("creado", !!v)}
                     >
                       Creado
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.actualizado}
-                      onCheckedChange={(v) => setCol('actualizado', !!v)}
+                      onCheckedChange={(v) => setCol("actualizado", !!v)}
                     >
                       Actualizado
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                <span className="text-sm text-muted-foreground">
-                  {resultsLabel}
-                </span>
               </div>
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-7">
+            <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-3 xl:grid-cols-8">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">
                   Existencia
                 </span>
-                <Select value={pExistencia} onValueChange={setPExistencia}>
+                <Select
+                  value={pendingFilters.existencia}
+                  onValueChange={setFilterAndApply("existencia")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Existencia" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL}>(Todas)</SelectItem>
-                    <SelectItem value="con">Con existencia (&gt; 0)</SelectItem>
-                    <SelectItem value="sin">Sin existencia (= 0)</SelectItem>
+                    <SelectItem value="con">Con existencia</SelectItem>
+                    <SelectItem value="sin">Sin existencia</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">Almacén</span>
-                <Select value={pAlmacen} onValueChange={setPAlmacen}>
+                <Select
+                  value={pendingFilters.almacen}
+                  onValueChange={setFilterAndApply("almacen")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Almacén" />
                   </SelectTrigger>
@@ -606,8 +910,8 @@ export default function ProductsPage() {
                   Suministrador
                 </span>
                 <Select
-                  value={pSuministrador}
-                  onValueChange={setPSuministrador}
+                  value={pendingFilters.suministrador}
+                  onValueChange={setFilterAndApply("suministrador")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Suministrador" />
@@ -627,7 +931,10 @@ export default function ProductsPage() {
                 <span className="text-xs text-muted-foreground">
                   Categoría Online
                 </span>
-                <Select value={pCategoria} onValueChange={setPCategoria}>
+                <Select
+                  value={pendingFilters.categoria}
+                  onValueChange={setFilterAndApply("categoria")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Categoría Online" />
                   </SelectTrigger>
@@ -644,7 +951,10 @@ export default function ProductsPage() {
 
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">Marca</span>
-                <Select value={pMarca} onValueChange={setPMarca}>
+                <Select
+                  value={pendingFilters.marca}
+                  onValueChange={setFilterAndApply("marca")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Marca" />
                   </SelectTrigger>
@@ -663,7 +973,10 @@ export default function ProductsPage() {
                 <span className="text-xs text-muted-foreground">
                   Habilitado
                 </span>
-                <Select value={pHabilitado} onValueChange={setPHabilitado}>
+                <Select
+                  value={pendingFilters.habilitado}
+                  onValueChange={setFilterAndApply("habilitado")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Habilitado" />
                   </SelectTrigger>
@@ -676,10 +989,11 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Activado
-                </span>
-                <Select value={pActivado} onValueChange={setPActivado}>
+                <span className="text-xs text-muted-foreground">Activado</span>
+                <Select
+                  value={pendingFilters.activado}
+                  onValueChange={setFilterAndApply("activado")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Activado" />
                   </SelectTrigger>
@@ -690,26 +1004,52 @@ export default function ProductsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Estado en tienda
+                </span>
+                <Select
+                  value={pendingFilters.estado_tienda}
+                  onValueChange={setFilterAndApply("estado_tienda")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Estado tienda" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 overflow-auto">
+                    <SelectItem value={ALL}>(Todos)</SelectItem>
+                    {opciones.estadosTienda.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Botones filtros */}
-            <div className="flex items-center gap-3">
+            <div className="lg:flex max-lg:grid items-center gap-3">
               <Button onClick={aplicarFiltros} className="gap-2">
                 Aplicar filtros
               </Button>
               <Button variant="outline" onClick={resetFiltros}>
                 Limpiar filtros
               </Button>
-              {/* <span className="text-xs text-muted-foreground">
-                (Los selectores se aplican al presionar “Aplicar filtros”)
-              </span> */}
+              <span className="text-xs text-muted-foreground">
+                (Los selectores globales se aplican al elegir una opción)
+              </span>
             </div>
+            {/* Resultados */}
+            <span className="text-sm text-muted-foreground">
+              {resultsLabel}
+            </span>
 
             {/* Chips filtros aplicados */}
             <div className="flex flex-wrap gap-2">
               {aExistencia !== ALL && (
                 <Badge variant="secondary">
-                  Existencia: {aExistencia === 'con' ? 'Con' : 'Sin'}
+                  Existencia: {aExistencia === "con" ? "Con" : "Sin"}
                 </Badge>
               )}
               {aAlmacen !== ALL && (
@@ -732,48 +1072,259 @@ export default function ProductsPage() {
               {aActivado !== ALL && (
                 <Badge variant="secondary">Activado: {aActivado}</Badge>
               )}
+              {aEstadoTienda !== ALL && (
+                <Badge variant="secondary">
+                  Estado tienda: {aEstadoTienda}
+                </Badge>
+              )}
             </div>
+          </div>
+          {/* Paginación */}
+          <div className="flex items-center justify-end gap-4 pt-4">
+            <span className="text-xs text-muted-foreground">
+              Página {page} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Siguiente
+            </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="overflow-x-auto">
+        <CardContent className="rounded-lg border border-border/60 p-0 sm:p-2">
           {loading ? (
             <div className="py-8 text-center text-muted-foreground">
               Cargando productos…
             </div>
-          ) : filtered.length === 0 ? (
+          ) : rows.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               No se encontraron productos.
             </div>
           ) : (
-            <Table className="min-w-[1400px]">
-              <TableHeader>
-                <TableRow>
-                  {cols.categoria && <TableHead>Categoría Online</TableHead>}
-                  {cols.idTienda && <TableHead>Id Tienda</TableHead>}
-                  {cols.codProducto && <TableHead>Cod. Producto</TableHead>}
-                  {cols.nombre && <TableHead>Nombre</TableHead>}
-                  {cols.marca && <TableHead>Marca</TableHead>}
-                  {cols.suministrador && <TableHead>Suministrador</TableHead>}
-                  {cols.exist && (
-                    <TableHead>Existencia Física (EF)</TableHead>
-                  )}
-                  {cols.reserva && <TableHead>Reserva (A)</TableHead>}
-                  {cols.dispTienda && <TableHead>Disp. Tienda (T)</TableHead>}
-                  {cols.precioCosto && <TableHead>Precio Costo</TableHead>}
-                  {cols.noAlmacen && <TableHead>No. Almacén</TableHead>}
-                  {cols.estadoAnuncio && (
-                    <TableHead>Estado de Anuncio</TableHead>
-                  )}
-                  {cols.estadoTienda && (
-                    <TableHead>Estado en tienda</TableHead>
-                  )}
-                  {cols.creado && <TableHead>Creado</TableHead>}
-                  {cols.actualizado && <TableHead>Actualizado</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((p) => {
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow>
+                      {cols.categoria && (
+                        <SortableHead
+                          field="category_name"
+                          label="Categoría Online"
+                          className={sortableHeader}
+                        />
+                      )}
+                      {cols.idTienda && (
+                        <SortableHead
+                          field="store_external_id"
+                          label="Id Tienda"
+                        />
+                      )}
+                      {cols.codProducto && (
+                        <SortableHead
+                          field="product_code"
+                          label="Cod. Producto"
+                        />
+                      )}
+                      {cols.nombre && (
+                        <SortableHead field="name" label="Nombre" />
+                      )}
+                      {cols.marca && (
+                        <SortableHead field="brand" label="Marca" />
+                      )}
+                      {cols.suministrador && (
+                        <SortableHead
+                          field="supplier_name"
+                          label="Suministrador"
+                        />
+                      )}
+                      {cols.exist && (
+                        <SortableHead
+                          field="existencia_fisica"
+                          label="Existencia Física (EF)"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.reserva && (
+                        <SortableHead
+                          field="reserva"
+                          label="Reserva (A)"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.dispTienda && (
+                        <SortableHead
+                          field="disponible_tienda"
+                          label="Disp. Tienda (T)"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.precioCosto && (
+                        <SortableHead
+                          field="precio_costo"
+                          label="Precio Costo"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.noAlmacen && (
+                        <SortableHead
+                          field="no_almacen"
+                          label="No. Almacén"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.estadoAnuncio && (
+                        <SortableHead
+                          field="status"
+                          label="Estado de Anuncio"
+                        />
+                      )}
+                      {cols.estadoTienda && (
+                        <SortableHead
+                          field="store_status"
+                          label="Estado en tienda"
+                        />
+                      )}
+                      {cols.creado && (
+                        <SortableHead field="created_at" label="Creado" />
+                      )}
+                      {cols.actualizado && (
+                        <SortableHead field="updated_at" label="Actualizado" />
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((p) => {
+                      const categoriaOnline = getCategoriaOnline(p);
+                      const idTienda = getIdTienda(p);
+                      const codProducto = getCodProducto(p);
+                      const suministrador = getSuministrador(p);
+                      const EF = getEF(p);
+                      const A = getReserva(p);
+                      const T = getDisponibleTienda(p);
+                      const precioCosto = getPrecioCosto(p);
+                      const noAlmacen = getNoAlmacen(p);
+                      const marca = getMarca(p);
+                      const estadoAnuncio = getEstadoAnuncio(p);
+                      const estadoTienda = getEstadoTienda(p);
+                      const anuncioVariant = badgeVariantAnuncio(estadoAnuncio);
+                      const tiendaVariant = badgeVariantTienda(estadoTienda);
+
+                      return (
+                        <TableRow key={p._id}>
+                          {cols.categoria && (
+                            <TableCell className="text-sm">
+                              <TruncatedCell value={categoriaOnline} />
+                            </TableCell>
+                          )}
+                          {cols.idTienda && (
+                            <TableCell className="font-mono text-xs">
+                              <TruncatedCell value={idTienda} />
+                            </TableCell>
+                          )}
+                          {cols.codProducto && (
+                            <TableCell className="font-mono text-xs">
+                              <TruncatedCell value={codProducto} />
+                            </TableCell>
+                          )}
+                          {cols.nombre && (
+                            <TableCell className="text-sm font-medium">
+                              <ProductHoverCard
+                                product={p}
+                                categoriaOnline={categoriaOnline}
+                                idTienda={idTienda}
+                                codProducto={codProducto}
+                                suministrador={suministrador}
+                                marca={marca}
+                                noAlmacen={noAlmacen}
+                                ef={EF}
+                                reserva={A}
+                                tienda={T}
+                                precioCosto={precioCosto}
+                              >
+                                <TruncatedCell value={p.name} />
+                              </ProductHoverCard>
+                            </TableCell>
+                          )}
+                          {cols.marca && (
+                            <TableCell className="text-sm">
+                              <TruncatedCell value={marca} />
+                            </TableCell>
+                          )}
+                          {cols.suministrador && (
+                            <TableCell className="text-sm">
+                              <TruncatedCell value={suministrador} />
+                            </TableCell>
+                          )}
+                          {cols.exist && (
+                            <TableCell className={compactNumberCell}>
+                              {Number.isNaN(EF) ? "—" : EF}
+                            </TableCell>
+                          )}
+                          {cols.reserva && (
+                            <TableCell className={compactNumberCell}>
+                              {Number.isNaN(A) ? "—" : A}
+                            </TableCell>
+                          )}
+                          {cols.dispTienda && (
+                            <TableCell className={compactNumberCell}>
+                              {Number.isNaN(T) ? "—" : T}
+                            </TableCell>
+                          )}
+                          {cols.precioCosto && (
+                            <TableCell className={compactNumberCell}>
+                              {fmtMoney(precioCosto)}
+                            </TableCell>
+                          )}
+                          {cols.noAlmacen && (
+                            <TableCell className={compactNumberCell}>
+                              <TruncatedCell value={noAlmacen} />
+                            </TableCell>
+                          )}
+                          {cols.estadoAnuncio && (
+                            <TableCell>
+                              <Badge variant={anuncioVariant}>
+                                {estadoAnuncio}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {cols.estadoTienda && (
+                            <TableCell>
+                              <Badge variant={tiendaVariant}>
+                                {estadoTienda}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {cols.creado && (
+                            <TableCell className="whitespace-nowrap text-xs">
+                              {fmtDate(p.created_at)}
+                            </TableCell>
+                          )}
+                          {cols.actualizado && (
+                            <TableCell className="whitespace-nowrap text-xs">
+                              {fmtDate(p.updated_at)}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="space-y-3 p-3 md:hidden">
+                {rows.map((p) => {
                   const categoriaOnline = getCategoriaOnline(p);
                   const idTienda = getIdTienda(p);
                   const codProducto = getCodProducto(p);
@@ -790,91 +1341,134 @@ export default function ProductsPage() {
                   const tiendaVariant = badgeVariantTienda(estadoTienda);
 
                   return (
-                    <TableRow key={p._id}>
-                      {cols.categoria && (
-                        <TableCell className="text-sm">
-                          {fmt(categoriaOnline)}
-                        </TableCell>
-                      )}
-                      {cols.idTienda && (
-                        <TableCell className="font-mono text-xs">
-                          {fmt(idTienda)}
-                        </TableCell>
-                      )}
-                      {cols.codProducto && (
-                        <TableCell className="font-mono text-xs">
-                          {fmt(codProducto)}
-                        </TableCell>
-                      )}
-                      {cols.nombre && (
-                        <TableCell className="text-sm font-medium">
-                          {fmt(p.name)}
-                        </TableCell>
-                      )}
-                      {cols.marca && (
-                        <TableCell className="text-sm">
-                          {fmt(marca)}
-                        </TableCell>
-                      )}
-                      {cols.suministrador && (
-                        <TableCell className="text-sm">
-                          {fmt(suministrador)}
-                        </TableCell>
-                      )}
-                      {cols.exist && (
-                        <TableCell className="text-right">
-                          {Number.isNaN(EF) ? '—' : EF}
-                        </TableCell>
-                      )}
-                      {cols.reserva && (
-                        <TableCell className="text-right">
-                          {Number.isNaN(A) ? '—' : A}
-                        </TableCell>
-                      )}
-                      {cols.dispTienda && (
-                        <TableCell className="text-right">
-                          {Number.isNaN(T) ? '—' : T}
-                        </TableCell>
-                      )}
-                      {cols.precioCosto && (
-                        <TableCell className="text-right">
-                          {fmtMoney(precioCosto)}
-                        </TableCell>
-                      )}
-                      {cols.noAlmacen && (
-                        <TableCell className="text-right">
-                          {fmt(noAlmacen)}
-                        </TableCell>
-                      )}
-                      {cols.estadoAnuncio && (
-                        <TableCell>
-                          <Badge variant={anuncioVariant}>
-                            {estadoAnuncio}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {cols.estadoTienda && (
-                        <TableCell>
-                          <Badge variant={tiendaVariant}>
+                    <div
+                      key={p._id}
+                      className="space-y-3 rounded-lg border border-border/60 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-1 items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={p.avatar} alt={p.name} />
+                            <AvatarFallback>
+                              {(p.name || "?")?.charAt(0)?.toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 space-y-1">
+                            <p className="text-sm font-semibold leading-tight line-clamp-2">
+                              {p.name || "Producto sin nombre"}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground font-mono">
+                              {codProducto || "Sin código"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 text-right">
+                          <Badge
+                            variant={tiendaVariant}
+                            className="text-[11px]"
+                          >
                             {estadoTienda}
                           </Badge>
-                        </TableCell>
-                      )}
-                      {cols.creado && (
-                        <TableCell className="whitespace-nowrap text-xs">
-                          {fmtDate(p.created_at)}
-                        </TableCell>
-                      )}
-                      {cols.actualizado && (
-                        <TableCell className="whitespace-nowrap text-xs">
-                          {fmtDate(p.updated_at)}
-                        </TableCell>
-                      )}
-                    </TableRow>
+                          <Badge
+                            variant={anuncioVariant}
+                            className="text-[11px]"
+                          >
+                            {estadoAnuncio}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">
+                            Categoría
+                          </p>
+                          <p className="line-clamp-2">
+                            {categoriaOnline || "Sin categoría"}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">
+                            Suministrador
+                          </p>
+                          <p className="line-clamp-2">{suministrador || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Marca</p>
+                          <p>{marca || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Almacén</p>
+                          <p>{noAlmacen || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">
+                            Id tienda
+                          </p>
+                          <p className="font-mono text-[11px] text-foreground">
+                            {idTienda || "—"}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Costo</p>
+                          <p className="text-foreground">
+                            {fmtMoney(precioCosto)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+                        <div className="rounded-md bg-muted/70 p-2">
+                          <p className="text-[11px] text-muted-foreground">
+                            EF
+                          </p>
+                          <p className="text-sm text-foreground">
+                            {Number.isNaN(EF) ? "—" : EF}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-muted/70 p-2">
+                          <p className="text-[11px] text-muted-foreground">A</p>
+                          <p className="text-sm text-foreground">
+                            {Number.isNaN(A) ? "—" : A}
+                          </p>
+                        </div>
+                        <div className="rounded-md bg-muted/70 p-2">
+                          <p className="text-[11px] text-muted-foreground">T</p>
+                          <p className="text-sm text-foreground">
+                            {Number.isNaN(T) ? "—" : T}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Paginación */}
+              <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-4 md:justify-end md:px-0">
+                <span className="text-xs text-muted-foreground">
+                  Página {page} de {totalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1 || loading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages || loading}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

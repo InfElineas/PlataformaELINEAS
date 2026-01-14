@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Warehouse, AlertCircle, TrendingUp } from 'lucide-react';
-import { swalLoading, swalSuccess, swalError, swalClose } from '@/lib/swal';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, Warehouse, AlertCircle, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -14,70 +13,65 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    let cancelled = false;
-
     async function loadStats() {
-      swalLoading('Cargando panel', 'Sincronizando datos...');
+      const [productsRes, storesRes, posRes] = await Promise.all([
+        fetch("/api/products?limit=1"),
+        fetch("/api/stores"),
+        fetch("/api/purchase-orders?status=draft"),
+      ]);
 
-      try {
-        const [productsRes, storesRes, posRes] = await Promise.all([
-          fetch('/api/products?limit=1'),
-          fetch('/api/stores'),
-          fetch('/api/purchase-orders?status=draft'),
-        ]);
+      const products = await productsRes.json();
+      const stores = await storesRes.json();
+      const pos = await posRes.json();
 
-        if (!productsRes.ok || !storesRes.ok || !posRes.ok) {
-          throw new Error('Error al obtener datos del servidor');
-        }
-
-        const [products, stores, pos] = await Promise.all([
-          productsRes.json(),
-          storesRes.json(),
-          posRes.json(),
-        ]);
-
-        if (cancelled) return;
-
-        setStats({
-          totalProducts: products.total || 0,
-          totalStores: stores.data?.length || 0,
-          lowStockItems: 0,
-          pendingPOs: pos.data?.length || 0,
-        });
-
-        swalClose();
-        swalSuccess('Datos actualizados', '');
-      } catch (err) {
-        console.error(err);
-        swalClose();
-        swalError(
-          'Error al cargar datos',
-          err.message || 'Revisa el backend o la conexión.',
-        );
-      }
+      setStats({
+        totalProducts: products.total || 0,
+        totalStores: stores.data?.length || 0,
+        lowStockItems: 0,
+        pendingPOs: pos.data?.length || 0,
+      });
     }
 
     loadStats();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const cards = [
-    { title: 'Total Productos', value: stats.totalProducts, icon: Package, color: 'text-blue-600' },
-    { title: 'Almacenes', value: stats.totalStores, icon: Warehouse, color: 'text-green-600' },
-    { title: 'Artículos con bajo stock', value: stats.lowStockItems, icon: AlertCircle, color: 'text-orange-600' },
-    { title: 'Pedidos pendientes', value: stats.pendingPOs, icon: TrendingUp, color: 'text-purple-600' },
+    {
+      title: "Productos totales",
+      value: stats.totalProducts,
+      icon: Package,
+      color: "text-blue-600",
+    },
+    {
+      title: "Tiendas",
+      value: stats.totalStores,
+      icon: Warehouse,
+      color: "text-green-600",
+    },
+    {
+      title: "Próximos a agotarse",
+      value: stats.lowStockItems,
+      icon: AlertCircle,
+      color: "text-orange-600",
+    },
+    {
+      title: "Órdenes de compra",
+      value: stats.pendingPOs,
+      icon: TrendingUp,
+      color: "text-purple-600",
+    },
   ];
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Panel de Control</h1>
+    <div className="space-y-6 pb-8">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">Tablero general</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          Vista general de tu sistema de inventarios
+        </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
@@ -103,22 +97,26 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h3 className="font-semibold mb-2">🎯 Generar plan de reabastecimiento</h3>
+              <h3 className="font-semibold mb-2">
+                🎯 Generar plan de reabastecimiento
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Acceda a la sección de Reabastecimiento para generar sugerencias inteligentes de
-                reposición de existencias basadas en los datos de su inventario.
+                Ir a Reabastecimiento para generar sugerencias basadas en tus
+                datos de inventario.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">📦 Gestionar productos</h3>
+              <h3 className="font-semibold mb-2">📦 Administrar productos</h3>
               <p className="text-sm text-muted-foreground">
-                Consulta y edita tu catálogo de productos en la sección Productos.
+                Visualizar y editar tu catálogo de productos en la sección de
+                Productos.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">📊 Consultar inventario</h3>
+              <h3 className="font-semibold mb-2">📊 Comprobar inventario</h3>
               <p className="text-sm text-muted-foreground">
-                Supervise los niveles de existencias en todas las tiendas en la vista de inventario.
+                Monitorear niveles de inventario a lo largo de todas las tiendas
+                en la vista de inventario.
               </p>
             </div>
           </CardContent>

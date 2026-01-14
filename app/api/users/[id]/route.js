@@ -1,10 +1,15 @@
-import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import User from '@/lib/models/User';
-import UserRole from '@/lib/models/UserRole';
-import Role from '@/lib/models/Role';
-import { requirePermission, updateUserRoles, logAuditEvent, PERMISSIONS } from '@/lib/auth';
-import { hashPassword } from '@/lib/auth/password';
+import { NextResponse } from "next/server";
+import connectDB from "@/lib/mongodb";
+import User from "@/lib/models/User";
+import UserRole from "@/lib/models/UserRole";
+import Role from "@/lib/models/Role";
+import {
+  requirePermission,
+  updateUserRoles,
+  logAuditEvent,
+  PERMISSIONS,
+} from "@/lib/auth";
+import { hashPassword } from "@/lib/auth/password";
 
 function serializeUser(user, roles = []) {
   return {
@@ -13,14 +18,14 @@ function serializeUser(user, roles = []) {
     email: user.email,
     full_name: user.full_name,
     username: user.username,
-    phone: user.phone || '',
-    language: user.language || 'es',
-    timezone: user.timezone || 'UTC',
-    avatar_url: user.avatar_url || '',
+    phone: user.phone || "",
+    language: user.language || "es",
+    timezone: user.timezone || "UTC",
+    avatar_url: user.avatar_url || "",
     is_active: user.is_active,
     roles,
     created_at: user.created_at,
-    updated_at: user.updated_at
+    updated_at: user.updated_at,
   };
 }
 
@@ -39,19 +44,22 @@ export async function GET(request, { params }) {
 
     const user = await User.findById(params.id).lean();
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (!context.isSuperAdmin && user.org_id !== context.orgId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const roles = await getUserRoles(user._id);
     return NextResponse.json({ user: serializeUser(user, roles) });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error("Get user error:", error);
     const status = error.status || 500;
-    return NextResponse.json({ error: error.message || 'Failed to load user' }, { status });
+    return NextResponse.json(
+      { error: error.message || "Failed to load user" },
+      { status }
+    );
   }
 }
 
@@ -63,25 +71,33 @@ export async function PUT(request, { params }) {
     await connectDB();
     const user = await User.findById(params.id);
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (!context.isSuperAdmin && user.org_id !== context.orgId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (body.email && body.email.toLowerCase() !== user.email) {
       const existing = await User.findOne({ email: body.email.toLowerCase() });
       if (existing) {
-        return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+        return NextResponse.json(
+          { error: "Email already in use" },
+          { status: 409 }
+        );
       }
       user.email = body.email.toLowerCase();
     }
 
     if (body.username && body.username.toLowerCase() !== user.username) {
-      const existingUsername = await User.findOne({ username: body.username.toLowerCase() });
+      const existingUsername = await User.findOne({
+        username: body.username.toLowerCase(),
+      });
       if (existingUsername) {
-        return NextResponse.json({ error: 'Username already in use' }, { status: 409 });
+        return NextResponse.json(
+          { error: "Username already in use" },
+          { status: 409 }
+        );
       }
       user.username = body.username.toLowerCase();
     }
@@ -91,7 +107,7 @@ export async function PUT(request, { params }) {
     if (body.language) user.language = body.language;
     if (body.timezone) user.timezone = body.timezone;
     if (body.avatar_url !== undefined) user.avatar_url = body.avatar_url;
-    if (typeof body.is_active === 'boolean') user.is_active = body.is_active;
+    if (typeof body.is_active === "boolean") user.is_active = body.is_active;
 
     if (body.password) {
       user.password_hash = await hashPassword(body.password);
@@ -104,7 +120,9 @@ export async function PUT(request, { params }) {
     await user.save();
 
     if (Array.isArray(body.roles)) {
-      const targetOrg = context.isSuperAdmin ? (body.org_id || user.org_id) : context.orgId;
+      const targetOrg = context.isSuperAdmin
+        ? body.org_id || user.org_id
+        : context.orgId;
       await updateUserRoles(user._id, body.roles, targetOrg);
     }
 
@@ -113,17 +131,69 @@ export async function PUT(request, { params }) {
     await logAuditEvent({
       org_id: user.org_id,
       user_id: context.user.id,
-      action: 'user.update',
-      resource: 'user',
+      action: "user.update",
+      resource: "user",
       resource_id: user._id.toString(),
       meta: { roles },
-      request
+      request,
     });
 
     return NextResponse.json({ user: serializeUser(user, roles) });
   } catch (error) {
-    console.error('Update user error:', error);
+    console.error("Update user error:", error);
     const status = error.status || 500;
-    return NextResponse.json({ error: error.message || 'Failed to update user' }, { status });
+    return NextResponse.json(
+      { error: error.message || "Failed to update user" },
+      { status }
+    );
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    const context = await requirePermission(request, PERMISSIONS.USERS_MANAGE);
+    await connectDB();
+
+    const user = await User.findById(params.id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Seguridad por organización
+    if (!context.isSuperAdmin && user.org_id !== context.orgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const userId = user._id.toString();
+    const orgId = user.org_id;
+
+    // Eliminar relaciones de roles
+    await UserRole.deleteMany({ user_id: user._id });
+
+    // Eliminar usuario
+    await User.deleteOne({ _id: user._id });
+
+    // Auditoría
+    await logAuditEvent({
+      org_id: orgId,
+      user_id: context.user.id,
+      action: "user.delete",
+      resource: "user",
+      resource_id: userId,
+      meta: {
+        email: user.email,
+        username: user.username,
+      },
+      request,
+    });
+
+    return NextResponse.json({ success: true, id: userId }, { status: 200 });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    const status = error.status || 500;
+    return NextResponse.json(
+      { error: error.message || "Failed to delete user" },
+      { status }
+    );
   }
 }
