@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/components/providers/AuthSessionProvider";
 import Swal from "sweetalert2";
+import { Users } from "lucide-react";
 
 const navigation = [
   { name: "Tablero general", href: "/", icon: LayoutDashboard },
@@ -29,6 +30,14 @@ const navigation = [
   { name: "Perfil", href: "/profile", icon: UserCircle },
 ];
 
+const adminNavigation = [
+  {
+    name: "Gestionar usuarios",
+    href: "/users",
+    icon: Users,
+  },
+];
+
 const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 72;
 
@@ -37,6 +46,15 @@ export default function SidebarHandler({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuthSession();
+
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+
+    return (
+      user.username === "jasanbadelldev" ||
+      user.email === "superadmin@example.com"
+    );
+  }, [user]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -50,6 +68,10 @@ export default function SidebarHandler({ children }) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    console.log("USER SESSION:", user);
+  }, [user]);
 
   const contentPadding = useMemo(
     () => ({
@@ -102,6 +124,10 @@ export default function SidebarHandler({ children }) {
     }
   }
 
+  const finalNavigation = useMemo(() => {
+    return isAdmin ? [...navigation, ...adminNavigation] : navigation;
+  }, [isAdmin]);
+
   return (
     <div className="flex min-h-screen bg-background text-[15px] sm:text-[16px]">
       <aside
@@ -144,7 +170,7 @@ export default function SidebarHandler({ children }) {
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 py-3">
-          {navigation.map((item) => {
+          {finalNavigation.map((item) => {
             const Icon = item.icon;
             const isActive =
               pathname === item.href ||

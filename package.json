@@ -11,6 +11,7 @@
     "start": "next start",
     "seed": "node scripts/seed.js",
     "seed:auth": "node scripts/seed-auth.js",
+    "seed:department-heads": "node scripts/seedDepartmentHeads.js",
     "prettier": "prettier -w ./"
   },
   "dependencies": {
