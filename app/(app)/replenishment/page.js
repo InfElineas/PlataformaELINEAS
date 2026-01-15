@@ -31,6 +31,12 @@ export default function ReplenishmentPage() {
   const [plan, setPlan] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [filters, setFilters] = useState({
+    product: "",
+    minRecommendedQty: "",
+    maxDaysOfCover: "",
+    reason: "all",
+  });
 
   useEffect(() => {
     loadStores();
@@ -144,8 +150,30 @@ export default function ReplenishmentPage() {
   }
 
   const planStatus = plan.length > 0 ? plan[0].status : null;
-  const itemsToRestock = plan.filter((p) => p.recommended_qty > 0);
-  const totalRecommendedQty = plan.reduce(
+  const availableReasons = Array.from(
+    new Set(plan.map((item) => item.reason).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
+  const filteredPlan = plan.filter((item) => {
+    const productMatch = filters.product
+      ? item.product_name
+          ?.toLowerCase()
+          .includes(filters.product.toLowerCase())
+      : true;
+    const minQtyMatch =
+      filters.minRecommendedQty === ""
+        ? true
+        : item.recommended_qty >= Number(filters.minRecommendedQty);
+    const maxDaysMatch =
+      filters.maxDaysOfCover === ""
+        ? true
+        : (item.days_of_cover || 7) <= Number(filters.maxDaysOfCover);
+    const reasonMatch =
+      filters.reason === "all" ? true : item.reason === filters.reason;
+
+    return productMatch && minQtyMatch && maxDaysMatch && reasonMatch;
+  });
+  const itemsToRestock = filteredPlan.filter((p) => p.recommended_qty > 0);
+  const totalRecommendedQty = filteredPlan.reduce(
     (sum, p) => sum + p.recommended_qty,
     0,
   );
@@ -221,7 +249,7 @@ export default function ReplenishmentPage() {
                 <div className="grid grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary">
-                      {plan.length}
+                      {filteredPlan.length}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Total de objetos
@@ -256,6 +284,92 @@ export default function ReplenishmentPage() {
                     >
                       {planStatus}
                     </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Filtros globales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Buscar producto
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.product}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          product: event.target.value,
+                        }))
+                      }
+                      placeholder="Nombre o SKU"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Cantidad mínima recomendada
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={filters.minRecommendedQty}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          minRecommendedQty: event.target.value,
+                        }))
+                      }
+                      placeholder="Ej. 5"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Máximo de días de cobertura
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={filters.maxDaysOfCover}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          maxDaysOfCover: event.target.value,
+                        }))
+                      }
+                      placeholder="Ej. 10"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Razón
+                    </label>
+                    <Select
+                      value={filters.reason}
+                      onValueChange={(value) =>
+                        setFilters((prev) => ({ ...prev, reason: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar razón" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {availableReasons.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
@@ -321,7 +435,7 @@ export default function ReplenishmentPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {plan
+                      {filteredPlan
                         .filter((p) => p.recommended_qty > 0)
                         .map((item) => (
                           <TableRow key={item._id}>
@@ -351,15 +465,14 @@ export default function ReplenishmentPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                      {plan.filter((p) => p.recommended_qty > 0).length ===
-                        0 && (
+                      {filteredPlan.filter((p) => p.recommended_qty > 0)
+                        .length === 0 && (
                         <TableRow>
                           <TableCell
                             colSpan={8}
                             className="text-center py-8 text-muted-foreground"
                           >
-                            Ningún objeto necesita reabastecerse en estos
-                            momentos
+                            Ninguna oferta cumple con los filtros actuales.
                           </TableCell>
                         </TableRow>
                       )}
