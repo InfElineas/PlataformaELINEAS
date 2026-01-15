@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
 import { ALL } from "@/hooks/useProductFilters";
 
@@ -528,7 +528,7 @@ export default function InventoryPage() {
 
   // ================= Edición de ajustes =================
 
-  function updateAdjustment(snapshotId, field, value) {
+  const updateAdjustment = useCallback((snapshotId, field, value) => {
     setAdjustments((prev) => ({
       ...prev,
       [snapshotId]: {
@@ -536,7 +536,7 @@ export default function InventoryPage() {
         [field]: value,
       },
     }));
-  }
+  }, []);
 
   function resolveRealQty(item, adj) {
     if (
@@ -841,140 +841,153 @@ export default function InventoryPage() {
     }
   }
 
-  const tableColumns = [
-    {
-      key: "code",
-      label: "Cód. Prod.",
-      className: "font-mono text-xs",
-      cell: ({ item }) => getProductCode(item),
-    },
-    {
-      key: "name",
-      label: "Producto",
-      className: "text-sm",
-      cell: ({ item }) => getProductName(item) || "—",
-    },
-    {
-      key: "supplier",
-      label: "Suministrador",
-      className: "text-sm",
-      cell: ({ item }) => getSupplierLabel(item) || "—",
-    },
-    {
-      key: "ef",
-      label: "EF (Existencia física)",
-      className: "text-right font-mono text-sm tabular-nums",
-      cell: ({ item }) => formatQty(getEF(item)),
-    },
-    {
-      key: "a",
-      label: "A (Reserva)",
-      className: "text-right font-mono text-sm tabular-nums",
-      cell: ({ item }) => formatQty(getA(item)),
-    },
-    {
-      key: "t",
-      label: "T (Disp. tienda)",
-      className: "text-right font-mono text-sm tabular-nums",
-      cell: ({ item }) => formatQty(getT(item)),
-    },
-    {
-      key: "real",
-      label: "Real",
-      className: "text-right",
-      show: ui.showReal,
-      cell: ({ snapshotId, adj }) => (
-        <Input
-          type="number"
-          className="h-8 w-24 text-right"
-          value={adj.real_qty ?? ""}
-          onChange={(e) =>
-            updateAdjustment(snapshotId, "real_qty", e.target.value)
-          }
-        />
-      ),
-    },
-    {
-      key: "upload",
-      label: "Subir T",
-      className: "text-right",
-      show: showUploadToStore,
-      cell: ({ snapshotId, adj }) => (
-        <Input
-          type="number"
-          className="h-8 w-20 text-right"
-          value={adj.upload_qty ?? ""}
-          onChange={(e) =>
-            updateAdjustment(snapshotId, "upload_qty", e.target.value)
-          }
-        />
-      ),
-    },
-    {
-      key: "download",
-      label: "Bajar T",
-      className: "text-right",
-      show: showDownloadFromStore,
-      cell: ({ snapshotId, adj }) => (
-        <Input
-          type="number"
-          className="h-8 w-20 text-right"
-          value={adj.download_qty ?? ""}
-          onChange={(e) =>
-            updateAdjustment(snapshotId, "download_qty", e.target.value)
-          }
-        />
-      ),
-    },
-    {
-      key: "reason",
-      label: "Clasificación",
-      cell: ({ snapshotId, adj }) => (
-        <Select
-          value={adj.reason || NO_REASON}
-          onValueChange={(v) =>
-            updateAdjustment(snapshotId, "reason", v || NO_REASON)
-          }
-        >
-          <SelectTrigger className="h-8 w-64">
-            <SelectValue placeholder="Seleccionar..." />
-          </SelectTrigger>
-          <SelectContent className="max-h-72 overflow-auto">
-            <SelectItem value={NO_REASON}>(Sin clasificación)</SelectItem>
-            {ADJUSTMENT_REASONS.map((reason) => (
-              <SelectItem key={reason} value={reason}>
-                {reason}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-    {
-      key: "note",
-      label: "Nota",
-      cell: ({ snapshotId, adj }) => (
-        <Input
-          className="h-8 w-64"
-          placeholder="Nota..."
-          value={adj.note || ""}
-          onChange={(e) => updateAdjustment(snapshotId, "note", e.target.value)}
-        />
-      ),
-    },
-    {
-      key: "state",
-      label: "Estado ajuste",
-      cell: ({ state, difference }) => (
-        <Badge variant={state === "ok" ? "default" : "secondary"}>
-          {state.toUpperCase()}
-          {difference !== 0 ? ` (${difference})` : ""}
-        </Badge>
-      ),
-    },
-  ];
+  const tableColumns = useMemo(
+    () => [
+      {
+        key: "code",
+        label: "Cód. Prod.",
+        className: "font-mono text-xs",
+        cell: ({ item }) => getProductCode(item),
+      },
+      {
+        key: "name",
+        label: "Producto",
+        className: "text-sm",
+        cell: ({ item }) => getProductName(item) || "—",
+      },
+      {
+        key: "supplier",
+        label: "Suministrador",
+        className: "text-sm",
+        cell: ({ item }) => getSupplierLabel(item) || "—",
+      },
+      {
+        key: "ef",
+        label: "EF (Existencia física)",
+        className: "text-right font-mono text-sm tabular-nums",
+        cell: ({ item }) => formatQty(getEF(item)),
+      },
+      {
+        key: "a",
+        label: "A (Reserva)",
+        className: "text-right font-mono text-sm tabular-nums",
+        cell: ({ item }) => formatQty(getA(item)),
+      },
+      {
+        key: "t",
+        label: "T (Disp. tienda)",
+        className: "text-right font-mono text-sm tabular-nums",
+        cell: ({ item }) => formatQty(getT(item)),
+      },
+      {
+        key: "real",
+        label: "Real",
+        className: "text-right",
+        show: ui.showReal,
+        cell: ({ snapshotId, adj }) => (
+          <Input
+            type="number"
+            className="h-8 w-24 text-right"
+            value={adj.real_qty ?? ""}
+            onChange={(e) =>
+              updateAdjustment(snapshotId, "real_qty", e.target.value)
+            }
+          />
+        ),
+      },
+      {
+        key: "upload",
+        label: "Subir T",
+        className: "text-right",
+        show: showUploadToStore,
+        cell: ({ snapshotId, adj }) => (
+          <Input
+            type="number"
+            className="h-8 w-20 text-right"
+            value={adj.upload_qty ?? ""}
+            onChange={(e) =>
+              updateAdjustment(snapshotId, "upload_qty", e.target.value)
+            }
+          />
+        ),
+      },
+      {
+        key: "download",
+        label: "Bajar T",
+        className: "text-right",
+        show: showDownloadFromStore,
+        cell: ({ snapshotId, adj }) => (
+          <Input
+            type="number"
+            className="h-8 w-20 text-right"
+            value={adj.download_qty ?? ""}
+            onChange={(e) =>
+              updateAdjustment(snapshotId, "download_qty", e.target.value)
+            }
+          />
+        ),
+      },
+      {
+        key: "reason",
+        label: "Clasificación",
+        cell: ({ snapshotId, adj }) => (
+          <Select
+            value={adj.reason || NO_REASON}
+            onValueChange={(v) =>
+              updateAdjustment(snapshotId, "reason", v || NO_REASON)
+            }
+          >
+            <SelectTrigger className="h-8 w-64">
+              <SelectValue placeholder="Seleccionar..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 overflow-auto">
+              <SelectItem value={NO_REASON}>(Sin clasificación)</SelectItem>
+              {ADJUSTMENT_REASONS.map((reason) => (
+                <SelectItem key={reason} value={reason}>
+                  {reason}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+      },
+      {
+        key: "note",
+        label: "Nota",
+        cell: ({ snapshotId, adj }) => (
+          <Input
+            className="h-8 w-64"
+            placeholder="Nota..."
+            value={adj.note || ""}
+            onChange={(e) =>
+              updateAdjustment(snapshotId, "note", e.target.value)
+            }
+          />
+        ),
+      },
+      {
+        key: "state",
+        label: "Estado ajuste",
+        cell: ({ state, difference }) => (
+          <Badge variant={state === "ok" ? "default" : "secondary"}>
+            {state.toUpperCase()}
+            {difference !== 0 ? ` (${difference})` : ""}
+          </Badge>
+        ),
+      },
+    ],
+    [
+      showDownloadFromStore,
+      showUploadToStore,
+      ui.showReal,
+      updateAdjustment,
+    ],
+  );
 
-  const visibleTableColumns = tableColumns.filter((col) => col.show !== false);
+  const visibleTableColumns = useMemo(
+    () => tableColumns.filter((col) => col.show !== false),
+    [tableColumns],
+  );
 
   // ================= Render =================
 
