@@ -39,6 +39,18 @@ export default function ReplenishmentPage() {
     maxDaysOfCover: "",
     reason: "all",
   });
+  const formatStoreLabel = (store) => {
+    const warehouseName = store.warehouse_name || store.name || "—";
+    const warehouseNumber =
+      store.no_almacen || store.warehouse_number || store.tkc_code;
+    const warehouseCode = store.warehouse_code;
+    const meta = [warehouseNumber, warehouseCode].filter(Boolean);
+    const uniqueMeta = Array.from(new Set(meta));
+
+    return uniqueMeta.length > 0
+      ? `${warehouseName} (${uniqueMeta.join(" · ")})`
+      : warehouseName;
+  };
 
   useEffect(() => {
     loadStores();
@@ -288,7 +300,7 @@ export default function ReplenishmentPage() {
                   <SelectContent>
                     {stores.map((store) => (
                       <SelectItem key={store._id} value={store._id}>
-                        {store.name}
+                        {formatStoreLabel(store)}
                       </SelectItem>
                     ))}
                   </SelectContent>
