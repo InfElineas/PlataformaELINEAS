@@ -442,6 +442,92 @@ export default function ReplenishmentPage() {
               </CardContent>
             </Card>
 
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Filtros globales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Buscar producto
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.product}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          product: event.target.value,
+                        }))
+                      }
+                      placeholder="Nombre o SKU"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Cantidad mínima recomendada
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={filters.minRecommendedQty}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          minRecommendedQty: event.target.value,
+                        }))
+                      }
+                      placeholder="Ej. 5"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Máximo de días de cobertura
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={filters.maxDaysOfCover}
+                      onChange={(event) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          maxDaysOfCover: event.target.value,
+                        }))
+                      }
+                      placeholder="Ej. 10"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Razón
+                    </label>
+                    <Select
+                      value={filters.reason}
+                      onValueChange={(value) =>
+                        setFilters((prev) => ({ ...prev, reason: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar razón" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {availableReasons.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
