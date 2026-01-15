@@ -58,7 +58,7 @@ export async function GET(request, { params }) {
     const status = error.status || 500;
     return NextResponse.json(
       { error: error.message || "Failed to load user" },
-      { status },
+      { status }
     );
   }
 }
@@ -83,7 +83,7 @@ export async function PUT(request, { params }) {
       if (existing) {
         return NextResponse.json(
           { error: "Email already in use" },
-          { status: 409 },
+          { status: 409 }
         );
       }
       user.email = body.email.toLowerCase();
@@ -96,7 +96,7 @@ export async function PUT(request, { params }) {
       if (existingUsername) {
         return NextResponse.json(
           { error: "Username already in use" },
-          { status: 409 },
+          { status: 409 }
         );
       }
       user.username = body.username.toLowerCase();
@@ -144,7 +144,56 @@ export async function PUT(request, { params }) {
     const status = error.status || 500;
     return NextResponse.json(
       { error: error.message || "Failed to update user" },
-      { status },
+      { status }
+    );
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    const context = await requirePermission(request, PERMISSIONS.USERS_MANAGE);
+    await connectDB();
+
+    const user = await User.findById(params.id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Seguridad por organización
+    if (!context.isSuperAdmin && user.org_id !== context.orgId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const userId = user._id.toString();
+    const orgId = user.org_id;
+
+    // Eliminar relaciones de roles
+    await UserRole.deleteMany({ user_id: user._id });
+
+    // Eliminar usuario
+    await User.deleteOne({ _id: user._id });
+
+    // Auditoría
+    await logAuditEvent({
+      org_id: orgId,
+      user_id: context.user.id,
+      action: "user.delete",
+      resource: "user",
+      resource_id: userId,
+      meta: {
+        email: user.email,
+        username: user.username,
+      },
+      request,
+    });
+
+    return NextResponse.json({ success: true, id: userId }, { status: 200 });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    const status = error.status || 500;
+    return NextResponse.json(
+      { error: error.message || "Failed to delete user" },
+      { status }
     );
   }
 }

@@ -60,7 +60,8 @@ function fmtDate(val) {
 
 const compactNumberCell =
   "text-center text-xs font-semibold tabular-nums whitespace-nowrap px-2";
-const compactHeader = "text-center text-xs font-semibold whitespace-nowrap px-2";
+const compactHeader =
+  "text-center text-xs font-semibold whitespace-nowrap px-2";
 const sortableHeader =
   "text-left text-xs font-semibold whitespace-nowrap px-2 select-none";
 
@@ -203,8 +204,7 @@ function TruncatedCell({ value, className }) {
   const raw = fmt(value);
   if (raw === "—") return <span className={className}>—</span>;
 
-  const truncated =
-    raw.length > 12 ? `${raw.slice(0, 12)}…` : raw;
+  const truncated = raw.length > 12 ? `${raw.slice(0, 12)}…` : raw;
 
   return (
     <span className={className} title={raw}>
@@ -231,7 +231,10 @@ function InfoRow({ label, value }) {
       <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
-      <span className="truncate text-xs font-medium" title={display === "—" ? undefined : display}>
+      <span
+        className="truncate text-xs font-medium"
+        title={display === "—" ? undefined : display}
+      >
         {display}
       </span>
     </div>
@@ -269,7 +272,7 @@ function ProductHoverCard({
   const description = getFirstString(
     product,
     ["description", "metadata.description", "metadata.descripcion"],
-    "",
+    ""
   );
   const image = getProductImage(product);
 
@@ -285,12 +288,20 @@ function ProductHoverCard({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 space-y-1">
-            <p className="truncate text-sm font-semibold leading-tight" title={product.name}>
+            <p
+              className="truncate text-sm font-semibold leading-tight"
+              title={product.name}
+            >
               {fmt(product.name)}
             </p>
-            {marca ? <p className="text-xs text-muted-foreground">{marca}</p> : null}
+            {marca ? (
+              <p className="text-xs text-muted-foreground">{marca}</p>
+            ) : null}
             {categoriaOnline ? (
-              <p className="text-xs text-muted-foreground truncate" title={categoriaOnline}>
+              <p
+                className="text-xs text-muted-foreground truncate"
+                title={categoriaOnline}
+              >
                 {categoriaOnline}
               </p>
             ) : null}
@@ -342,7 +353,7 @@ function getSuministrador(p) {
   return getFirstString(
     p,
     ["supplier_name", "provider_name", "provider_id", "supplier_id"],
-    "",
+    ""
   );
 }
 
@@ -374,7 +385,7 @@ function getNoAlmacen(p) {
       "metadata.warehouse_code",
       "metadata.warehouse_name",
     ],
-    "",
+    ""
   );
 }
 
@@ -402,9 +413,7 @@ function getEstadoAnuncio(p) {
   }
 
   if (status === "dead" || status === "muerto") {
-    return EF === 0
-      ? "DESACTIVADO MUERTO EF = 0"
-      : "DESACTIVADO MUERTO EF > 0";
+    return EF === 0 ? "DESACTIVADO MUERTO EF = 0" : "DESACTIVADO MUERTO EF > 0";
   }
 
   return EF === 0 ? "DESACTIVADO EF = 0" : "DESACTIVADO EF > 0";
@@ -563,7 +572,8 @@ export default function ProductsPage() {
         params.set("suministrador", appliedFilters.suministrador);
       if (appliedFilters.categoria !== ALL)
         params.set("categoria", appliedFilters.categoria);
-      if (appliedFilters.marca !== ALL) params.set("marca", appliedFilters.marca);
+      if (appliedFilters.marca !== ALL)
+        params.set("marca", appliedFilters.marca);
       if (appliedFilters.habilitado !== ALL)
         params.set("habilitado", appliedFilters.habilitado);
       if (appliedFilters.activado !== ALL)
@@ -613,13 +623,13 @@ export default function ProductsPage() {
         almacenes: mergeOptions(data.meta?.warehouses, derived.almacenes),
         suministradores: mergeOptions(
           data.meta?.suppliers,
-          derived.suministradores,
+          derived.suministradores
         ),
         categorias: mergeOptions(data.meta?.categories, derived.categorias),
         marcas: mergeOptions(data.meta?.brands, derived.marcas),
         estadosTienda: mergeOptions(
           data.meta?.storeStatuses,
-          derived.estadosTienda,
+          derived.estadosTienda
         ),
       });
     } catch (e) {
@@ -635,22 +645,22 @@ export default function ProductsPage() {
   const opciones = useMemo(
     () => ({
       almacenes: Array.from(new Set(filterOptions.almacenes || [])).sort(
-        (a, b) => a.localeCompare(b, "es"),
+        (a, b) => a.localeCompare(b, "es")
       ),
       suministradores: Array.from(
-        new Set(filterOptions.suministradores || []),
+        new Set(filterOptions.suministradores || [])
       ).sort((a, b) => a.localeCompare(b, "es")),
       categorias: Array.from(new Set(filterOptions.categorias || [])).sort(
-        (a, b) => a.localeCompare(b, "es"),
+        (a, b) => a.localeCompare(b, "es")
       ),
       marcas: Array.from(new Set(filterOptions.marcas || [])).sort((a, b) =>
-        a.localeCompare(b, "es"),
+        a.localeCompare(b, "es")
       ),
       estadosTienda: Array.from(
-        new Set(filterOptions.estadosTienda || []),
+        new Set(filterOptions.estadosTienda || [])
       ).sort((a, b) => a.localeCompare(b, "es")),
     }),
-    [filterOptions],
+    [filterOptions]
   );
 
   const {
@@ -700,8 +710,7 @@ export default function ProductsPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const firstItem = total === 0 ? 0 : (page - 1) * perPage + 1;
-  const lastItem =
-    total === 0 ? 0 : firstItem + rows.length - 1;
+  const lastItem = total === 0 ? 0 : firstItem + rows.length - 1;
 
   const resultsLabel = loading
     ? "Cargando…"
@@ -723,7 +732,9 @@ export default function ProductsPage() {
           <div className="flex flex-col gap-4">
             <div className="grid gap-3 lg:flex lg:items-center lg:justify-between">
               <div className="max-lg:pb-1">
-                <CardTitle className="text-lg sm:text-xl">Listado de productos</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">
+                  Listado de productos
+                </CardTitle>
                 <p className="text-xs text-muted-foreground sm:text-sm">
                   Busca por nombre, código, código de barras o Id tienda.
                 </p>
@@ -746,7 +757,10 @@ export default function ProductsPage() {
                 {/* Columnas visibles */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 whitespace-nowrap">
+                    <Button
+                      variant="outline"
+                      className="gap-2 whitespace-nowrap"
+                    >
                       <Settings2 className="h-4 w-4" />
                       Columnas visibles
                     </Button>
@@ -757,127 +771,96 @@ export default function ProductsPage() {
                   >
                     <DropdownMenuCheckboxItem
                       checked={cols.categoria}
-                      onCheckedChange={(v) =>
-                        setCol("categoria", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("categoria", !!v)}
                     >
                       Categoría Online
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.idTienda}
-                      onCheckedChange={(v) =>
-                        setCol("idTienda", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("idTienda", !!v)}
                     >
                       Id Tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.codProducto}
-                      onCheckedChange={(v) =>
-                        setCol("codProducto", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("codProducto", !!v)}
                     >
                       Cod. Producto
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.nombre}
-                      onCheckedChange={(v) =>
-                        setCol("nombre", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("nombre", !!v)}
                     >
                       Nombre
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.marca}
-                      onCheckedChange={(v) =>
-                        setCol("marca", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("marca", !!v)}
                     >
                       Marca
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.suministrador}
-                      onCheckedChange={(v) =>
-                        setCol("suministrador", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("suministrador", !!v)}
                     >
                       Suministrador
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.exist}
-                      onCheckedChange={(v) =>
-                        setCol("exist", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("exist", !!v)}
                     >
                       Existencia Física
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.reserva}
-                      onCheckedChange={(v) =>
-                        setCol("reserva", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("reserva", !!v)}
                     >
                       Reserva (A)
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.dispTienda}
-                      onCheckedChange={(v) =>
-                        setCol("dispTienda", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("dispTienda", !!v)}
                     >
                       Disp. Tienda (T)
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.precioCosto}
-                      onCheckedChange={(v) =>
-                        setCol("precioCosto", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("precioCosto", !!v)}
                     >
                       Precio Costo
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.noAlmacen}
-                      onCheckedChange={(v) =>
-                        setCol("noAlmacen", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("noAlmacen", !!v)}
                     >
                       No. Almacén
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoAnuncio}
-                      onCheckedChange={(v) =>
-                        setCol("estadoAnuncio", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("estadoAnuncio", !!v)}
                     >
                       Estado de Anuncio
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.estadoTienda}
-                      onCheckedChange={(v) =>
-                        setCol("estadoTienda", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("estadoTienda", !!v)}
                     >
                       Estado en tienda
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.creado}
-                      onCheckedChange={(v) =>
-                        setCol("creado", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("creado", !!v)}
                     >
                       Creado
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem
                       checked={cols.actualizado}
-                      onCheckedChange={(v) =>
-                        setCol("actualizado", !!v)
-                      }
+                      onCheckedChange={(v) => setCol("actualizado", !!v)}
                     >
                       Actualizado
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
               </div>
             </div>
 
@@ -896,20 +879,14 @@ export default function ProductsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL}>(Todas)</SelectItem>
-                    <SelectItem value="con">
-                      Con existencia
-                    </SelectItem>
-                    <SelectItem value="sin">
-                      Sin existencia
-                    </SelectItem>
+                    <SelectItem value="con">Con existencia</SelectItem>
+                    <SelectItem value="sin">Sin existencia</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Almacén
-                </span>
+                <span className="text-xs text-muted-foreground">Almacén</span>
                 <Select
                   value={pendingFilters.almacen}
                   onValueChange={setFilterAndApply("almacen")}
@@ -973,9 +950,7 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Marca
-                </span>
+                <span className="text-xs text-muted-foreground">Marca</span>
                 <Select
                   value={pendingFilters.marca}
                   onValueChange={setFilterAndApply("marca")}
@@ -1014,9 +989,7 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
-                  Activado
-                </span>
+                <span className="text-xs text-muted-foreground">Activado</span>
                 <Select
                   value={pendingFilters.activado}
                   onValueChange={setFilterAndApply("activado")}
@@ -1068,7 +1041,9 @@ export default function ProductsPage() {
               </span>
             </div>
             {/* Resultados */}
-            <span className="text-sm text-muted-foreground">{resultsLabel}</span>
+            <span className="text-sm text-muted-foreground">
+              {resultsLabel}
+            </span>
 
             {/* Chips filtros aplicados */}
             <div className="flex flex-wrap gap-2">
@@ -1098,42 +1073,38 @@ export default function ProductsPage() {
                   Habilitado: {aHabilitado}
                 </Badge>
               )}
-                {aActivado !== ALL && (
-                  <Badge variant="secondary">
-                    Activado: {aActivado}
-                  </Badge>
-                )}
-                {aEstadoTienda !== ALL && (
-                  <Badge variant="secondary">
-                    Estado tienda: {aEstadoTienda}
-                  </Badge>
-                )}
-              </div>
+              {aActivado !== ALL && (
+                <Badge variant="secondary">Activado: {aActivado}</Badge>
+              )}
+              {aEstadoTienda !== ALL && (
+                <Badge variant="secondary">
+                  Estado tienda: {aEstadoTienda}
+                </Badge>
+              )}
+            </div>
           </div>
-           {/* Paginación */}
-              <div className="flex items-center justify-end gap-4 pt-4">
-                <span className="text-xs text-muted-foreground">
-                  Página {page} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1 || loading}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || loading}
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
-                >
-                  Siguiente
-                </Button>
-              </div>
+          {/* Paginación */}
+          <div className="flex items-center justify-end gap-4 pt-4">
+            <span className="text-xs text-muted-foreground">
+              Página {page} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Siguiente
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="rounded-lg border border-border/60 p-0 sm:p-2">
@@ -1151,205 +1122,208 @@ export default function ProductsPage() {
                 <Table className="w-full">
                   <TableHeader>
                     <TableRow>
-                    {cols.categoria && (
-                      <SortableHead
-                        field="category_name"
-                        label="Categoría Online"
-                        className={sortableHeader}
-                      />
-                    )}
-                    {cols.idTienda && (
-                      <SortableHead
-                        field="store_external_id"
-                        label="Id Tienda"
-                      />
-                    )}
-                    {cols.codProducto && (
-                      <SortableHead field="product_code" label="Cod. Producto" />
-                    )}
-                    {cols.nombre && <SortableHead field="name" label="Nombre" />}
-                    {cols.marca && <SortableHead field="brand" label="Marca" />}
-                    {cols.suministrador && (
-                      <SortableHead
-                        field="supplier_name"
-                        label="Suministrador"
-                      />
-                    )}
-                    {cols.exist && (
-                      <SortableHead
-                        field="existencia_fisica"
-                        label="Existencia Física (EF)"
-                        className={compactHeader}
-                      />
-                    )}
-                    {cols.reserva && (
-                      <SortableHead
-                        field="reserva"
-                        label="Reserva (A)"
-                        className={compactHeader}
-                      />
-                    )}
-                    {cols.dispTienda && (
-                      <SortableHead
-                        field="disponible_tienda"
-                        label="Disp. Tienda (T)"
-                        className={compactHeader}
-                      />
-                    )}
-                    {cols.precioCosto && (
-                      <SortableHead
-                        field="precio_costo"
-                        label="Precio Costo"
-                        className={compactHeader}
-                      />
-                    )}
-                    {cols.noAlmacen && (
-                      <SortableHead
-                        field="no_almacen"
-                        label="No. Almacén"
-                        className={compactHeader}
-                      />
-                    )}
-                    {cols.estadoAnuncio && (
-                      <SortableHead
-                        field="status"
-                        label="Estado de Anuncio"
-                      />
-                    )}
-                    {cols.estadoTienda && (
-                      <SortableHead
-                        field="store_status"
-                        label="Estado en tienda"
-                      />
-                    )}
-                    {cols.creado && (
-                      <SortableHead field="created_at" label="Creado" />
-                    )}
-                    {cols.actualizado && (
-                      <SortableHead field="updated_at" label="Actualizado" />
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((p) => {
-                    const categoriaOnline = getCategoriaOnline(p);
-                    const idTienda = getIdTienda(p);
-                    const codProducto = getCodProducto(p);
-                    const suministrador = getSuministrador(p);
-                    const EF = getEF(p);
-                    const A = getReserva(p);
-                    const T = getDisponibleTienda(p);
-                    const precioCosto = getPrecioCosto(p);
-                    const noAlmacen = getNoAlmacen(p);
-                    const marca = getMarca(p);
-                    const estadoAnuncio = getEstadoAnuncio(p);
-                    const estadoTienda = getEstadoTienda(p);
-                    const anuncioVariant =
-                      badgeVariantAnuncio(estadoAnuncio);
-                    const tiendaVariant =
-                      badgeVariantTienda(estadoTienda);
+                      {cols.categoria && (
+                        <SortableHead
+                          field="category_name"
+                          label="Categoría Online"
+                          className={sortableHeader}
+                        />
+                      )}
+                      {cols.idTienda && (
+                        <SortableHead
+                          field="store_external_id"
+                          label="Id Tienda"
+                        />
+                      )}
+                      {cols.codProducto && (
+                        <SortableHead
+                          field="product_code"
+                          label="Cod. Producto"
+                        />
+                      )}
+                      {cols.nombre && (
+                        <SortableHead field="name" label="Nombre" />
+                      )}
+                      {cols.marca && (
+                        <SortableHead field="brand" label="Marca" />
+                      )}
+                      {cols.suministrador && (
+                        <SortableHead
+                          field="supplier_name"
+                          label="Suministrador"
+                        />
+                      )}
+                      {cols.exist && (
+                        <SortableHead
+                          field="existencia_fisica"
+                          label="Existencia Física (EF)"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.reserva && (
+                        <SortableHead
+                          field="reserva"
+                          label="Reserva (A)"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.dispTienda && (
+                        <SortableHead
+                          field="disponible_tienda"
+                          label="Disp. Tienda (T)"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.precioCosto && (
+                        <SortableHead
+                          field="precio_costo"
+                          label="Precio Costo"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.noAlmacen && (
+                        <SortableHead
+                          field="no_almacen"
+                          label="No. Almacén"
+                          className={compactHeader}
+                        />
+                      )}
+                      {cols.estadoAnuncio && (
+                        <SortableHead
+                          field="status"
+                          label="Estado de Anuncio"
+                        />
+                      )}
+                      {cols.estadoTienda && (
+                        <SortableHead
+                          field="store_status"
+                          label="Estado en tienda"
+                        />
+                      )}
+                      {cols.creado && (
+                        <SortableHead field="created_at" label="Creado" />
+                      )}
+                      {cols.actualizado && (
+                        <SortableHead field="updated_at" label="Actualizado" />
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((p) => {
+                      const categoriaOnline = getCategoriaOnline(p);
+                      const idTienda = getIdTienda(p);
+                      const codProducto = getCodProducto(p);
+                      const suministrador = getSuministrador(p);
+                      const EF = getEF(p);
+                      const A = getReserva(p);
+                      const T = getDisponibleTienda(p);
+                      const precioCosto = getPrecioCosto(p);
+                      const noAlmacen = getNoAlmacen(p);
+                      const marca = getMarca(p);
+                      const estadoAnuncio = getEstadoAnuncio(p);
+                      const estadoTienda = getEstadoTienda(p);
+                      const anuncioVariant = badgeVariantAnuncio(estadoAnuncio);
+                      const tiendaVariant = badgeVariantTienda(estadoTienda);
 
-                    return (
-                      <TableRow key={p._id}>
-                        {cols.categoria && (
-                          <TableCell className="text-sm">
-                            <TruncatedCell
-                              value={categoriaOnline}
-                            />
-                          </TableCell>
-                        )}
-                        {cols.idTienda && (
-                          <TableCell className="font-mono text-xs">
-                            <TruncatedCell value={idTienda} />
-                          </TableCell>
-                        )}
-                        {cols.codProducto && (
-                          <TableCell className="font-mono text-xs">
-                            <TruncatedCell value={codProducto} />
-                          </TableCell>
-                        )}
-                        {cols.nombre && (
-                          <TableCell className="text-sm font-medium">
-                            <ProductHoverCard
-                              product={p}
-                              categoriaOnline={categoriaOnline}
-                              idTienda={idTienda}
-                              codProducto={codProducto}
-                              suministrador={suministrador}
-                              marca={marca}
-                              noAlmacen={noAlmacen}
-                              ef={EF}
-                              reserva={A}
-                              tienda={T}
-                              precioCosto={precioCosto}
-                            >
-                              <TruncatedCell value={p.name} />
-                            </ProductHoverCard>
-                          </TableCell>
-                        )}
-                        {cols.marca && (
-                          <TableCell className="text-sm">
-                            <TruncatedCell value={marca} />
-                          </TableCell>
-                        )}
-                        {cols.suministrador && (
-                          <TableCell className="text-sm">
-                            <TruncatedCell value={suministrador} />
-                          </TableCell>
-                        )}
-                        {cols.exist && (
-                          <TableCell className={compactNumberCell}>
-                            {Number.isNaN(EF) ? "—" : EF}
-                          </TableCell>
-                        )}
-                        {cols.reserva && (
-                          <TableCell className={compactNumberCell}>
-                            {Number.isNaN(A) ? "—" : A}
-                          </TableCell>
-                        )}
-                        {cols.dispTienda && (
-                          <TableCell className={compactNumberCell}>
-                            {Number.isNaN(T) ? "—" : T}
-                          </TableCell>
-                        )}
-                        {cols.precioCosto && (
-                          <TableCell className={compactNumberCell}>
-                            {fmtMoney(precioCosto)}
-                          </TableCell>
-                        )}
-                        {cols.noAlmacen && (
-                          <TableCell className={compactNumberCell}>
-                            <TruncatedCell value={noAlmacen} />
-                          </TableCell>
-                        )}
-                        {cols.estadoAnuncio && (
-                          <TableCell>
-                            <Badge variant={anuncioVariant}>
-                              {estadoAnuncio}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        {cols.estadoTienda && (
-                          <TableCell>
-                            <Badge variant={tiendaVariant}>
-                              {estadoTienda}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        {cols.creado && (
-                          <TableCell className="whitespace-nowrap text-xs">
-                            {fmtDate(p.created_at)}
-                          </TableCell>
-                        )}
-                        {cols.actualizado && (
-                          <TableCell className="whitespace-nowrap text-xs">
-                            {fmtDate(p.updated_at)}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
+                      return (
+                        <TableRow key={p._id}>
+                          {cols.categoria && (
+                            <TableCell className="text-sm">
+                              <TruncatedCell value={categoriaOnline} />
+                            </TableCell>
+                          )}
+                          {cols.idTienda && (
+                            <TableCell className="font-mono text-xs">
+                              <TruncatedCell value={idTienda} />
+                            </TableCell>
+                          )}
+                          {cols.codProducto && (
+                            <TableCell className="font-mono text-xs">
+                              <TruncatedCell value={codProducto} />
+                            </TableCell>
+                          )}
+                          {cols.nombre && (
+                            <TableCell className="text-sm font-medium">
+                              <ProductHoverCard
+                                product={p}
+                                categoriaOnline={categoriaOnline}
+                                idTienda={idTienda}
+                                codProducto={codProducto}
+                                suministrador={suministrador}
+                                marca={marca}
+                                noAlmacen={noAlmacen}
+                                ef={EF}
+                                reserva={A}
+                                tienda={T}
+                                precioCosto={precioCosto}
+                              >
+                                <TruncatedCell value={p.name} />
+                              </ProductHoverCard>
+                            </TableCell>
+                          )}
+                          {cols.marca && (
+                            <TableCell className="text-sm">
+                              <TruncatedCell value={marca} />
+                            </TableCell>
+                          )}
+                          {cols.suministrador && (
+                            <TableCell className="text-sm">
+                              <TruncatedCell value={suministrador} />
+                            </TableCell>
+                          )}
+                          {cols.exist && (
+                            <TableCell className={compactNumberCell}>
+                              {Number.isNaN(EF) ? "—" : EF}
+                            </TableCell>
+                          )}
+                          {cols.reserva && (
+                            <TableCell className={compactNumberCell}>
+                              {Number.isNaN(A) ? "—" : A}
+                            </TableCell>
+                          )}
+                          {cols.dispTienda && (
+                            <TableCell className={compactNumberCell}>
+                              {Number.isNaN(T) ? "—" : T}
+                            </TableCell>
+                          )}
+                          {cols.precioCosto && (
+                            <TableCell className={compactNumberCell}>
+                              {fmtMoney(precioCosto)}
+                            </TableCell>
+                          )}
+                          {cols.noAlmacen && (
+                            <TableCell className={compactNumberCell}>
+                              <TruncatedCell value={noAlmacen} />
+                            </TableCell>
+                          )}
+                          {cols.estadoAnuncio && (
+                            <TableCell>
+                              <Badge variant={anuncioVariant}>
+                                {estadoAnuncio}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {cols.estadoTienda && (
+                            <TableCell>
+                              <Badge variant={tiendaVariant}>
+                                {estadoTienda}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {cols.creado && (
+                            <TableCell className="whitespace-nowrap text-xs">
+                              {fmtDate(p.created_at)}
+                            </TableCell>
+                          )}
+                          {cols.actualizado && (
+                            <TableCell className="whitespace-nowrap text-xs">
+                              {fmtDate(p.updated_at)}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
                 </Table>
               </div>
 
@@ -1393,10 +1367,16 @@ export default function ProductsPage() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1 text-right">
-                          <Badge variant={tiendaVariant} className="text-[11px]">
+                          <Badge
+                            variant={tiendaVariant}
+                            className="text-[11px]"
+                          >
                             {estadoTienda}
                           </Badge>
-                          <Badge variant={anuncioVariant} className="text-[11px]">
+                          <Badge
+                            variant={anuncioVariant}
+                            className="text-[11px]"
+                          >
                             {estadoAnuncio}
                           </Badge>
                         </div>
@@ -1404,16 +1384,18 @@ export default function ProductsPage() {
 
                       <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
                         <div className="space-y-1">
-                          <p className="font-medium text-foreground">Categoría</p>
+                          <p className="font-medium text-foreground">
+                            Categoría
+                          </p>
                           <p className="line-clamp-2">
                             {categoriaOnline || "Sin categoría"}
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className="font-medium text-foreground">Suministrador</p>
-                          <p className="line-clamp-2">
-                            {suministrador || "—"}
+                          <p className="font-medium text-foreground">
+                            Suministrador
                           </p>
+                          <p className="line-clamp-2">{suministrador || "—"}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="font-medium text-foreground">Marca</p>
@@ -1424,29 +1406,41 @@ export default function ProductsPage() {
                           <p>{noAlmacen || "—"}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="font-medium text-foreground">Id tienda</p>
+                          <p className="font-medium text-foreground">
+                            Id tienda
+                          </p>
                           <p className="font-mono text-[11px] text-foreground">
                             {idTienda || "—"}
                           </p>
                         </div>
                         <div className="space-y-1">
                           <p className="font-medium text-foreground">Costo</p>
-                          <p className="text-foreground">{fmtMoney(precioCosto)}</p>
+                          <p className="text-foreground">
+                            {fmtMoney(precioCosto)}
+                          </p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
                         <div className="rounded-md bg-muted/70 p-2">
-                          <p className="text-[11px] text-muted-foreground">EF</p>
-                          <p className="text-sm text-foreground">{Number.isNaN(EF) ? "—" : EF}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            EF
+                          </p>
+                          <p className="text-sm text-foreground">
+                            {Number.isNaN(EF) ? "—" : EF}
+                          </p>
                         </div>
                         <div className="rounded-md bg-muted/70 p-2">
                           <p className="text-[11px] text-muted-foreground">A</p>
-                          <p className="text-sm text-foreground">{Number.isNaN(A) ? "—" : A}</p>
+                          <p className="text-sm text-foreground">
+                            {Number.isNaN(A) ? "—" : A}
+                          </p>
                         </div>
                         <div className="rounded-md bg-muted/70 p-2">
                           <p className="text-[11px] text-muted-foreground">T</p>
-                          <p className="text-sm text-foreground">{Number.isNaN(T) ? "—" : T}</p>
+                          <p className="text-sm text-foreground">
+                            {Number.isNaN(T) ? "—" : T}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1472,9 +1466,7 @@ export default function ProductsPage() {
                     variant="outline"
                     size="sm"
                     disabled={page >= totalPages || loading}
-                    onClick={() =>
-                      setPage((p) => Math.min(totalPages, p + 1))
-                    }
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   >
                     Siguiente
                   </Button>
