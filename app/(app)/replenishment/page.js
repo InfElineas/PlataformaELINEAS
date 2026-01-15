@@ -26,13 +26,15 @@ import { Toaster } from "@/components/ui/sonner";
 
 export default function ReplenishmentPage() {
   const [stores, setStores] = useState([]);
-  const [selectedStore, setSelectedStore] = useState("");
+  const [suppliers, setSuppliers] = useState([]);
   const [planDate, setPlanDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [plan, setPlan] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [filters, setFilters] = useState({
+    storeId: "",
     product: "",
+    supplierId: "all",
     minRecommendedQty: "",
     maxDaysOfCover: "",
     reason: "all",
@@ -40,27 +42,37 @@ export default function ReplenishmentPage() {
 
   useEffect(() => {
     loadStores();
+    loadSuppliers();
   }, []);
 
   useEffect(() => {
-    if (selectedStore && planDate) {
+    if (filters.storeId && planDate) {
       loadExistingPlan();
     }
-  }, [selectedStore, planDate]);
+  }, [filters.storeId, planDate]);
 
   async function loadStores() {
     const res = await fetch("/api/stores");
     const data = await res.json();
     setStores(data.data || []);
     if (data.data?.length > 0) {
-      setSelectedStore(data.data[0]._id);
+      setFilters((prev) => ({
+        ...prev,
+        storeId: prev.storeId || data.data[0]._id,
+      }));
     }
+  }
+
+  async function loadSuppliers() {
+    const res = await fetch("/api/suppliers");
+    const data = await res.json();
+    setSuppliers(data.data || []);
   }
 
   async function loadExistingPlan() {
     setLoading(true);
     const res = await fetch(
-      `/api/replenishment/plans?store_id=${selectedStore}&plan_date=${planDate}`,
+      `/api/replenishment/plans?store_id=${filters.storeId}&plan_date=${planDate}`,
     );
     const data = await res.json();
     setPlan(data.data || []);
@@ -68,17 +80,26 @@ export default function ReplenishmentPage() {
   }
 
   async function generatePlan() {
-    if (!selectedStore || !planDate) {
+    if (!filters.storeId || !planDate) {
       toast.error("Please select store and date");
       return;
     }
 
     setGenerating(true);
     try {
+      const selectedSupplier = suppliers.find(
+        (supplier) => supplier._id === filters.supplierId,
+      );
       const res = await fetch("/api/replenishment/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_date: planDate, store_id: selectedStore }),
+        body: JSON.stringify({
+          plan_date: planDate,
+          store_id: filters.storeId,
+          supplier_id:
+            filters.supplierId === "all" ? null : filters.supplierId,
+          supplier_name: selectedSupplier?.name || null,
+        }),
       });
 
       const data = await res.json();
@@ -133,7 +154,7 @@ export default function ReplenishmentPage() {
       const res = await fetch("/api/purchase-orders/from-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_date: planDate, store_id: selectedStore }),
+        body: JSON.stringify({ plan_date: planDate, store_id: filters.storeId }),
       });
 
       const data = await res.json();
@@ -150,10 +171,22 @@ export default function ReplenishmentPage() {
   }
 
   const planStatus = plan.length > 0 ? plan[0].status : null;
+  const selectedSupplier = suppliers.find(
+    (supplier) => supplier._id === filters.supplierId,
+  );
   const availableReasons = Array.from(
     new Set(plan.map((item) => item.reason).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
   const filteredPlan = plan.filter((item) => {
+    const storeMatch = filters.storeId
+      ? item.store_id === filters.storeId
+      : true;
+    const supplierMatch =
+      filters.supplierId === "all"
+        ? true
+        : item.supplier_id === filters.supplierId ||
+          (selectedSupplier?.name &&
+            item.supplier_name === selectedSupplier.name);
     const productMatch = filters.product
       ? item.product_name
           ?.toLowerCase()
@@ -170,7 +203,14 @@ export default function ReplenishmentPage() {
     const reasonMatch =
       filters.reason === "all" ? true : item.reason === filters.reason;
 
-    return productMatch && minQtyMatch && maxDaysMatch && reasonMatch;
+    return (
+      storeMatch &&
+      supplierMatch &&
+      productMatch &&
+      minQtyMatch &&
+      maxDaysMatch &&
+      reasonMatch
+    );
   });
   const itemsToRestock = filteredPlan.filter((p) => p.recommended_qty > 0);
   const totalRecommendedQty = filteredPlan.reduce(
@@ -199,21 +239,6 @@ export default function ReplenishmentPage() {
           <CardContent>
             <div className="lg:flex max-lg:grid gap-4 items-end">
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Tienda</label>
-                <Select value={selectedStore} onValueChange={setSelectedStore}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tienda" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem key={store._id} value={store._id}>
-                        {store.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">
                   Fecha del plan
                 </label>
@@ -228,6 +253,7 @@ export default function ReplenishmentPage() {
                 onClick={generatePlan}
                 disabled={
                   generating ||
+                  !filters.storeId ||
                   planStatus === "approved" ||
                   planStatus === "converted_to_po"
                 }
@@ -238,6 +264,133 @@ export default function ReplenishmentPage() {
                 />
                 {generating ? "Generando..." : "Generar plan"}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Filtros globales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Almacén</label>
+                <Select
+                  value={filters.storeId}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, storeId: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar almacén" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stores.map((store) => (
+                      <SelectItem key={store._id} value={store._id}>
+                        {store.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Suministrador
+                </label>
+                <Select
+                  value={filters.supplierId}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, supplierId: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar suministrador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier._id} value={supplier._id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Buscar producto
+                </label>
+                <input
+                  type="text"
+                  value={filters.product}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      product: event.target.value,
+                    }))
+                  }
+                  placeholder="Nombre o SKU"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Cantidad mínima recomendada
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.minRecommendedQty}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      minRecommendedQty: event.target.value,
+                    }))
+                  }
+                  placeholder="Ej. 5"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Máximo de días de cobertura
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.maxDaysOfCover}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      maxDaysOfCover: event.target.value,
+                    }))
+                  }
+                  placeholder="Ej. 10"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Razón</label>
+                <Select
+                  value={filters.reason}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, reason: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar razón" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {availableReasons.map((reason) => (
+                      <SelectItem key={reason} value={reason}>
+                        {reason}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
