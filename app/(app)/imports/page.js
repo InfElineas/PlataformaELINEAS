@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,6 +134,7 @@ export default function ImportsPage() {
   const [googleResult, setGoogleResult] = useState(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [listingSheets, setListingSheets] = useState(false);
+  const excelFileRef = useRef(null);
 
   useEffect(() => {
     if (!canImport) return;
@@ -169,6 +170,11 @@ export default function ImportsPage() {
       setMessage("No se pudo completar la vinculación con Google.");
     }
   }, [searchParams, refresh]);
+
+  useEffect(() => {
+    setSheetList([]);
+    setSelectedSheet("");
+  }, [sheetInput]);
 
   if (!canImport) {
     return (
@@ -249,11 +255,16 @@ export default function ImportsPage() {
       setMessage(error.message);
     } finally {
       setExcelLoading(false);
+      setExcelState((prev) => ({ ...prev, file: null }));
+      if (excelFileRef.current) {
+        excelFileRef.current.value = "";
+      }
     }
   }
 
   async function listSheets() {
-    if (!sheetInput) {
+    const cleanedInput = sheetInput.trim();
+    if (!cleanedInput) {
       setMessage("Pega la URL o ID del documento de Google");
       return;
     }
@@ -261,7 +272,7 @@ export default function ImportsPage() {
     setMessage("");
     try {
       const query = new URLSearchParams({
-        fileId: sheetInput,
+        fileId: cleanedInput,
         useOAuth: googleUseOAuth ? "1" : "0",
       }).toString();
       const res = await fetch(`/api/imports/products/worksheets?${query}`);
@@ -279,7 +290,8 @@ export default function ImportsPage() {
 
   async function handleGoogleImport(event) {
     event.preventDefault();
-    if (!sheetInput) {
+    const cleanedInput = sheetInput.trim();
+    if (!cleanedInput) {
       setMessage("Pega la URL o ID del documento de Google");
       return;
     }
@@ -291,7 +303,7 @@ export default function ImportsPage() {
     setMessage("");
     try {
       const payload = {
-        fileId: sheetInput,
+        fileId: cleanedInput,
         sheetName: googleMode === "single" ? selectedSheet : undefined,
         mode: googleMode,
         replaceExisting: googleReplace,
@@ -367,6 +379,7 @@ export default function ImportsPage() {
                   id="excel-file"
                   type="file"
                   accept=".xlsx"
+                  ref={excelFileRef}
                   onChange={(event) =>
                     setExcelState((prev) => ({
                       ...prev,

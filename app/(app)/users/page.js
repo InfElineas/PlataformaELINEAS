@@ -73,41 +73,6 @@ export default function UsersPage() {
     setModalOpen(true);
   }
 
-  /* ---------- Eliminar usuario ---------- */
-  async function handleDelete(user) {
-    if (!user) return;
-
-    const id = user.id ?? user._id;
-    if (!id) {
-      alert("No se pudo identificar el usuario.");
-      return;
-    }
-
-    const confirmation = window.confirm(
-      `⚠️ Esta acción es irreversible.\n\n¿Eliminar definitivamente al usuario "${user.full_name || user.username}"?`
-    );
-
-    if (!confirmation) return;
-
-    // Optimistic UI
-    const prevUsers = users;
-    setUsers((u) => u.filter((item) => userKey(item) !== userKey(user)));
-
-    try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error(`Status ${res.status}`);
-      }
-    } catch (err) {
-      setUsers(prevUsers);
-      console.error("[handleDelete]", err);
-      alert("No se pudo eliminar el usuario.");
-    }
-  }
-
   /* ---------- Desactivar usuario ---------- */
   async function handleDeactivate(user) {
     if (!user) return;

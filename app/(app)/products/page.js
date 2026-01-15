@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Search, Settings2 } from "lucide-react";
 import { ALL } from "@/hooks/useProductFilters";
 import { useGlobalProductFilters } from "@/components/providers/ProductFiltersProvider";
@@ -506,6 +511,7 @@ export default function ProductsPage() {
   const [perPage, setPerPage] = useState(100);
   const [total, setTotal] = useState(0);
   const { sortBy, sortDir } = sort;
+  const deferredSearch = useDeferredValue(search);
 
   // Columnas visibles
   const [cols, setCols] = useState({
@@ -534,14 +540,18 @@ export default function ProductsPage() {
 
   // Carga de datos desde el servidor (global search + filtros + paginación)
   useEffect(() => {
+    const controller = new AbortController();
     const id = setTimeout(() => {
-      loadProducts();
+      loadProducts(controller.signal);
     }, 250);
-    return () => clearTimeout(id);
+    return () => {
+      controller.abort();
+      clearTimeout(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     page,
-    search,
+    deferredSearch,
     appliedFilters.existencia,
     appliedFilters.almacen,
     appliedFilters.suministrador,
@@ -554,14 +564,16 @@ export default function ProductsPage() {
     sortDir,
   ]);
 
-  async function loadProducts() {
+  async function loadProducts(signal) {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("perPage", String(perPage));
 
-      if (search.trim()) params.set("search", search.trim());
+      if (deferredSearch.trim()) {
+        params.set("search", deferredSearch.trim());
+      }
       params.set("includeFilters", "1");
 
       if (appliedFilters.existencia !== ALL)
@@ -585,10 +597,12 @@ export default function ProductsPage() {
 
       const res = await fetch(`/api/products?${params.toString()}`, {
         cache: "no-store",
+        signal,
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
 
+      if (signal?.aborted) return;
       const nextRows = Array.isArray(data.data) ? data.data : [];
       setRows(nextRows);
       setTotal(Number(data.total || 0));
@@ -633,11 +647,14 @@ export default function ProductsPage() {
         ),
       });
     } catch (e) {
+      if (signal?.aborted || e.name === "AbortError") return;
       console.error("Load products failed", e);
       setRows([]);
       setTotal(0);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }
 

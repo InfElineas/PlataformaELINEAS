@@ -4,10 +4,11 @@ import connectDB from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { getSessionFromCookies } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import mongoose from "mongoose";
 
 export default async function ProfilePage() {
   const session = await getSessionFromCookies();
-  if (!session?.user) {
+  if (!session?.user || !mongoose.Types.ObjectId.isValid(session.user.id)) {
     redirect("/login");
   }
 
