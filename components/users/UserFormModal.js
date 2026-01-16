@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 
 const INITIAL_STATE = {
   full_name: "",
@@ -25,7 +26,7 @@ export default function UserFormModal({
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const isEdit = Boolean(user);
-  const dialogRef = useRef(null);
+  const firstInputRef = useRef(null);
 
   useEffect(() => {
     setError(null);
@@ -46,21 +47,36 @@ export default function UserFormModal({
     }
   }, [user, open]);
 
+  // bloquear scroll del body mientras el modal está abierto
   useEffect(() => {
-    function handleKey(e) {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // focus en primer input al abrir
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => firstInputRef.current?.focus(), 40);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // Escape para cerrar
+  useEffect(() => {
+    function onKey(e) {
       if (e.key === "Escape" && open) onClose?.();
     }
-    if (open) window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    if (open) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    setForm((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
+    setFieldErrors((p) => ({ ...p, [name]: undefined }));
   }
 
   function validateForm(values) {
@@ -94,7 +110,6 @@ export default function UserFormModal({
     return errors;
   }
 
-  // robust fetch: intenta primaryMethod; si fetch falla o responde 405, intenta fallbackMethod.
   async function requestWithFallback(
     url,
     primaryMethod,
@@ -106,44 +121,16 @@ export default function UserFormModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
-    // primer intento
     try {
-      console.debug("[requestWithFallback] intent:", primaryMethod, url);
       let res = await fetch(url, opts(primaryMethod));
-      console.debug("[requestWithFallback] status:", res.status);
       if (res.status === 405 && fallbackMethod) {
-        console.debug(
-          "[requestWithFallback] 405 -> intentando fallback:",
-          fallbackMethod
-        );
         res = await fetch(url, opts(fallbackMethod));
-        console.debug("[requestWithFallback] fallback status:", res.status);
       }
       return res;
     } catch (err) {
-      // si fetch lanzó (AbortError / network), intentar fallback si existe
-      console.debug("[requestWithFallback] fetch error:", err?.name || err);
       if (fallbackMethod) {
-        try {
-          console.debug(
-            "[requestWithFallback] intentando fallback tras error:",
-            fallbackMethod,
-            url
-          );
-          const res = await fetch(url, opts(fallbackMethod));
-          console.debug(
-            "[requestWithFallback] fallback status after error:",
-            res.status
-          );
-          return res;
-        } catch (err2) {
-          console.debug(
-            "[requestWithFallback] fallback también falló:",
-            err2?.name || err2
-          );
-          throw err2;
-        }
+        const res = await fetch(url, opts(fallbackMethod));
+        return res;
       }
       throw err;
     }
@@ -156,7 +143,7 @@ export default function UserFormModal({
 
     const errors = validateForm(form);
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length) return;
 
     setLoading(true);
     try {
@@ -166,36 +153,26 @@ export default function UserFormModal({
       if (isEdit) {
         const id = user.id ?? user._id ?? user.__tmpId;
         const url = `/api/users/${id}`;
+        const res = await requestWithFallback(url, "PATCH", "PUT", payload);
 
-        // PATCH -> PUT fallback, y captura de excepciones (abort/network)
-        let res = await requestWithFallback(url, "PATCH", "PUT", payload);
-
-        // Si aun así no está ok, intentar endpoint alternativo /deactivate o /update (si aplica para tu backend)
         if (!res.ok) {
-          // intentar respuesta JSON si la hay
-          let text = "";
-          try {
-            text = await res.text();
-          } catch {}
+          const text = await res.text().catch(() => "");
           let json = null;
           try {
             if (text) json = JSON.parse(text);
           } catch {}
-          // si status 405/404 o similar, lanzar para que el catch gestione
+          if (json && json.errors) setFieldErrors(json.errors);
           throw new Error(
             (json && (json.error || json.message)) || `Status ${res.status}`
           );
         }
 
-        // parsear JSON seguro
         const json = await res.json().catch(() => ({}));
-        const savedUser = json?.user || json?.data || null;
-
+        const savedUser = json?.user || json?.data || json || null;
         onSaved?.(savedUser);
         onSuccess?.(savedUser);
         onClose?.();
       } else {
-        // crear
         const res = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -211,7 +188,7 @@ export default function UserFormModal({
         }
 
         const json = await res.json().catch(() => ({}));
-        const savedUser = (json && (json.data || json)) || null;
+        const savedUser = json?.data || json || null;
         onSaved?.(savedUser);
         onSuccess?.(savedUser);
         onClose?.();
@@ -226,164 +203,265 @@ export default function UserFormModal({
 
   if (!open) return null;
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="user-form-title"
     >
+      {/* backdrop */}
       <div
-        ref={dialogRef}
-        className="w-full max-w-lg rounded-lg bg-white shadow-lg"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose?.();
+        }}
+      />
+
+      {/* modal centralizado con translate -50% -50% para garantizar centrado exacto */}
+      <div
+        role="document"
+        className="relative z-10 rounded-lg bg-white shadow-xl"
+        style={{
+          boxSizing: "border-box",
+          width: "calc(100% - 64px)", // deja 32px margen a cada lado
+          maxWidth: "1100px", // ancho máximo en desktop
+          maxHeight: "80vh",
+          overflow: "hidden",
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+        }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="border-b px-6 py-4">
-          <h2 id="user-form-title" className="text-lg font-semibold">
-            {isEdit ? "Editar usuario" : "Agregar usuario"}
-          </h2>
-        </div>
+        <div className="flex max-h-[80vh] flex-col overflow-auto">
+          <div className="flex items-center justify-between border-b px-4 py-3 lg:px-6 lg:py-4">
+            <h2 id="user-form-title" className="text-lg font-semibold">
+              {isEdit ? "Editar usuario" : "Agregar usuario"}
+            </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-4">
-          {error && (
-            <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">
-              {error}
+            <div className="flex items-center gap-2">
+              {isEdit && (
+                <span className="hidden text-sm text-gray-500 lg:block">
+                  {user?.email}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => onClose?.()}
+                aria-label="Cerrar"
+                className="rounded border px-3 py-1 text-sm hover:bg-gray-100"
+              >
+                Cerrar
+              </button>
             </div>
-          )}
+          </div>
 
-          <div>
-            <input
-              name="full_name"
-              placeholder="Nombre completo"
-              value={form.full_name}
-              onChange={handleChange}
-              required
-              className={`w-full rounded border px-3 py-2 text-sm ${fieldErrors.full_name ? "border-red-300" : ""}`}
-              aria-invalid={!!fieldErrors.full_name}
-              aria-describedby={
-                fieldErrors.full_name ? "err-full_name" : undefined
-              }
-            />
-            {fieldErrors.full_name && (
-              <div id="err-full_name" className="mt-1 text-xs text-red-600">
-                {fieldErrors.full_name}
+          <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
+            {error && (
+              <div className="m-4 rounded bg-red-50 px-3 py-2 text-sm text-red-600">
+                {error}
               </div>
             )}
-          </div>
 
-          <div>
-            <input
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              className={`w-full rounded border px-3 py-2 text-sm ${fieldErrors.email ? "border-red-300" : ""}`}
-              aria-invalid={!!fieldErrors.email}
-              aria-describedby={fieldErrors.email ? "err-email" : undefined}
-            />
-            {fieldErrors.email && (
-              <div id="err-email" className="mt-1 text-xs text-red-600">
-                {fieldErrors.email}
+            {/* grid: 1 columna por defecto; 2 columnas a partir de lg (>=1024px) */}
+            <div className="grid gap-3 p-4 lg:grid-cols-2 lg:gap-6 lg:p-6">
+              {/* left column */}
+              <div className="space-y-3 min-w-0">
+                <div>
+                  <label className="sr-only">Nombre completo</label>
+                  <input
+                    ref={firstInputRef}
+                    name="full_name"
+                    placeholder="Nombre completo"
+                    value={form.full_name}
+                    onChange={handleChange}
+                    required
+                    // clases que evitan overflow (min-w-0, box-border, max-w-full)
+                    className={`w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm ${fieldErrors.full_name ? "border-red-300" : ""}`}
+                    aria-invalid={!!fieldErrors.full_name}
+                    aria-describedby={
+                      fieldErrors.full_name ? "err-full_name" : undefined
+                    }
+                  />
+                  {fieldErrors.full_name && (
+                    <div
+                      id="err-full_name"
+                      className="mt-1 text-xs text-red-600"
+                    >
+                      {fieldErrors.full_name}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="sr-only">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="Email"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                    className={`w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm ${fieldErrors.email ? "border-red-300" : ""}`}
+                    aria-invalid={!!fieldErrors.email}
+                    aria-describedby={
+                      fieldErrors.email ? "err-email" : undefined
+                    }
+                  />
+                  {fieldErrors.email && (
+                    <div id="err-email" className="mt-1 text-xs text-red-600">
+                      {fieldErrors.email}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="sr-only">Usuario</label>
+                  <input
+                    name="username"
+                    placeholder="Usuario"
+                    value={form.username}
+                    onChange={handleChange}
+                    required
+                    className={`w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm ${fieldErrors.username ? "border-red-300" : ""}`}
+                    aria-invalid={!!fieldErrors.username}
+                    aria-describedby={
+                      fieldErrors.username ? "err-username" : undefined
+                    }
+                  />
+                  {fieldErrors.username && (
+                    <div
+                      id="err-username"
+                      className="mt-1 text-xs text-red-600"
+                    >
+                      {fieldErrors.username}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
 
-          <div>
-            <input
-              name="username"
-              placeholder="Usuario"
-              value={form.username}
-              onChange={handleChange}
-              required
-              className={`w-full rounded border px-3 py-2 text-sm ${fieldErrors.username ? "border-red-300" : ""}`}
-              aria-invalid={!!fieldErrors.username}
-              aria-describedby={
-                fieldErrors.username ? "err-username" : undefined
-              }
-            />
-            {fieldErrors.username && (
-              <div id="err-username" className="mt-1 text-xs text-red-600">
-                {fieldErrors.username}
+              {/* right column */}
+              <div className="space-y-3 min-w-0">
+                <div>
+                  <label className="sr-only">Contraseña</label>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder={
+                      isEdit ? "Dejar vacía para no cambiar" : "Contraseña"
+                    }
+                    value={form.password}
+                    onChange={handleChange}
+                    className={`w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm ${fieldErrors.password ? "border-red-300" : ""}`}
+                    aria-invalid={!!fieldErrors.password}
+                    aria-describedby={
+                      fieldErrors.password ? "err-password" : undefined
+                    }
+                  />
+                  {fieldErrors.password && (
+                    <div
+                      id="err-password"
+                      className="mt-1 text-xs text-red-600"
+                    >
+                      {fieldErrors.password}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="sr-only">Teléfono</label>
+                  <input
+                    name="phone"
+                    placeholder="Teléfono"
+                    value={form.phone}
+                    onChange={handleChange}
+                    className={`w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm ${fieldErrors.phone ? "border-red-300" : ""}`}
+                    aria-invalid={!!fieldErrors.phone}
+                    aria-describedby={
+                      fieldErrors.phone ? "err-phone" : undefined
+                    }
+                  />
+                  {fieldErrors.phone && (
+                    <div id="err-phone" className="mt-1 text-xs text-red-600">
+                      {fieldErrors.phone}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <label className="sr-only">Idioma</label>
+                    <select
+                      name="language"
+                      value={form.language}
+                      onChange={handleChange}
+                      className="w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm"
+                    >
+                      <option value="es">Español</option>
+                      <option value="en">Inglés</option>
+                    </select>
+                  </div>
+
+                  <div className="lg:w-1/2 w-full min-w-0">
+                    <label className="sr-only">Zona horaria</label>
+                    <select
+                      name="timezone"
+                      value={form.timezone}
+                      onChange={handleChange}
+                      className="w-full max-w-full min-w-0 box-border rounded border px-3 py-2 text-sm"
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="Europe/Sofia">Europe/Sofia</option>
+                      <option value="America/New_York">America/New_York</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          <div>
-            <input
-              name="password"
-              type="password"
-              placeholder={
-                isEdit ? "Dejar vacía para no cambiar" : "Contraseña"
-              }
-              value={form.password}
-              onChange={handleChange}
-              className={`w-full rounded border px-3 py-2 text-sm ${fieldErrors.password ? "border-red-300" : ""}`}
-              aria-invalid={!!fieldErrors.password}
-              aria-describedby={
-                fieldErrors.password ? "err-password" : undefined
-              }
-            />
-            {fieldErrors.password && (
-              <div id="err-password" className="mt-1 text-xs text-red-600">
-                {fieldErrors.password}
+            {/* footer */}
+            <div className="flex flex-col gap-3 border-t px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-4">
+              <div className="flex items-center gap-3">
+                <input
+                  id="is_active"
+                  type="checkbox"
+                  name="is_active"
+                  checked={!!form.is_active}
+                  onChange={handleChange}
+                />
+                <label htmlFor="is_active" className="text-sm text-gray-700">
+                  Usuario activo
+                </label>
               </div>
-            )}
-          </div>
 
-          <div>
-            <input
-              name="phone"
-              placeholder="Teléfono"
-              value={form.phone}
-              onChange={handleChange}
-              className={`w-full rounded border px-3 py-2 text-sm ${fieldErrors.phone ? "border-red-300" : ""}`}
-              aria-invalid={!!fieldErrors.phone}
-              aria-describedby={fieldErrors.phone ? "err-phone" : undefined}
-            />
-            {fieldErrors.phone && (
-              <div id="err-phone" className="mt-1 text-xs text-red-600">
-                {fieldErrors.phone}
+              <div className="flex gap-3 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={() => onClose?.()}
+                  className="rounded border px-4 py-2 text-sm"
+                  disabled={loading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {loading ? "Guardando…" : "Guardar"}
+                </button>
               </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              id="is_active"
-              type="checkbox"
-              name="is_active"
-              checked={!!form.is_active}
-              onChange={handleChange}
-            />
-            <label htmlFor="is_active" className="text-sm text-gray-700">
-              Usuario activo
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => onClose?.()}
-              className="rounded border px-4 py-2 text-sm"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? "Guardando…" : "Guardar"}
-            </button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
+
+  if (typeof document !== "undefined") {
+    return createPortal(modal, document.body);
+  }
+  return null;
 }
