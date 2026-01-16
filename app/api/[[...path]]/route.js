@@ -769,7 +769,7 @@ async function handleReplenishment(request, segments, searchParams, context) {
   // POST /api/replenishment/plan - Generate new plan
   if (method === "POST" && segments.length === 2 && segments[1] === "plan") {
     const body = await request.json();
-    const { plan_date, store_id } = body;
+    const { plan_date, store_id, supplier_id, supplier_name } = body;
 
     if (!plan_date || !store_id) {
       return errorResponse("plan_date and store_id required", 400, request);
@@ -778,6 +778,8 @@ async function handleReplenishment(request, segments, searchParams, context) {
     console.log("🔄 Generating replenishment plan...", {
       plan_date,
       store_id,
+      supplier_id,
+      supplier_name,
       orgId,
     });
 
@@ -785,6 +787,10 @@ async function handleReplenishment(request, segments, searchParams, context) {
       orgId,
       store_id,
       plan_date,
+      {
+        supplierId: supplier_id,
+        supplierName: supplier_name,
+      },
     );
     const saved = await ReplenishmentPlan.insertMany(planItems);
 
