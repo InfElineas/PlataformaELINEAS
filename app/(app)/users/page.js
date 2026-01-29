@@ -84,7 +84,7 @@ export default function UsersPage() {
     }
 
     const confirmation = window.confirm(
-      `⚠️ Esta acción es irreversible.\n\n¿Eliminar definitivamente al usuario "${user.full_name || user.username}"?`
+      `⚠️ Esta acción es irreversible.\n\n¿Eliminar definitivamente al usuario "${user.full_name || user.username}"?`,
     );
 
     if (!confirmation) return;
@@ -128,8 +128,8 @@ export default function UsersPage() {
     const prevUsers = users;
     setUsers((u) =>
       u.map((item) =>
-        userKey(item) === userKey(user) ? { ...item, is_active: false } : item
-      )
+        userKey(item) === userKey(user) ? { ...item, is_active: false } : item,
+      ),
     );
 
     try {
@@ -177,8 +177,8 @@ export default function UsersPage() {
     const prevUsers = users;
     setUsers((u) =>
       u.map((item) =>
-        userKey(item) === userKey(user) ? { ...item, is_active: true } : item
-      )
+        userKey(item) === userKey(user) ? { ...item, is_active: true } : item,
+      ),
     );
 
     try {
@@ -259,7 +259,7 @@ export default function UsersPage() {
 
     setUsers((prev) => {
       const exists = prev.some(
-        (u) => userKey(u) && userKey(u) === userKey(saved)
+        (u) => userKey(u) && userKey(u) === userKey(saved),
       );
       if (exists) {
         return prev.map((u) => (userKey(u) === userKey(saved) ? saved : u));

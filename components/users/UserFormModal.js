@@ -114,7 +114,7 @@ export default function UserFormModal({
     url,
     primaryMethod,
     fallbackMethod,
-    payload
+    payload,
   ) {
     const opts = (method) => ({
       method,
@@ -163,7 +163,7 @@ export default function UserFormModal({
           } catch {}
           if (json && json.errors) setFieldErrors(json.errors);
           throw new Error(
-            (json && (json.error || json.message)) || `Status ${res.status}`
+            (json && (json.error || json.message)) || `Status ${res.status}`,
           );
         }
 
@@ -183,7 +183,7 @@ export default function UserFormModal({
           const json = await res.json().catch(() => ({}));
           if (json && json.errors) setFieldErrors(json.errors);
           throw new Error(
-            (json && (json.error || json.message)) || `Status ${res.status}`
+            (json && (json.error || json.message)) || `Status ${res.status}`,
           );
         }
 

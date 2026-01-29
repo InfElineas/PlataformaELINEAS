@@ -281,7 +281,8 @@ async function handleProducts(request, segments, searchParams, context) {
       andFilters.push({ status: { $ne: "active" } });
     }
 
-    const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
+    const query =
+      andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
 
     const sortField = SORT_MAP[sortBy] || "created_at";
     const sort = { [sortField]: sortDir };
@@ -491,18 +492,31 @@ async function handleProducts(request, segments, searchParams, context) {
   }
 
   // POST /api/inventory/adjustments - guardar ajustes e histórico
-  if (method === "POST" && segments.length === 2 && segments[1] === "adjustments") {
+  if (
+    method === "POST" &&
+    segments.length === 2 &&
+    segments[1] === "adjustments"
+  ) {
     const body = await request.json();
-    const adjustments = Array.isArray(body?.adjustments) ? body.adjustments : [];
+    const adjustments = Array.isArray(body?.adjustments)
+      ? body.adjustments
+      : [];
 
     if (adjustments.length === 0) {
-      return errorResponse("No se recibieron ajustes para guardar", 400, request);
+      return errorResponse(
+        "No se recibieron ajustes para guardar",
+        400,
+        request,
+      );
     }
 
     const normalized = adjustments.map((adj) => {
-      const platformQty = Number(adj.existencia_fisica ?? adj.physical_stock ?? 0) || 0;
+      const platformQty =
+        Number(adj.existencia_fisica ?? adj.physical_stock ?? 0) || 0;
       const realQty =
-        adj.real_qty === null || adj.real_qty === undefined || adj.real_qty === ""
+        adj.real_qty === null ||
+        adj.real_qty === undefined ||
+        adj.real_qty === ""
           ? null
           : Number(adj.real_qty);
       const reserve = Number(adj.reserva ?? adj.reserve_qty ?? 0) || 0;
@@ -544,7 +558,11 @@ async function handleProducts(request, segments, searchParams, context) {
   }
 
   // GET /api/inventory/adjustments - histórico por fecha/producto
-  if (method === "GET" && segments.length === 2 && segments[1] === "adjustments") {
+  if (
+    method === "GET" &&
+    segments.length === 2 &&
+    segments[1] === "adjustments"
+  ) {
     const productId = searchParams.get("product_id");
     const state = searchParams.get("state");
     const from = searchParams.get("from");

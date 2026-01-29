@@ -272,7 +272,7 @@ function ProductHoverCard({
   const description = getFirstString(
     product,
     ["description", "metadata.description", "metadata.descripcion"],
-    ""
+    "",
   );
   const image = getProductImage(product);
 
@@ -353,7 +353,7 @@ function getSuministrador(p) {
   return getFirstString(
     p,
     ["supplier_name", "provider_name", "provider_id", "supplier_id"],
-    ""
+    "",
   );
 }
 
@@ -385,7 +385,7 @@ function getNoAlmacen(p) {
       "metadata.warehouse_code",
       "metadata.warehouse_name",
     ],
-    ""
+    "",
   );
 }
 
@@ -623,13 +623,13 @@ export default function ProductsPage() {
         almacenes: mergeOptions(data.meta?.warehouses, derived.almacenes),
         suministradores: mergeOptions(
           data.meta?.suppliers,
-          derived.suministradores
+          derived.suministradores,
         ),
         categorias: mergeOptions(data.meta?.categories, derived.categorias),
         marcas: mergeOptions(data.meta?.brands, derived.marcas),
         estadosTienda: mergeOptions(
           data.meta?.storeStatuses,
-          derived.estadosTienda
+          derived.estadosTienda,
         ),
       });
     } catch (e) {
@@ -645,22 +645,22 @@ export default function ProductsPage() {
   const opciones = useMemo(
     () => ({
       almacenes: Array.from(new Set(filterOptions.almacenes || [])).sort(
-        (a, b) => a.localeCompare(b, "es")
+        (a, b) => a.localeCompare(b, "es"),
       ),
       suministradores: Array.from(
-        new Set(filterOptions.suministradores || [])
+        new Set(filterOptions.suministradores || []),
       ).sort((a, b) => a.localeCompare(b, "es")),
       categorias: Array.from(new Set(filterOptions.categorias || [])).sort(
-        (a, b) => a.localeCompare(b, "es")
+        (a, b) => a.localeCompare(b, "es"),
       ),
       marcas: Array.from(new Set(filterOptions.marcas || [])).sort((a, b) =>
-        a.localeCompare(b, "es")
+        a.localeCompare(b, "es"),
       ),
       estadosTienda: Array.from(
-        new Set(filterOptions.estadosTienda || [])
+        new Set(filterOptions.estadosTienda || []),
       ).sort((a, b) => a.localeCompare(b, "es")),
     }),
-    [filterOptions]
+    [filterOptions],
   );
 
   const {

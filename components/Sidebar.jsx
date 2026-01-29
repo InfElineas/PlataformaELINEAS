@@ -77,7 +77,7 @@ export default function SidebarHandler({ children }) {
     () => ({
       marginLeft: collapsed ? `${COLLAPSED_WIDTH}px` : `${EXPANDED_WIDTH}px`,
     }),
-    [collapsed]
+    [collapsed],
   );
 
   async function handleSignOut() {
@@ -133,19 +133,19 @@ export default function SidebarHandler({ children }) {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r border-slate-900/40 bg-slate-950 text-slate-100 shadow-xl shadow-slate-950/30 transition-all duration-300 ease-in-out",
-          collapsed ? "w-[72px]" : "w-64"
+          collapsed ? "w-[72px]" : "w-64",
         )}
       >
         <div
           className={cn(
             "flex h-14 items-center border-b border-white/5 px-4 transition-all duration-300 ease-in-out",
-            collapsed ? "justify-center" : "justify-between"
+            collapsed ? "justify-center" : "justify-between",
           )}
         >
           <button
             className={cn(
               "flex items-center gap-2 text-white transition-all duration-300 ease-in-out",
-              collapsed && "justify-center"
+              collapsed && "justify-center",
             )}
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
@@ -161,7 +161,6 @@ export default function SidebarHandler({ children }) {
                 </>
               )}
             </h1>
-            
           </button>
         </div>
 
@@ -182,7 +181,7 @@ export default function SidebarHandler({ children }) {
                     ? "justify-center px-0"
                     : "justify-start gap-3 px-4",
                   isActive &&
-                    "bg-white/10 text-white shadow-sm shadow-slate-900/30"
+                    "bg-white/10 text-white shadow-sm shadow-slate-900/30",
                 )}
                 onClick={() => router.push(item.href)}
                 title={item.name}
@@ -210,7 +209,7 @@ export default function SidebarHandler({ children }) {
             variant="ghost"
             className={cn(
               "w-full items-center border border-white/10 text-slate-100 transition-all duration-300 ease-in-out hover:bg-white/10",
-              collapsed ? "justify-center px-0" : "justify-start gap-2 px-4"
+              collapsed ? "justify-center px-0" : "justify-start gap-2 px-4",
             )}
             title="Cerrar sesión"
           >
@@ -222,7 +221,7 @@ export default function SidebarHandler({ children }) {
           <p
             className={cn(
               "text-xs text-slate-500 transition-opacity",
-              collapsed ? "text-center" : "text-left"
+              collapsed ? "text-center" : "text-left",
             )}
           >
             {collapsed ? "v1.0" : "v1.0 • Elíneas"}

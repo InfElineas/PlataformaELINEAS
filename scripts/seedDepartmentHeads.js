@@ -73,7 +73,7 @@ async function main() {
   await mongoose.connect(MONGO_URL, { dbName: DB_NAME, autoIndex: true });
   console.log(
     "Conectado a MongoDB - base:",
-    mongoose.connection.db.databaseName
+    mongoose.connection.db.databaseName,
   );
   console.log("Conectado a MongoDB");
 
@@ -110,7 +110,7 @@ async function main() {
     try {
       const res = await User.create(doc);
       console.log(
-        `Creado: ${c.full_name} -> username: ${username}, _id: ${res._id}`
+        `Creado: ${c.full_name} -> username: ${username}, _id: ${res._id}`,
       );
       created.push({
         _id: res._id.toString(),
@@ -132,14 +132,14 @@ async function main() {
         JSON.stringify(
           { org_id: ORG_ID, created, timestamp: new Date().toISOString() },
           null,
-          2
-        )
+          2,
+        ),
       );
       console.log(`Registro escrito en: ${OUTPUT_PATH}`);
     } catch (err) {
       console.error(
         "No se pudo escribir el archivo de salida:",
-        err.message || err
+        err.message || err,
       );
     }
   }
@@ -148,7 +148,7 @@ async function main() {
   console.log("Desconectado de MongoDB");
   console.log(
     "Resumen:",
-    created.map((u) => ({ _id: u._id, username: u.username, email: u.email }))
+    created.map((u) => ({ _id: u._id, username: u.username, email: u.email })),
   );
 }
 

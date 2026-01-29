@@ -108,8 +108,7 @@ export default function ReplenishmentPage() {
         body: JSON.stringify({
           plan_date: planDate,
           store_id: filters.storeId,
-          supplier_id:
-            filters.supplierId === "all" ? null : filters.supplierId,
+          supplier_id: filters.supplierId === "all" ? null : filters.supplierId,
           supplier_name: selectedSupplier?.name || null,
         }),
       });
@@ -166,7 +165,10 @@ export default function ReplenishmentPage() {
       const res = await fetch("/api/purchase-orders/from-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_date: planDate, store_id: filters.storeId }),
+        body: JSON.stringify({
+          plan_date: planDate,
+          store_id: filters.storeId,
+        }),
       });
 
       const data = await res.json();
@@ -200,9 +202,7 @@ export default function ReplenishmentPage() {
           (selectedSupplier?.name &&
             item.supplier_name === selectedSupplier.name);
     const productMatch = filters.product
-      ? item.product_name
-          ?.toLowerCase()
-          .includes(filters.product.toLowerCase())
+      ? item.product_name?.toLowerCase().includes(filters.product.toLowerCase())
       : true;
     const minQtyMatch =
       filters.minRecommendedQty === ""
@@ -287,7 +287,9 @@ export default function ReplenishmentPage() {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Almacén</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Almacén
+                </label>
                 <Select
                   value={filters.storeId}
                   onValueChange={(value) =>

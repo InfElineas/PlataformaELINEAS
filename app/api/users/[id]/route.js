@@ -58,7 +58,7 @@ export async function GET(request, { params }) {
     const status = error.status || 500;
     return NextResponse.json(
       { error: error.message || "Failed to load user" },
-      { status }
+      { status },
     );
   }
 }
@@ -83,7 +83,7 @@ export async function PUT(request, { params }) {
       if (existing) {
         return NextResponse.json(
           { error: "Email already in use" },
-          { status: 409 }
+          { status: 409 },
         );
       }
       user.email = body.email.toLowerCase();
@@ -96,7 +96,7 @@ export async function PUT(request, { params }) {
       if (existingUsername) {
         return NextResponse.json(
           { error: "Username already in use" },
-          { status: 409 }
+          { status: 409 },
         );
       }
       user.username = body.username.toLowerCase();
@@ -144,7 +144,7 @@ export async function PUT(request, { params }) {
     const status = error.status || 500;
     return NextResponse.json(
       { error: error.message || "Failed to update user" },
-      { status }
+      { status },
     );
   }
 }
@@ -193,7 +193,7 @@ export async function DELETE(request, { params }) {
     const status = error.status || 500;
     return NextResponse.json(
       { error: error.message || "Failed to delete user" },
-      { status }
+      { status },
     );
   }
 }

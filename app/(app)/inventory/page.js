@@ -456,7 +456,7 @@ export default function InventoryPage() {
       setFilterOptions({
         warehouses: mergeOptions(
           data.meta?.warehouses || [],
-          derived.warehouses
+          derived.warehouses,
         ),
         suppliers: mergeOptions(data.meta?.suppliers || [], derived.suppliers),
       });
@@ -483,14 +483,14 @@ export default function InventoryPage() {
         ? filterOptions.suppliers
         : [],
     }),
-    [filterOptions]
+    [filterOptions],
   );
 
   // ================= Inventario filtrado + segmentado =================
 
   const prioritizedInventory = useMemo(() => {
     const order = Object.fromEntries(
-      ANALYSIS_SEGMENTS.map((s, idx) => [s.id, idx])
+      ANALYSIS_SEGMENTS.map((s, idx) => [s.id, idx]),
     );
 
     return [...inventory]
@@ -503,7 +503,7 @@ export default function InventoryPage() {
         if (efDiff !== 0) return efDiff;
         return getProductName(a.item).localeCompare(
           getProductName(b.item),
-          "es"
+          "es",
         );
       })
       .map(({ item }) => item);
@@ -514,7 +514,7 @@ export default function InventoryPage() {
       ANALYSIS_SEGMENTS.find((s) => s.id === segmentId) || ANALYSIS_SEGMENTS[0];
 
     const base = prioritizedInventory.filter(
-      (item) => getEstadoTienda(item)?.id === segment.id
+      (item) => getEstadoTienda(item)?.id === segment.id,
     );
 
     return base.slice(0, DEFAULT_MAX_ROWS);
@@ -592,8 +592,8 @@ export default function InventoryPage() {
       ) {
         alert(
           `La clasificación es obligatoria cuando hay diferencia en el conteo (producto: ${getProductName(
-            item
-          )}).`
+            item,
+          )}).`,
         );
         return;
       }
@@ -754,7 +754,7 @@ export default function InventoryPage() {
         };
 
         return visibleColumns.map((col) =>
-          col.value(item, adj, index, helpers)
+          col.value(item, adj, index, helpers),
         );
       })
       .filter(Boolean);
@@ -1173,7 +1173,7 @@ export default function InventoryPage() {
                       const adj = adjustments[snapshotId] || {};
                       const { state, difference } = resolveAdjustmentState(
                         item,
-                        adj
+                        adj,
                       );
 
                       return (
@@ -1205,7 +1205,7 @@ export default function InventoryPage() {
                   const adj = adjustments[snapshotId] || {};
                   const { state, difference } = resolveAdjustmentState(
                     item,
-                    adj
+                    adj,
                   );
 
                   return (
@@ -1262,7 +1262,7 @@ export default function InventoryPage() {
                                 updateAdjustment(
                                   snapshotId,
                                   "real_qty",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                             />
@@ -1291,7 +1291,7 @@ export default function InventoryPage() {
                                   updateAdjustment(
                                     snapshotId,
                                     "upload_qty",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -1310,7 +1310,7 @@ export default function InventoryPage() {
                                   updateAdjustment(
                                     snapshotId,
                                     "download_qty",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                               />
@@ -1326,7 +1326,7 @@ export default function InventoryPage() {
                             updateAdjustment(
                               snapshotId,
                               "reason",
-                              v || NO_REASON
+                              v || NO_REASON,
                             )
                           }
                         >

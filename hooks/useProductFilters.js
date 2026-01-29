@@ -56,7 +56,12 @@ export function useProductFilters() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const payload = JSON.stringify({ pendingFilters, appliedFilters, search, sort });
+    const payload = JSON.stringify({
+      pendingFilters,
+      appliedFilters,
+      search,
+      sort,
+    });
     window.localStorage.setItem(STORAGE_KEY, payload);
   }, [pendingFilters, appliedFilters, search, sort]);
 
