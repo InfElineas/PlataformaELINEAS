@@ -13,12 +13,12 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   LogOut,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/components/providers/AuthSessionProvider";
 import Swal from "sweetalert2";
-import { Users } from "lucide-react";
 
 const navigation = [
   { name: "Tablero general", href: "/", icon: LayoutDashboard },
@@ -40,6 +40,7 @@ const adminNavigation = [
 
 const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 72;
+let isSmallScreen = false;
 
 export default function SidebarHandler({ children }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -60,6 +61,7 @@ export default function SidebarHandler({ children }) {
     const handleResize = () => {
       if (typeof window === "undefined") return;
       if (window.innerWidth < 1024) {
+        isSmallScreen = true;
         setCollapsed(true);
       }
     };
@@ -75,7 +77,11 @@ export default function SidebarHandler({ children }) {
 
   const contentPadding = useMemo(
     () => ({
-      marginLeft: collapsed ? `${COLLAPSED_WIDTH}px` : `${EXPANDED_WIDTH}px`,
+      marginLeft: !collapsed
+        ? `${EXPANDED_WIDTH}px`
+        : isSmallScreen
+          ? "0"
+          : `${COLLAPSED_WIDTH}px`,
     }),
     [collapsed],
   );
@@ -133,7 +139,7 @@ export default function SidebarHandler({ children }) {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r border-slate-900/40 bg-slate-950 text-slate-100 shadow-xl shadow-slate-950/30 transition-all duration-300 ease-in-out",
-          collapsed ? "w-[72px]" : "w-64",
+          collapsed ? "w-[72px] max-sm:hidden" : "w-64",
         )}
       >
         <div
@@ -230,7 +236,7 @@ export default function SidebarHandler({ children }) {
       </aside>
 
       <div
-        className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out"
+        className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out max-w-full flex"
         style={contentPadding}
       >
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur sm:px-6">
@@ -257,7 +263,7 @@ export default function SidebarHandler({ children }) {
         </header>
 
         <main className="flex-1 bg-transparent px-2 py-3 sm:px-4 lg:px-6">
-          <div className="mx-auto w-full max-w-[1440px] rounded-2xl border border-border/60 bg-background/80 p-3 shadow-sm shadow-black/5 backdrop-blur sm:p-5 overflow-hidden">
+          <div className="mx-auto w-full rounded-2xl border border-border/60 bg-background/80 p-3 shadow-sm shadow-black/5 backdrop-blur sm:p-5 overflow-hidden">
             {children}
           </div>
         </main>

@@ -235,11 +235,11 @@ export default function ReplenishmentPage() {
       <Toaster />
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Sparkles className="h-8 w-8 text-primary" />
+          <h1 className="max-sm:text-2xl md:text-3xl font-bold flex items-center gap-2 max-sm:text-center">
+            <Sparkles className="h-8 w-8 text-primary max-sm:hidden" />
             Planeador de reabastecimiento
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-sm:text-center">
             Genera recomendaciones de reabastecimiento
           </p>
         </div>
@@ -285,7 +285,7 @@ export default function ReplenishmentPage() {
             <CardTitle>Filtros globales</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Almacén
@@ -413,7 +413,7 @@ export default function ReplenishmentPage() {
           <>
             <Card className="mb-6">
               <CardContent className="pt-6">
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary">
                       {filteredPlan.length}
@@ -544,9 +544,9 @@ export default function ReplenishmentPage() {
 
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="max-sm:grid md:flex gap-4 grid-cols-1 sm:grid-cols-2 max-sm:text-center items-center justify-between">
                   <CardTitle>Recomendaciones de reabastecimiento</CardTitle>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-center">
                     {planStatus === "draft" && (
                       <Button
                         onClick={approvePlan}

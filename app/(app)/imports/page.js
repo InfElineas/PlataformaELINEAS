@@ -18,9 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { useAuthSession } from "@/components/providers/AuthSessionProvider";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 
-function SectionTitle({ title, description }) {
+function SectionTitle({ title, description, className }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className={"flex flex-col gap-1" + className ? ` ${className}` : ""}>
       <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       {description ? (
         <p className="text-sm text-muted-foreground">{description}</p>
@@ -328,11 +328,15 @@ export default function ImportsPage() {
     <div className="flex flex-col gap-8 p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SectionTitle
+          className={"max-sm:text-center"}
           title="Importaciones"
           description="Carga productos desde plantillas de Excel o sincroniza hojas de Google Drive"
         />
-        <div className="sm:flex max-sm:grid items-center gap-3">
-          <Badge variant={user?.google_connected ? "default" : "secondary"}>
+        <div className="sm:flex max-sm:grid items-center gap-3 max-sm:w-full">
+          <Badge
+            className="max-sm:text-center"
+            variant={user?.google_connected ? "default" : "secondary"}
+          >
             Google {user?.google_connected ? "conectado" : "no vinculado"}
           </Badge>
           {user?.google_connected ? (
@@ -340,7 +344,9 @@ export default function ImportsPage() {
               Desconectar Google
             </Button>
           ) : (
-            <Button onClick={connectGoogle}>Conectar Google</Button>
+            <Button className="max-sm:w-full" onClick={connectGoogle}>
+              Conectar Google
+            </Button>
           )}
         </div>
       </div>
@@ -447,7 +453,11 @@ export default function ImportsPage() {
                   }
                 />
               </div>
-              <Button type="submit" disabled={excelLoading}>
+              <Button
+                className="max-sm:w-full"
+                type="submit"
+                disabled={excelLoading}
+              >
                 {excelLoading ? "Importando..." : "Importar archivo"}
               </Button>
             </form>
@@ -577,7 +587,11 @@ export default function ImportsPage() {
                   onCheckedChange={setGoogleUseOAuth}
                 />
               </div>
-              <Button type="submit" disabled={googleLoading}>
+              <Button
+                className="max-sm:w-full"
+                type="submit"
+                disabled={googleLoading}
+              >
                 {googleLoading ? "Importando..." : "Importar desde Google"}
               </Button>
             </form>

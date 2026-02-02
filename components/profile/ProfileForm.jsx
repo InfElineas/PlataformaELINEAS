@@ -190,7 +190,7 @@ export default function ProfileForm({ initialData }) {
           {status.success}
         </div>
       )}
-      <Button type="submit" disabled={status.loading}>
+      <Button className="max-sm:w-full" type="submit" disabled={status.loading}>
         {status.loading ? "Guardando…" : "Guardar cambios"}
       </Button>
     </form>

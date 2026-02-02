@@ -112,7 +112,7 @@ export default function LoginForm({ redirectTo = "/" }) {
           required
         />
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-md:flex-col max-md:items-start gap-2">
         <label className="flex items-center space-x-2 text-sm">
           <Checkbox
             id="remember"
