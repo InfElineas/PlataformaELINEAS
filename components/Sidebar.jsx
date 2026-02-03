@@ -135,11 +135,16 @@ export default function SidebarHandler({ children }) {
   }, [isAdmin]);
 
   return (
-    <div className="flex min-h-screen bg-background text-[15px] sm:text-[16px]">
+    <div
+      className={cn(
+        "flex min-h-screen bg-background text-[15px] sm:text-[16px]",
+        !collapsed && isSmallScreen && "overflow-hidden",
+      )}
+    >
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r border-slate-900/40 bg-slate-950 text-slate-100 shadow-xl shadow-slate-950/30 transition-all duration-300 ease-in-out",
-          collapsed ? "w-[72px] max-sm:hidden" : "w-64",
+          "fixed inset-y-0 left-0 z-20 flex h-full max-h-screen flex-col border-r border-slate-900/40 bg-slate-950 text-slate-100 shadow-xl shadow-slate-950/30 transition-all duration-300 ease-in-out overflow-y-auto",
+          collapsed ? "w-[72px] max-md:hidden" : "w-64",
         )}
       >
         <div
@@ -189,7 +194,10 @@ export default function SidebarHandler({ children }) {
                   isActive &&
                     "bg-white/10 text-white shadow-sm shadow-slate-900/30",
                 )}
-                onClick={() => router.push(item.href)}
+                onClick={() => {
+                  if (isSmallScreen) setCollapsed(true);
+                  router.push(item.href);
+                }}
                 title={item.name}
               >
                 <Icon className="h-5 w-5" />
@@ -236,7 +244,7 @@ export default function SidebarHandler({ children }) {
       </aside>
 
       <div
-        className="flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out max-w-full flex"
+        className="flex h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out max-w-full overflow-y-auto overflow-x-hidden"
         style={contentPadding}
       >
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur sm:px-6">
@@ -254,8 +262,20 @@ export default function SidebarHandler({ children }) {
               )}
             </Button>
             <div className="leading-tight">
-              <p className="text-sm font-semibold text-foreground">Panel</p>
-              <p className="text-xs text-muted-foreground">
+              <p
+                className={
+                  "text-sm font-semibold text-foreground" +
+                  (!collapsed ? " truncate" : "")
+                }
+              >
+                Panel
+              </p>
+              <p
+                className={
+                  "text-xs text-muted-foreground" +
+                  (!collapsed ? " truncate" : "")
+                }
+              >
                 Gestiona catálogos e inventario
               </p>
             </div>
