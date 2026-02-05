@@ -60,7 +60,7 @@ export default function SidebarHandler({ children }) {
   useEffect(() => {
     const handleResize = () => {
       if (typeof window === "undefined") return;
-      if (window.innerWidth < 1024) {
+      if (window.innerWidth < 768) {
         isSmallScreen = true;
         setCollapsed(true);
       }
@@ -76,13 +76,7 @@ export default function SidebarHandler({ children }) {
   }, [user]);
 
   const contentPadding = useMemo(
-    () => ({
-      marginLeft: !collapsed
-        ? `${EXPANDED_WIDTH}px`
-        : isSmallScreen
-          ? "0"
-          : `${COLLAPSED_WIDTH}px`,
-    }),
+    () => (!collapsed ? { marginLeft: `${EXPANDED_WIDTH}px` } : {}),
     [collapsed],
   );
 
@@ -244,7 +238,7 @@ export default function SidebarHandler({ children }) {
       </aside>
 
       <div
-        className="flex h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out max-w-full overflow-y-auto overflow-x-hidden"
+        className="flex h-screen flex-1 flex-col transition-[margin] duration-300 ease-in-out max-w-full overflow-y-auto overflow-x-hidden md:ml-[72px]"
         style={contentPadding}
       >
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur sm:px-6">
